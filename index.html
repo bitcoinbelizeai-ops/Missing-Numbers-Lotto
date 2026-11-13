@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Boledo Missing Numbers</title>
+<meta name="description" content="See which Belize Boledo, Sunday Lottery, Fantasy 5 and Pick 3 numbers haven't played in recent draws.">
+<meta name="theme-color" content="#094692">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boledo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="install" id="installBar" hidden>
+    <span id="installText">Put this app on your home screen.</span>
+    <button class="btn small" id="installBtn" hidden>Install app</button>
+  </div>
+
+  <div class="top">
+    <header class="marquee">
+      <p class="eyebrow">Belize Lottery</p>
+      <h1>Number Board</h1>
+      <p class="slogan"><span>Missing Numbers</span><i aria-hidden="true">★</i><span>Hot Numbers</span><i aria-hidden="true">★</i><span>The Last Draw</span></p>
+      <p class="tagline">Your Numbers. Every Game. Every Draw.</p>
+    </header>
+    <h2 class="pick-title" id="pickTitle">Choose Your Game</h2>
+    <div class="games" role="group" aria-labelledby="pickTitle" id="gameSeg"></div>
+    <p class="fresh" id="fresh"></p>
+  </div>
+
+  <div class="banner" id="sampleBanner" hidden>
+    <div><b>Practice numbers.</b> These are made up to show how it works. They are not real results.</div>
+    <button class="btn ghost small" type="button" id="clearSample">Go back to real results</button>
+  </div>
+
+  <section class="panel" aria-labelledby="lastTitle">
+    <div class="panel-head">
+      <h2 id="lastTitle">Last Draw</h2>
+      <span class="when" id="lastDate"></span>
+    </div>
+    <div class="lastdraw" id="lastDraw"></div>
+  </section>
+
+  <div class="chips-row">
+    <span>Check the last</span>
+    <div class="chips" role="group" aria-label="How many draws to check" id="winSeg"></div>
+    <span>draws</span>
+  </div>
+
+  <section class="panel" aria-labelledby="missTitle" aria-live="polite">
+    <div class="panel-head">
+      <h2 id="missTitle">Missing Numbers</h2>
+    </div>
+    <p class="say" id="say">Loading results…</p>
+    <div id="tiles" class="answer-body"></div>
+    <p class="note" id="note"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="hotTitle">
+    <div class="panel-head">
+      <h2 id="hotTitle">Hot Numbers</h2>
+    </div>
+    <p class="say" id="hotSay"></p>
+    <div id="hot" class="answer-body"></div>
+  </section>
+
+  <details id="addFold">
+    <summary>Add a result by hand</summary>
+    <div class="fold">
+      <div class="addgame" id="addGame">
+        <span class="tile gball" id="addBall"><span id="addBallTxt">00</span></span>
+        <div class="addgame-txt"><small>Adding winning numbers for</small><b id="addGameName">Boledo</b></div>
+      </div>
+      <div class="slots" id="slots" aria-hidden="true"></div>
+      <form id="addForm" class="quick">
+        <div class="field"><label class="label" for="dDate">Date</label><input type="date" id="dDate" required></div>
+        <div class="field grow"><label class="label" for="quickNums" id="quickLabel">Numbers</label><input id="quickNums" autocomplete="off" required></div>
+        <button class="btn" type="submit">Add</button>
+      </form>
+      <div class="hint" id="addHint"></div>
+      <div class="msg" id="addMsg"></div>
+      
+    </div>
+  </details>
+
+  <details class="nudge" id="nudge" open hidden aria-live="polite">
+    <summary><h2 id="nudgeTitle">Results are waiting</h2></summary>
+    <div class="nudge-body">
+      <ul id="nudgeList"></ul>
+      <p class="nudge-more" id="nudgeMore"></p>
+    </div>
+  </details>
+
+  <details id="histFold">
+    <summary>All past results</summary>
+    <div class="fold">
+      <div class="hist"><table><tbody id="hist"></tbody></table></div>
+      <div class="empty" id="histEmpty">No results yet.</div>
+      <div class="hint" id="storeNote"></div>
+      <div class="backup">
+        <button class="btn ghost small" id="backupBtn" type="button">Save a backup</button>
+        <label class="btn ghost small" for="restoreFile">Restore a backup</label>
+        <input type="file" id="restoreFile" accept="application/json,.json">
+        <button class="btn ghost small" id="sampleBtn" type="button">Try practice numbers</button>
+      </div>
+    </div>
+  </details>
+
+  <footer>Every draw is random. A number that hasn't played for a while is not more likely to play next.<span class="disclaimer">Independent tracker. Not affiliated with Belize Government Lotteries Ltd.</span></footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

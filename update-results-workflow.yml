@@ -1,0 +1,39 @@
+name: Update Belize results
+
+on:
+  schedule:
+    # Every day at 12:23 UTC (6:23 am in Belize, 7:23 am in New York)
+    - cron: "23 12 * * *"
+  workflow_dispatch: {}   # adds a "Run workflow" button on the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-results
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the site files
+        uses: actions/checkout@v4
+
+      - name: Fetch missing results from magayo
+        env:
+          MAGAYO_API_KEY: ${{ secrets.MAGAYO_API_KEY }}
+          MONTHLY_API_LIMIT: ${{ vars.MONTHLY_API_LIMIT }}
+        run: python3 scripts/update_results.py
+
+      - name: Save the new results
+        run: |
+          git config user.name "results-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add draws.json data/api-usage.json
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+          else
+            git commit -m "Update Belize results $(date -u +%Y-%m-%d)"
+            git push
+          fi
