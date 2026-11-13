@@ -121,6 +121,7 @@ def main():
     report = [f"Missing draws in the last {lookback} days: {len(todo)}",
               f"API calls used this month before this run: {usage['calls']} of {limit}"]
     added, nodraw, skipped = [], [], []
+    fatal = None
 
     for game, date in todo:
         if usage["calls"] >= limit:
@@ -146,6 +147,14 @@ def main():
         elif err == 401:  # magayo: no draw on that date
             draws.append({"id": f"{game}-{date}", "game": game, "date": date, "nums": [], "nodraw": True})
             nodraw.append(f"{LABELS[game]} {date}")
+        elif err in (100, 101, 102, 300):  # key missing, wrong or suspended: stop, nothing else will work
+            usage["calls"] -= 1  # magayo can't charge an unrecognised key, so don't count it
+            fatal = {100: "API key not provided", 101: "invalid API key", 102: "API key not found",
+                     300: "magayo account suspended"}[err]
+            skipped.append(f"{LABELS[game]} {date} (magayo error {err}: {fatal})")
+            for g2, d2 in todo[todo.index((game, date)) + 1:]:
+                skipped.append(f"{LABELS[g2]} {d2} (not tried: {fatal})")
+            break
         elif err == 303:  # magayo: quota used up
             usage["calls"] = max(usage["calls"], limit)
             skipped.append(f"{LABELS[game]} {date} (magayo says the monthly limit is reached)")
@@ -171,6 +180,9 @@ def main():
     if summary:
         with open(summary, "a", encoding="utf-8") as f:
             f.write("## Belize results update\n\n" + text + "\n")
+    if fatal:
+        print(f"\nSTOPPED: {fatal}. Check the MAGAYO_API_KEY secret (Settings > Secrets and variables > Actions).")
+        return 2  # makes the run show a red X so it gets noticed
     return 0
 
 
