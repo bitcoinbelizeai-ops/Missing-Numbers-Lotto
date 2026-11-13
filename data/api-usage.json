@@ -1,6 +1,6 @@
 {
  "month": "2026-11",
- "calls": 10,
+ "calls": 2,
  "limit_note": "Calls to the magayo API this month (the 2 browser tests on Nov 12 included). The job resets this each month.",
  "updated": "2026-11-13T03:30-06:00"
 }
