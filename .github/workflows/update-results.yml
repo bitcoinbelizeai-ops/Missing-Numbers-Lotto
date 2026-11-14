@@ -2,9 +2,22 @@ name: Update Belize results
 
 on:
   schedule:
-    # Every day at 12:23 UTC (6:23 am in Belize, 7:23 am in New York)
-    - cron: "23 12 * * *"
-  workflow_dispatch: {}   # adds a "Run workflow" button on the Actions tab
+    # Times are UTC. Belize is UTC-6 all year (no daylight saving).
+    # Draws (Belize time): Pick 3 Mon-Fri 8:30 pm, Boledo Mon-Fri 9:10 pm,
+    # Fantasy 5 Tue/Thu/Sat 8:00 pm, Sunday Lottery Sun 10:00 am.
+    #
+    # Tue-Sun 6:23 am Belize: the previous evening's draws (about 9 hours after,
+    # so magayo has posted them). No Monday morning run: there are no Sunday evening draws.
+    - cron: "23 12 * * 0,2-6"
+    # Sun and Mon 2:23 pm Belize: the Sunday Lottery, about 4 hours after the draw.
+    # The Monday run only calls magayo if Sunday's draw is still missing or was postponed.
+    - cron: "23 20 * * 0,1"
+  workflow_dispatch:      # adds a "Run workflow" button on the Actions tab
+    inputs:
+      lookback_days:
+        description: "How many days back to fill gaps (14 normally; up to 60 for a one-time catch-up). The safeguards still apply."
+        required: false
+        default: "14"
 
 permissions:
   contents: write
@@ -16,6 +29,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Get the site files
         uses: actions/checkout@v4
@@ -23,7 +37,11 @@ jobs:
       - name: Fetch missing results from magayo
         env:
           MAGAYO_API_KEY: ${{ secrets.MAGAYO_API_KEY }}
-          MONTHLY_API_LIMIT: ${{ vars.MONTHLY_API_LIMIT }}
+          MONTHLY_API_LIMIT: ${{ vars.MONTHLY_API_LIMIT }}   # 100 on Bronze
+          SAFETY_RESERVE: ${{ vars.SAFETY_RESERVE }}         # optional, default 5 spare
+          MAX_CALLS_PER_RUN: ${{ vars.MAX_CALLS_PER_RUN }}   # optional, default 10
+          API_RESET_DAY: ${{ vars.API_RESET_DAY }}           # optional, default 1
+          LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '14' }}
         run: python3 scripts/update_results.py
 
       - name: Save the new results
@@ -35,5 +53,6 @@ jobs:
             echo "Nothing changed."
           else
             git commit -m "Update Belize results $(date -u +%Y-%m-%d)"
+            git pull --rebase --quiet || true   # in case files were uploaded while it ran
             git push
           fi
