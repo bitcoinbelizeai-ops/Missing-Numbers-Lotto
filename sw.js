@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever you change index.html, app.css or app.js.
-const VERSION = 'boledo-v22';
+const VERSION = 'boledo-v24';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'draws.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

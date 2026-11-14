@@ -49,6 +49,7 @@
       <span class="when" id="lastDate"></span>
     </div>
     <div class="lastdraw" id="lastDraw"></div>
+    <p class="drawinfo" id="drawInfo"></p>
   </section>
 
   <div class="chips-row">
@@ -79,7 +80,7 @@
     <div class="fold">
       <div class="addgame" id="addGame">
         <span class="tile gball" id="addBall"><span id="addBallTxt">00</span></span>
-        <div class="addgame-txt"><small>Adding winning numbers for</small><b id="addGameName">Boledo</b></div>
+        <div class="addgame-txt"><small>Adding winning numbers for</small><b id="addGameName">Boledo</b><small class="sched" id="addSched"></small></div>
       </div>
       <div class="slots" id="slots" aria-hidden="true"></div>
       <form id="addForm" class="quick">
@@ -87,6 +88,7 @@
         <div class="field grow"><label class="label" for="quickNums" id="quickLabel">Numbers</label><input id="quickNums" autocomplete="off" required></div>
         <button class="btn" type="submit">Add</button>
       </form>
+      <div class="hint" id="dateHint" aria-live="polite"></div>
       <div class="hint" id="addHint"></div>
       <div class="msg" id="addMsg"></div>
       
@@ -116,7 +118,7 @@
     </div>
   </details>
 
-  <footer>Every draw is random. A number that hasn't played for a while is not more likely to play next.<span class="disclaimer">Independent tracker. Not affiliated with Belize Government Lotteries Ltd.</span></footer>
+  <footer>Every draw is random. A number that hasn't played for a while is not more likely to play next.<span class="disclaimer">Draw days and times come from Belize Government Lotteries Ltd. and the game operators and can change. Independent tracker, not affiliated with Belize Government Lotteries Ltd.</span></footer>
 </div>
 <div class="toast" id="toast" hidden></div>
 <script src="app.js"></script>

@@ -35,8 +35,31 @@ const GAMES={
 };
 const ORDER=['boledo','lottery','fantasy5','pick3'];
 /* draw days (0=Sun), worked out from past results; used to spot missing draws */
-const SCHED={boledo:[1,2,3,4,5],pick3:[1,2,3,4,5],fantasy5:[2,4,6],lottery:[0]};
+/* Official draw days (0=Sun) and times, Belize time (UTC-6, no daylight saving).
+   Boledo & Sunday Lottery: Belize Government Lotteries Ltd. Fantasy 5 & Pick 3: the game operator. */
+const SCHEDULE={
+  boledo:{days:[1,2,3,4,5],at:'21:10',text:'Monday to Friday at 9:10 pm'},
+  pick3:{days:[1,2,3,4,5],at:'20:30',text:'Monday to Friday at 8:30 pm'},
+  fantasy5:{days:[2,4,6],at:'20:00',text:'Tuesday, Thursday and Saturday at 8:00 pm'},
+  lottery:{days:[0],at:'10:00',text:'Sunday at 10:00 am',extra:'If a Sunday draw is postponed, it can be held on Monday instead.'}
+};
+const SCHED={};Object.keys(SCHEDULE).forEach(g=>SCHED[g]=SCHEDULE[g].days);
+const RESULT_LAG_MIN=30; // give each draw 30 minutes before counting it as waiting
+/* Belize clock, whatever time zone the viewer is in */
+function bzNow(){const d=new Date(Date.now()-6*3600e3);return{iso:d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1,2)+'-'+pad(d.getUTCDate(),2),dow:d.getUTCDay(),min:d.getUTCHours()*60+d.getUTCMinutes()}}
+const isoDow=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(Date.UTC(y,m-1,d)).getUTCDay()};
+const isoAdd=(iso,n)=>{const [y,m,d]=iso.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1,2)+'-'+pad(t.getUTCDate(),2)};
+const atMin=g=>{const [h,m]=SCHEDULE[g].at.split(':').map(Number);return h*60+m};
+const fmtTime=g=>{const [h,m]=SCHEDULE[g].at.split(':').map(Number);return ((h%12)||12)+':'+pad(m,2)+' '+(h<12?'am':'pm')};
+const isDrawDay=(g,iso)=>SCHED[g].includes(isoDow(iso));
+/* has this game's draw on this date happened (plus the 30-minute allowance)? */
+function drawDone(g,iso){const n=bzNow();if(iso<n.iso)return true;if(iso>n.iso)return false;return n.min>=atMin(g)+RESULT_LAG_MIN}
+/* most recent scheduled draw date that has already happened */
+function lastDrawDate(g){let iso=bzNow().iso;for(let i=0;i<8;i++){if(isDrawDay(g,iso)&&drawDone(g,iso))return iso;iso=isoAdd(iso,-1)}return bzNow().iso}
+/* next scheduled draw date that hasn't happened yet */
+function nextDrawDate(g){const n=bzNow();let iso=n.iso;for(let i=0;i<8;i++){if(isDrawDay(g,iso)&&(iso>n.iso||n.min<atMin(g)))return iso;iso=isoAdd(iso,1)}return n.iso}
 const NUDGE_DAYS=14;
+let pendingOdd=null;
 const ENCOURAGE=['Sharp eye! Your board is up to date.',"That's a winner's habit: every draw counted.",'Nice work! You stay one step ahead.','Every number tracked. That\'s how the pros do it.','Your board is fresh and ready.'];
 const real=list=>list.filter(d=>!d.nodraw);
 const SPOTS=['1st','2nd','3rd'];
@@ -56,7 +79,7 @@ const seg=$('gameSeg');
 const BALL={boledo:'00',lottery:'1st',fantasy5:'5',pick3:'3'};
 ORDER.forEach(g=>{const b=document.createElement('button');b.type='button';b.dataset.g=g;
   b.innerHTML='<span class="tile gball" data-game="'+g+'"><span>'+BALL[g]+'</span></span><span class="gtxt"><b>'+esc(GAMES[g].label).replace(/ (\d)$/,'&nbsp;$1')+'</b><small id="gl-'+g+'">&nbsp;</small></span>';
-  b.onclick=()=>{state.game=g;savePrefs();setup();render()};seg.appendChild(b)});
+  b.onclick=()=>{state.game=g;savePrefs();setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render()};seg.appendChild(b)});
 function setup(){
   const G=GAMES[state.game];
   document.body.dataset.game=state.game;
@@ -69,6 +92,8 @@ function setup(){
   $('quickLabel').textContent=G.label+' numbers';
   $('addHint').textContent=G.hint;
   $('addBall').dataset.game=state.game;$('addBallTxt').textContent=BALL[state.game];$('addGameName').textContent=G.label;
+  $('addSched').textContent='Drawn '+SCHEDULE[state.game].text+' (Belize time)';
+  $('dDate').max=bzNow().iso;pendingOdd=null;checkDate();
   renderSlots();
 }
 
@@ -149,7 +174,7 @@ function render(){
     const animKey=state.game+'|'+d.id+'|'+(state.sample?'s':'r');
     const roll=animKey!==lastAnim;lastAnim=animKey;
     last.classList.toggle('roll',roll);
-    $('lastDate').textContent=fmtDay(d.date);
+    $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
     let bi=0;
     if(state.game==='lottery'){
       d.nums.forEach((n,i)=>{const row=document.createElement('div');row.className='prizerow';
@@ -162,6 +187,9 @@ function render(){
       if(d.letter){const l=document.createElement('div');l.className='letter';l.textContent=d.letter;l.title='Free letter';l.style.setProperty('--i',bi++);last.appendChild(l)}
     }
   }else{last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>'}
+  { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
+    $('drawInfo').innerHTML='<b>Next draw:</b> '+(tonight?'today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' at '+fmtTime(state.game)+
+      '<span>'+esc(G.label)+' is drawn '+esc(S.text)+', Belize time.'+(S.extra?' '+esc(S.extra):'')+'</span>'; }
 
   const say=$('say');
   if(!state.loaded&&!state.sample){say.textContent='Loading results…'}
@@ -255,10 +283,9 @@ async function undoSkip(d){
 function isoOf(dt){return dt.getFullYear()+'-'+pad(dt.getMonth()+1,2)+'-'+pad(dt.getDate(),2)}
 function missingDraws(){
   const have=new Set((state.draws||[]).map(d=>d.id));
-  const now=new Date(),out=[];
-  const lastDay=new Date(now);if(now.getHours()<21)lastDay.setDate(now.getDate()-1); // tonight's draws count after 9 pm
-  for(let i=0;i<NUDGE_DAYS;i++){const dt=new Date(lastDay);dt.setDate(lastDay.getDate()-i);const iso=isoOf(dt);
-    ORDER.forEach(g=>{if(SCHED[g].includes(dt.getDay())&&!have.has(g+'-'+iso))out.push({game:g,date:iso})})}
+  const out=[],today=bzNow().iso;
+  for(let i=0;i<NUDGE_DAYS;i++){const iso=isoAdd(today,-i);
+    ORDER.forEach(g=>{if(isDrawDay(g,iso)&&drawDone(g,iso)&&!have.has(g+'-'+iso))out.push({game:g,date:iso})})}
   return out; // newest first
 }
 const recentSkips={}; // id -> {game,date}: just-skipped rows that offer Undo for a few seconds
@@ -298,10 +325,10 @@ function renderNudge(){
     li.append(add,no);list.appendChild(li)});
   $('nudgeMore').textContent=miss.length>3?'+ '+(miss.length-3)+' more from the last two weeks':'';
 }
-function nextMissingDate(g){const m=missingDraws().find(x=>x.game===g);return m?m.date:todayISO()}
+function nextMissingDate(g){const m=missingDraws().find(x=>x.game===g);return m?m.date:lastDrawDate(g)}
 function openAdd(g,date){
   if(state.game!==g){state.game=g;savePrefs();setup();render()}
-  const fold=$('addFold');fold.open=true;$('dDate').value=date;$('addMsg').textContent='';
+  const fold=$('addFold');fold.open=true;$('dDate').value=date;$('addMsg').textContent='';pendingOdd=null;checkDate();
   fold.scrollIntoView({behavior:'smooth',block:'center'});
   setTimeout(()=>{try{$('quickNums').focus({preventScroll:true})}catch(e){$('quickNums').focus()}},350);
 }
@@ -326,11 +353,23 @@ $('quickNums').addEventListener('input',renderSlots);
 /* ---------- adding a result: one box ---------- */
 function makeDraw(game,date,tokens){const o=GAMES[game].make(tokens);return o?Object.assign({id:game+'-'+date,game,date},o):null}
 function flash(text,ok){const m=$('addMsg');m.textContent=text;m.className='msg '+(ok?'ok':'err')}
-$('addFold').addEventListener('toggle',()=>{if($('addFold').open&&!$('quickNums').value)$('dDate').value=nextMissingDate(state.game)});
-$('dDate').value=todayISO();
+$('addFold').addEventListener('toggle',()=>{if($('addFold').open&&!$('quickNums').value){$('dDate').value=nextMissingDate(state.game);$('dDate').max=bzNow().iso;checkDate()}});
+/* warn about dates that aren't draw days, and block draws that haven't happened yet */
+function checkDate(){
+  const el=$('dateHint');if(!el)return;const g=state.game,date=$('dDate').value,G=GAMES[g];
+  el.className='hint';el.textContent='';
+  if(!date)return;
+  if(!drawDone(g,date)&&date>=bzNow().iso){el.className='hint warn';el.textContent=isDrawDay(g,date)?'This '+G.label+' draw is at '+fmtTime(g)+' Belize time and hasn\'t happened yet.':'That date is in the future.';return}
+  if(!isDrawDay(g,date)){el.className='hint warn';el.textContent=G.label+' isn\'t normally drawn on '+['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][isoDow(date)]+'s. It\'s drawn '+SCHEDULE[g].text+'. Check the date.'}
+}
+$('dDate').addEventListener('input',()=>{pendingOdd=null;checkDate()});
+$('dDate').value=lastDrawDate(state.game);checkDate();
 $('addForm').addEventListener('submit',async e=>{e.preventDefault();
   if(state.sample){flash('Go back to real results first, then add a result.',false);return}
   const date=$('dDate').value;
+  if(date&&!drawDone(state.game,date)&&date>=bzNow().iso){flash(isDrawDay(state.game,date)?'That draw hasn\'t happened yet. Results come in after '+fmtTime(state.game)+' Belize time.':'That date is in the future. Pick the date of the draw.',false);return}
+  if(date&&!isDrawDay(state.game,date)&&pendingOdd!==state.game+date){pendingOdd=state.game+date;
+    flash(GAMES[state.game].label+' is normally drawn '+SCHEDULE[state.game].text+'. If this was a moved or special draw, tap Add again to save it.',false);return}
   const tokens=$('quickNums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
   const d=date&&makeDraw(state.game,date,tokens);
   if(!d){flash(ERR[state.game],false);return}
@@ -339,7 +378,7 @@ $('addForm').addEventListener('submit',async e=>{e.preventDefault();
     flash((replacing?'Updated ':'Added ')+GAMES[state.game].label+' for '+fmtDate(date)+': '+GAMES[state.game].show(d),true);
     $('quickNums').value='';renderSlots();
     toast('<b>Board Updated · <span class="nw">'+esc(GAMES[state.game].show(d))+'</span> Added</b><br>'+esc(ENCOURAGE[Math.floor(Math.random()*ENCOURAGE.length)]),true);
-    const nx=missingDraws().find(x=>x.game===state.game);if(nx)$('dDate').value=nx.date}
+    pendingOdd=null;const nx=missingDraws().find(x=>x.game===state.game);if(nx)$('dDate').value=nx.date;checkDate()}
   catch(err){flash("That result didn't save. "+(err&&err.message?err.message:'Try again.'),false)}
 });
 
