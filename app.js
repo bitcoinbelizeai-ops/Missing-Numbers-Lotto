@@ -17,10 +17,10 @@ const GAMES={
     ph:'41',hint:'Type the winning number, like 41.',
     keys:d=>[pad(d.nums[0],2)],show:d=>pad(d.nums[0],2),
     make(t){const n=digitsOf(t);if(!n.length||n[0].length>2)return null;return{nums:[pad(n[0],2)]}}},
-  lottery:{label:'Sunday Lottery',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',
+  lottery:{label:'Sunday Jackpot',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',
     ph:'1652 0188 7876',hint:'Type the 1st, 2nd and 3rd prize numbers with spaces between, like 1652 0188 7876.',
-    note:'For the Sunday Lottery, we count the last two digits of the 1st, 2nd and 3rd prize.',
-    keys:d=>d.nums.map(n=>pad(n,4).slice(-2)),show:d=>d.nums.map(n=>pad(n,4)).join(' · '),
+    note:'For the Sunday Jackpot, the board counts the last two digits of the 1st prize, the 2-digit number that wins. The 2nd and 3rd prizes are shown but not counted.',
+    keys:d=>[pad(d.nums[0],4).slice(-2)],show:d=>d.nums.map(n=>pad(n,4)).join(' · '),
     make(t){const n=digitsOf(t).filter(x=>x.length<=4);if(!n.length)return null;return{nums:n.slice(0,3).map(x=>pad(x,4))}}},
   fantasy5:{label:'Fantasy 5',mode:'board',board:range(1,39),wins:['5','10','15','all'],def:'10',
     ph:'12 18 25 27 33 Y',hint:'Type the five numbers with spaces between, then the letter if you have it, like 12 18 25 27 33 Y.',
@@ -36,7 +36,7 @@ const GAMES={
 const ORDER=['boledo','lottery','fantasy5','pick3'];
 /* draw days (0=Sun), worked out from past results; used to spot missing draws */
 /* Official draw days (0=Sun) and times, Belize time (UTC-6, no daylight saving).
-   Boledo & Sunday Lottery: Belize Government Lotteries Ltd. Fantasy 5 & Pick 3: the game operator. */
+   Boledo & Sunday Jackpot: Belize Government Lotteries Ltd. Fantasy 5 & Pick 3: the game operator. */
 const SCHEDULE={
   boledo:{days:[1,2,3,4,5],at:'21:10',text:'Monday to Friday at 9:10 pm'},
   pick3:{days:[1,2,3,4,5],at:'20:30',text:'Monday to Friday at 8:30 pm'},
@@ -111,6 +111,53 @@ function grid(items,extra){const set=document.createElement('div');set.className
   const g=document.createElement('div');g.className='tiles'+(extra?' '+extra:'');items.forEach(el=>g.appendChild(el));
   const p=document.createElement('p');p.className='balldetail';p.hidden=true;p.setAttribute('aria-live','polite');
   set.append(g,p);return set}
+/* ---------- drama for Missing and Hot Numbers ----------
+   A wave that always lasts about 0.8 s however many balls there are, then a
+   spotlight on the leader (longest wait / hottest), with the numbers counting up.
+   Plays once per game or look-back change, when the section scrolls into view. */
+const WAVE_S=.8;
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dramaState={tiles:{key:null,played:false},hot:{key:null,played:false}};
+let dramaIO=null;
+function countUp(el,ms,delay){
+  const m=/^(\d+)(.*)$/.exec(el.textContent);if(!m)return;
+  const to=+m[1],rest=m[2];if(to<2){return}
+  el.textContent='0'+rest;
+  const t0=performance.now()+delay;
+  const step=now=>{const p=Math.min(1,Math.max(0,(now-t0)/ms)),e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(to*e)+rest;if(p<1)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+function playDrama(id){
+  const box=$(id),st=dramaState[id];if(!box||st.played)return;
+  st.played=true;box.classList.remove('dpending');box.classList.add('dplay');
+  const hot=id==='hot';
+  box.querySelectorAll('.tiles').forEach(g=>{
+    const balls=[...g.querySelectorAll('.bwrap')],n=balls.length;
+    balls.forEach((b,i)=>{
+      if(i===0){b.classList.add(hot?'dstar-hot':'dstar');b.style.setProperty('--d',(WAVE_S+.15)+'s')}
+      else b.style.setProperty('--d',(n>2?((i-1)/(n-2))*WAVE_S:0).toFixed(3)+'s');
+      const num=b.querySelector('.tag b');
+      if(num)countUp(num,i===0?1100:700,i===0?(WAVE_S+.15)*1000:(parseFloat(b.style.getPropertyValue('--d'))||0)*1000);
+    });
+  });
+  if(!hot){const sb=$('say').querySelector('b');if(sb)countUp(sb,WAVE_S*1000+300,0)}
+  setTimeout(()=>box.classList.remove('dplay'),(WAVE_S+3.2)*1000);
+}
+function drama(key){
+  if(reduceMotion())return;
+  ['tiles','hot'].forEach(id=>{
+    const st=dramaState[id],box=$(id);if(!box)return;
+    if(st.key!==key){st.key=key;st.played=false}
+    if(st.played)return;           // already shown for this game and look-back
+    if(!box.querySelector('.bwrap')){st.played=true;return}
+    box.classList.add('dpending');
+    if(!('IntersectionObserver' in window)){playDrama(id);return}
+    if(!dramaIO)dramaIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){dramaIO.unobserve(e.target);playDrama(e.target.id)}}),{threshold:0,rootMargin:'0px 0px -15% 0px'});
+    dramaIO.unobserve(box);dramaIO.observe(box);
+  });
+}
+
 /* "More info": fine print stays folded until the person asks for it */
 function setNote(main,extra){
   $('note').textContent=main;$('noteFine').textContent=extra;
@@ -192,9 +239,9 @@ function render(){
     if(state.game==='lottery'){
       d.nums.forEach((n,i)=>{const row=document.createElement('div');row.className='prizerow';
         const lab=document.createElement('span');lab.className='prizelab';lab.textContent=['1st','2nd','3rd'][i]+' prize';row.appendChild(lab);
-        pad(n,4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('xs');if(j>=2)t.classList.add('counted');t.style.setProperty('--i',bi++);row.appendChild(t)});
+        pad(n,4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('xs');if(i===0&&j>=2)t.classList.add('counted');t.style.setProperty('--i',bi++);row.appendChild(t)});
         last.appendChild(row)});
-      const ln=document.createElement('p');ln.className='lnote';ln.textContent='The gold-ringed balls are the last two digits, the ones the board counts.';last.appendChild(ln);
+      const ln=document.createElement('p');ln.className='lnote';ln.textContent='The gold-ringed balls are the last two digits of the 1st prize, the number the board counts.';last.appendChild(ln);
     }else{
       (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach(k=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);last.appendChild(t)});
       if(d.letter){const l=document.createElement('div');l.className='letter';l.textContent=d.letter;l.title='Free letter';l.style.setProperty('--i',bi++);last.appendChild(l)}
@@ -245,6 +292,7 @@ function render(){
       setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
     }
     shadeColumns();
+    drama(state.game+'|'+W+'|'+(state.sample?'s':'r')+'|'+win.length+'|'+win[win.length-1].id);
   }
 
   const h=$('hist');h.innerHTML='';
