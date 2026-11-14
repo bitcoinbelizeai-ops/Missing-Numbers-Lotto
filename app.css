@@ -300,6 +300,10 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 .appbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:15px;color:var(--muted);letter-spacing:.02em}
 .brand img{width:28px;height:28px;border-radius:50%}
-.install{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px}
+.install{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:linear-gradient(180deg,rgba(254,194,7,.2),rgba(254,194,7,.08));border:1px solid var(--gold);border-radius:12px;padding:10px 12px;font-size:15px;font-weight:600;color:var(--cream);box-shadow:0 0 14px rgba(254,194,7,.25)}
+.install #installText{flex:1 1 180px;min-width:0}
+.install-ic{font-size:22px}
+.install-x{background:none;border:0;color:var(--cream);font-size:24px;line-height:1;padding:2px 6px;cursor:pointer;opacity:.75}
+.install-x:hover{opacity:1}
 .backup label.btn{display:inline-flex;align-items:center}
 .backup input[type=file]{position:absolute;width:1px;height:1px;opacity:0}

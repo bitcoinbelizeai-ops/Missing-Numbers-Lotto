@@ -456,13 +456,20 @@ $('restoreFile').onchange=async e=>{
 
 /* install */
 const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const ua=navigator.userAgent;
+const ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const android=/android/i.test(ua);
 let deferred=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;if(standalone)return;
-  $('installBar').hidden=false;$('installBtn').hidden=false;$('installText').textContent='Put this app on your home screen.'});
+function tipHidden(){try{return localStorage.getItem('installTipHidden')==='1'}catch(e){return false}}
+function showTip(text,withBtn){if(standalone||tipHidden())return;
+  $('installText').textContent=text;$('installBtn').hidden=!withBtn;$('installBar').hidden=false}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;showTip('Put this app on your home screen.',true)});
 $('installBtn').onclick=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;$('installBar').hidden=true};
+$('installClose').onclick=()=>{$('installBar').hidden=true;try{localStorage.setItem('installTipHidden','1')}catch(e){}};
 window.addEventListener('appinstalled',()=>{$('installBar').hidden=true});
-const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-if(ios&&!standalone){$('installBar').hidden=false;$('installText').textContent='To install: tap the Share button, then "Add to Home Screen".'}
+if(ios)showTip('To install: tap the Share button (the square with the arrow), then "Add to Home Screen".',false);
+else if(android)showTip('To install: tap the browser menu (⋮), then "Add to Home screen" or "Install app".',false);
+else showTip('To install: open your browser menu and choose "Install app" or "Add to Home screen".',false);
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
