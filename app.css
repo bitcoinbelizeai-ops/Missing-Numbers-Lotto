@@ -287,12 +287,27 @@ tr.skipped td.num{font-family:var(--f-body);font-weight:500;font-size:14px;lette
 .disclaimer{display:block;margin-top:6px;font-size:11px;opacity:.85}
 
 /* draw schedule notes */
-.drawinfo{margin:0;padding-top:10px;border-top:1px dashed var(--line);font-size:15px;color:var(--cream);display:flex;flex-direction:column;gap:3px}
 .drawinfo b{font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
-.drawinfo span{font-size:13px;color:var(--muted)}
-.addgame-txt .sched{margin-top:4px;text-transform:none;letter-spacing:.02em;font:500 13px var(--f-body);color:var(--cream);opacity:.9}
 .hint.warn{color:#ffd27a;font-weight:600}
 .hint.warn::before{content:"⚠ "}
+
+/* "More info" fine print */
+.drawinfo{margin:0;padding-top:10px;border-top:1px dashed var(--line);font-size:15px;color:var(--cream);display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.drawinfo p{margin:0}
+.notebar,.morebar{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap}
+.morebar{justify-content:flex-end}
+.notebar .note{flex:1 1 200px;min-width:0}
+.more{flex:none;display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 7px;font:600 12px var(--f-body);letter-spacing:.02em;color:var(--gold);cursor:pointer;transition:border-color .15s,box-shadow .15s,background-color .15s}
+.more::before{content:"i";display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1.5px solid currentColor;font:700 10px/1 Georgia,serif;font-style:italic}
+.more:hover,.more:focus-visible{border-color:var(--gold);background:rgba(254,194,7,.1);box-shadow:0 0 8px rgba(254,194,7,.35)}
+.more[aria-expanded="true"]{background:rgba(254,194,7,.14);border-color:var(--gold)}
+.fine{margin:0;font-size:13px;line-height:1.45;color:var(--muted);background:rgba(0,0,0,.18);border-left:2px solid var(--gold);border-radius:0 8px 8px 0;padding:8px 12px}
+footer .more{margin:8px auto 0}
+footer{display:flex;flex-direction:column;align-items:center}
+footer .fine{text-align:left;margin-top:8px}
+@media (prefers-reduced-motion:no-preference){.fine:not([hidden]){animation:finein .2s ease-out}@keyframes finein{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}}
+.notebar .hint{flex:1 1 200px;min-width:0}
+#dateHint:empty,#addMsg:empty{display:none}
 
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}

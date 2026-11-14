@@ -51,7 +51,8 @@
       <span class="when" id="lastDate"></span>
     </div>
     <div class="lastdraw" id="lastDraw"></div>
-    <p class="drawinfo" id="drawInfo"></p>
+    <div class="drawinfo"><p id="drawNext"></p><button type="button" class="more" data-more="drawFine" aria-expanded="false" aria-controls="drawFine">More info</button></div>
+    <p class="fine" id="drawFine" hidden></p>
   </section>
 
   <div class="chips-row">
@@ -66,7 +67,8 @@
     </div>
     <p class="say" id="say">Loading results…</p>
     <div id="tiles" class="answer-body"></div>
-    <p class="note" id="note"></p>
+    <div class="notebar"><p class="note" id="note"></p><button type="button" class="more" data-more="noteFine" aria-expanded="false" aria-controls="noteFine">More info</button></div>
+    <p class="fine" id="noteFine" hidden></p>
   </section>
 
   <section class="panel" aria-labelledby="hotTitle">
@@ -82,7 +84,7 @@
     <div class="fold">
       <div class="addgame" id="addGame">
         <span class="tile gball" id="addBall"><span id="addBallTxt">00</span></span>
-        <div class="addgame-txt"><small>Adding winning numbers for</small><b id="addGameName">Boledo</b><small class="sched" id="addSched"></small></div>
+        <div class="addgame-txt"><small>Adding winning numbers for</small><b id="addGameName">Boledo</b></div>
       </div>
       <div class="slots" id="slots" aria-hidden="true"></div>
       <form id="addForm" class="quick">
@@ -91,7 +93,8 @@
         <button class="btn" type="submit">Add</button>
       </form>
       <div class="hint" id="dateHint" aria-live="polite"></div>
-      <div class="hint" id="addHint"></div>
+      <div class="notebar"><div class="hint" id="addHint"></div><button type="button" class="more" data-more="addFine" aria-expanded="false" aria-controls="addFine">More info</button></div>
+      <div class="fine" id="addFine" hidden><span id="addSched"></span> Adding the same date again replaces it.</div>
       <div class="msg" id="addMsg"></div>
       
     </div>
@@ -120,7 +123,7 @@
     </div>
   </details>
 
-  <footer>Every draw is random. A number that hasn't played for a while is not more likely to play next.<span class="disclaimer">Draw days and times come from Belize Government Lotteries Ltd. and the game operators and can change. Independent tracker, not affiliated with Belize Government Lotteries Ltd.</span></footer>
+  <footer><span>Every draw is random. A number that hasn't played for a while is not more likely to play next.</span><button type="button" class="more" data-label="About this tracker" data-more="footFine" aria-expanded="false" aria-controls="footFine">About this tracker</button><span class="disclaimer fine" id="footFine" hidden>Draw days &amp; times come from Belize Government Lotteries Ltd. &amp; Game Operators. This Independent tracker is not affiliated with Belize Government Lotteries Ltd. or Game Operators.</span></footer>
 </div>
 <div class="toast" id="toast" hidden></div>
 <script src="app.js"></script>

@@ -92,7 +92,7 @@ function setup(){
   $('quickLabel').textContent=G.label+' numbers';
   $('addHint').textContent=G.hint;
   $('addBall').dataset.game=state.game;$('addBallTxt').textContent=BALL[state.game];$('addGameName').textContent=G.label;
-  $('addSched').textContent='Drawn '+SCHEDULE[state.game].text+' (Belize time)';
+  $('addSched').textContent=G.label+' is drawn '+SCHEDULE[state.game].text+' (Belize time).';
   $('dDate').max=bzNow().iso;pendingOdd=null;checkDate();
   renderSlots();
 }
@@ -111,6 +111,19 @@ function grid(items,extra){const set=document.createElement('div');set.className
   const g=document.createElement('div');g.className='tiles'+(extra?' '+extra:'');items.forEach(el=>g.appendChild(el));
   const p=document.createElement('p');p.className='balldetail';p.hidden=true;p.setAttribute('aria-live','polite');
   set.append(g,p);return set}
+/* "More info": fine print stays folded until the person asks for it */
+function setNote(main,extra){
+  $('note').textContent=main;$('noteFine').textContent=extra;
+  const b=document.querySelector('[data-more="noteFine"]');b.hidden=!extra;if(!extra)$('noteFine').hidden=true;
+  if(extra&&b.getAttribute('aria-expanded')==='true')$('noteFine').hidden=false;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button.more');if(!b)return;
+  const t=$(b.dataset.more),open=b.getAttribute('aria-expanded')!=='true';
+  t.hidden=!open;b.setAttribute('aria-expanded',open);
+  const base=b.dataset.label||'More info';b.textContent=open?(base==='More info'?'Less info':'Close'):base;
+});
+
 /* per-key facts for the tap note: last date, draws since, times in the chosen draws */
 function factsFor(allSeq,dates,n){
   const m={},L=allSeq.length;
@@ -164,7 +177,7 @@ function render(){
   const win=W==='all'?all:all.slice(-Number(W));
   const body=$('tiles'),hot=$('hot'),last=$('lastDraw');
   body.innerHTML='';hot.innerHTML='';last.innerHTML='';
-  $('note').textContent='';$('hotSay').textContent='';$('lastDate').textContent='';
+  setNote('','');$('hotSay').textContent='';$('lastDate').textContent='';
 
   /* last draw */
   if(all.length){
@@ -188,8 +201,8 @@ function render(){
     }
   }else{last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>'}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
-    $('drawInfo').innerHTML='<b>Next draw:</b> '+(tonight?'today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' at '+fmtTime(state.game)+
-      '<span>'+esc(G.label)+' is drawn '+esc(S.text)+', Belize time.'+(S.extra?' '+esc(S.extra):'')+'</span>'; }
+    $('drawNext').innerHTML='<b>Next draw:</b> '+(tonight?'today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' at '+fmtTime(state.game);
+    $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:''); }
 
   const say=$('say');
   if(!state.loaded&&!state.sample){say.textContent='Loading results…'}
@@ -205,7 +218,7 @@ function render(){
         :missing.length?'These <b>'+missing.length+'</b> numbers have <em>not</em> played in '+span+'. Longest wait first. Under each ball: how many draws since it last played. Tap a ball for more.'
         :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has played in '+span+'.';
       if(missing.length)body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · ')))));
-      $('note').textContent=dates+(G.note?' '+G.note:'');
+      setNote(dates,G.note||'');
       const hl=hotList(winSeq,G.board,state.game==='fantasy5'?6:8);
       $('hotSay').innerHTML=hl.length?'These numbers played the most in '+span+'. Under each ball: how many times.':'No number has played more than once in '+span+'. Try more draws.';
       if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '))),'hot'));
@@ -229,7 +242,7 @@ function render(){
       say.innerHTML=total?'These digits have <em>not</em> played in each spot in '+span+'. Longest wait first. Under each ball: how many draws since it last played. Tap a ball for more.'
         :'Every digit from 0 to 9 has played in every spot in '+span+'.';
       $('hotSay').innerHTML=anyHot?'The digits that played the most in each spot in '+span+'.':'No digit has played more than once in any spot. Try more draws.';
-      $('note').textContent=dates+' Each row is one spot in the Pick 3 number, read left to right.';
+      setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
     }
     shadeColumns();
   }
