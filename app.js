@@ -9,6 +9,8 @@ const fmtDay=s=>{try{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-
 const todayISO=()=>{const t=new Date();return t.getFullYear()+'-'+pad(t.getMonth()+1,2)+'-'+pad(t.getDate(),2)};
 const range=(a,b)=>{const r=[];for(let i=a;i<=b;i++)r.push(pad(i,2));return r};
 const digitsOf=tokens=>tokens.map(t=>t.replace(/\D/g,'')).filter(Boolean);
+// Jackpot: the three prizes may be typed with spaces or dots, or as 12 digits in a row (iPhone number pad has no space)
+const jackDigits=tokens=>{const d=digitsOf(tokens);if(d.length===1&&d[0].length===12)return d[0].match(/.{4}/g);return d.filter(x=>x.length<=4)};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- the four games ---------- */
@@ -18,10 +20,10 @@ const GAMES={
     keys:d=>[pad(d.nums[0],2)],show:d=>pad(d.nums[0],2),
     make(t){const n=digitsOf(t);if(!n.length||n[0].length>2)return null;return{nums:[pad(n[0],2)]}}},
   lottery:{label:'Sunday Jackpot',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',
-    ph:'1652 0188 7876',hint:'Type the 1st, 2nd and 3rd prize numbers with spaces between, like 1652 0188 7876.',
+    ph:'1652 0188 7876',hint:'Type the 1st, 2nd and 3rd prize, like 1652 0188 7876. On a phone you can type all 12 digits in a row (165201887876) or use a dot between them.',
     note:'For the Sunday Jackpot, the board counts the last two digits of the 1st prize, the 2-digit number that wins. The 2nd and 3rd prizes are shown but not counted.',
     keys:d=>[pad(d.nums[0],4).slice(-2)],show:d=>d.nums.map(n=>pad(n,4)).join(' · '),
-    make(t){const n=digitsOf(t).filter(x=>x.length<=4);if(!n.length)return null;return{nums:n.slice(0,3).map(x=>pad(x,4))}}},
+    make(t){const n=jackDigits(t);if(!n.length)return null;return{nums:n.slice(0,3).map(x=>pad(x,4))}}},
   fantasy5:{label:'Fantasy 5',mode:'board',board:range(1,39),wins:['5','10','15','all'],def:'10',
     ph:'12 18 25 27 33 Y',hint:'Type the five numbers with spaces between, then the letter if you have it, like 12 18 25 27 33 Y.',
     keys:d=>d.nums.map(n=>pad(n,2)),show:d=>d.nums.map(n=>pad(n,2)).join(' ')+(d.letter?' · '+d.letter:''),
@@ -90,7 +92,7 @@ function setup(){
     b.setAttribute('aria-label',w==='all'?'All draws':'Last '+w+' draws');
     b.onclick=()=>{state.wins[state.game]=w;savePrefs();render()};box.appendChild(b)});
   $('quickNums').placeholder=G.ph;
-  $('quickNums').inputMode=state.game==='fantasy5'?'text':'numeric';
+  $('quickNums').inputMode=state.game==='fantasy5'?'text':state.game==='lottery'?'decimal':'numeric';
   $('quickLabel').textContent=G.label+' numbers';
   $('addHint').textContent=G.hint;
   $('addBall').dataset.game=state.game;$('addBallTxt').textContent=BALL[state.game];$('addGameName').textContent=G.label;
@@ -759,7 +761,7 @@ function renderSlots(){
     const l=document.createElement('div');l.className='letter sm'+((toks.find(x=>/^[A-Za-z]$/.test(x)))?'':' blank');l.textContent=(toks.find(x=>/^[A-Za-z]$/.test(x))||'?').toUpperCase();box.appendChild(l)}
   else{['1st','2nd','3rd'].forEach((lab,i)=>{const row=document.createElement('div');row.className='prizerow';
     const sp=document.createElement('span');sp.className='prizelab';sp.textContent=lab+' prize';row.appendChild(sp);
-    const d=(dig[i]||'').slice(0,4).split('');for(let j=0;j<4;j++)row.appendChild(slot(d[j]||'',j>=2?'counted':''));box.appendChild(row)})}
+    const jd=(dig.length===1&&dig[0].length>4)?(dig[0].match(/.{1,4}/g)||[]):dig;const d=(jd[i]||'').slice(0,4).split('');for(let j=0;j<4;j++)row.appendChild(slot(d[j]||'',j>=2?'counted':''));box.appendChild(row)})}
 }
 $('quickNums').addEventListener('input',renderSlots);
 

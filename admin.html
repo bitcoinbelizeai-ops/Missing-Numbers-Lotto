@@ -118,7 +118,7 @@ const $=id=>document.getElementById(id);
 const pad=(n,w)=>String(n).padStart(w,'0');
 const LABEL={boledo:'Boledo',lottery:'Sunday Jackpot',fantasy5:'Fantasy 5',pick3:'Pick 3'};
 const SCHED={boledo:{days:[1,2,3,4,5],h:21,m:10,text:'Mon–Fri 9:10 pm'},pick3:{days:[1,2,3,4,5],h:20,m:30,text:'Mon–Fri 8:30 pm'},fantasy5:{days:[2,4,6],h:20,m:0,text:'Tue, Thu, Sat 8:00 pm'},lottery:{days:[0],h:10,m:0,text:'Sunday 10:00 am'}};
-const PH={boledo:['Winning number','41'],lottery:['1st, 2nd and 3rd prize','1652 0188 7876'],fantasy5:['5 numbers and the letter','03 05 11 20 27 Q'],pick3:['3 digits','390']};
+const PH={boledo:['Winning number','41'],lottery:['1st, 2nd and 3rd prize (12 digits in a row is fine)','165201887876'],fantasy5:['5 numbers and the letter','03 05 11 20 27 Q'],pick3:['3 digits','390']};
 let game='boledo',token='',current=null,pending=null;
 const getTok=()=>{try{return localStorage.getItem(KEY)||''}catch(e){return ''}};
 const setTok=t=>{try{t?localStorage.setItem(KEY,t):localStorage.removeItem(KEY);return true}catch(e){return false}};
@@ -133,7 +133,7 @@ const digits=t=>t.map(x=>x.replace(/\D/g,'')).filter(Boolean);
 function make(g,t){
   const n=digits(t);
   if(g==='boledo'){if(!n.length||n[0].length>2)return null;return{nums:[pad(n[0],2)]}}
-  if(g==='lottery'){const v=n.filter(x=>x.length<=4);if(v.length<3)return null;return{nums:v.slice(0,3).map(x=>pad(x,4))}}
+  if(g==='lottery'){const v=(n.length===1&&n[0].length===12)?n[0].match(/.{4}/g):n.filter(x=>x.length<=4);if(v.length<3)return null;return{nums:v.slice(0,3).map(x=>pad(x,4))}}
   if(g==='fantasy5'){const letter=(t.find(x=>/^[A-Za-z]$/.test(x))||'').toUpperCase();const v=[...new Set(n.map(Number))].filter(x=>x>=1&&x<=39);
     if(v.length!==5||!letter)return null;return{nums:v.sort((a,b)=>a-b).map(x=>pad(x,2)),letter}}
   let v=n;if(v.length===1&&v[0].length===3)v=v[0].split('');if(v.length<3||v.slice(0,3).some(x=>x.length!==1))return null;return{nums:v.slice(0,3)}
@@ -144,11 +144,11 @@ function preview(){
   if(game==='boledo')box.appendChild(ball(n[0]&&n[0].slice(0,2)));
   else if(game==='pick3'){const d=(n.length===1?n[0]:n.map(x=>x[0]).join('')).slice(0,3).split('');for(let i=0;i<3;i++)box.appendChild(ball(d[i]))}
   else if(game==='fantasy5'){for(let i=0;i<5;i++)box.appendChild(ball(n[i]&&n[i].slice(0,2)));const l=document.createElement('span');l.className='letter';l.textContent=(t.find(x=>/^[A-Za-z]$/.test(x))||'?').toUpperCase();box.appendChild(l)}
-  else ['1st','2nd','3rd'].forEach((p,i)=>{const r=document.createElement('div');r.className='prize';r.innerHTML='<span>'+p+'</span>';(n[i]||'').slice(0,4).padEnd(4,' ').split('').forEach(c=>r.appendChild(ball(c.trim())));box.appendChild(r)});
+  else{const jd=(n.length===1&&n[0].length>4)?(n[0].match(/.{1,4}/g)||[]):n;['1st','2nd','3rd'].forEach((p,i)=>{const r=document.createElement('div');r.className='prize';r.innerHTML='<span>'+p+'</span>';(jd[i]||'').slice(0,4).padEnd(4,' ').split('').forEach(c=>r.appendChild(ball(c.trim())));box.appendChild(r)})}
 }
 function setGame(g){game=g;document.body.dataset.g=g;
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===g));
-  $('numsLbl').textContent=PH[g][0];$('nums').placeholder=PH[g][1];$('nums').inputMode=g==='fantasy5'?'text':'numeric';
+  $('numsLbl').textContent=PH[g][0];$('nums').placeholder=PH[g][1];$('nums').inputMode=g==='fantasy5'?'text':g==='lottery'?'decimal':'numeric';
   $('date').value=lastDraw(g);$('date').max=bz().iso;$('sched').textContent='Drawn '+SCHED[g].text;
   $('nums').value='';$('confirm').classList.remove('show');$('msg').className='msg';preview();}
 
