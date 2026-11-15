@@ -340,12 +340,28 @@ let cdTimer=null;
 function drawEpoch(g,iso){const [y,m,d]=iso.split('-').map(Number);return Date.UTC(y,m-1,d)+(atMin(g)+360)*60000}
 function fmtLeft(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),sec=t%60;
   return d?d+'d '+h+'h '+pad(m,2)+'m':pad(h,2)+':'+pad(m,2)+':'+pad(sec,2)}
+/* the latest scheduled draw whose draw time has passed (Belize time) */
+function lastHeldDate(g){const n=bzNow();let iso=n.iso;for(let i=0;i<8;i++){if(isDrawDay(g,iso)&&(iso<n.iso||n.min>=atMin(g)))return iso;iso=isoAdd(iso,-1)}return null}
+const WAIT_MAX_H=36;let lastPoll=0;
 function tickCountdown(){
   const el=$('cdTime');if(!el){clearInterval(cdTimer);return}
-  const g=state.game,n=bzNow(),chip=$('cdChip');
-  const drawing=isDrawDay(g,n.iso)&&n.min>=atMin(g)&&n.min<atMin(g)+RESULT_LAG_MIN;
-  chip.classList.toggle('live',drawing);
-  if(drawing){$('cdLbl').textContent='Drawing now';el.textContent='results soon';return}
+  const g=state.game,chip=$('cdChip'),when=chip.parentNode.querySelector('.cd-when');
+  if(when&&when.dataset.next===undefined)when.dataset.next=when.textContent;
+  // Hold the "next draw" timer until the result of the draw that just happened is posted
+  const held=lastHeldDate(g),since=held?Date.now()-drawEpoch(g,held):Infinity;
+  const posted=held&&drawsFor().some(d=>d.date===held);
+  const waiting=held&&!posted&&since>=0&&since<WAIT_MAX_H*3600e3&&(state.loaded||state.sample);
+  chip.classList.toggle('live',!!waiting);chip.classList.remove(waiting?'soon':'x');
+  if(waiting){
+    const mins=Math.floor(since/60000);
+    $('cdLbl').textContent=mins<RESULT_LAG_MIN?'Drawing now':'Waiting for results';
+    el.textContent=mins<1?'just drawn':mins<60?mins+' min ago':Math.floor(mins/60)+' h '+pad(mins%60,2)+' m ago';
+    if(when)when.textContent=(held===bzNow().iso?'Today':fmtDay(held).replace(/,? \d{4}$/,''))+' · '+fmtTime(g)+' draw';
+    // the phone app re-checks for new results every 3 minutes while waiting
+    if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>180e3){lastPoll=Date.now();window.bzRefresh()}
+    return;
+  }
+  if(when&&when.dataset.next!==undefined)when.textContent=when.dataset.next;
   const left=drawEpoch(g,nextDrawDate(g))-Date.now();
   if(left<=0){render();return}
   $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
@@ -832,6 +848,9 @@ async function refreshShipped(){
   $('storeNote').textContent=(shipped.updated?'Built-in results updated '+fmt(shipped.updated)+'. ':'')+'Draws you add are saved on this phone.';
   push();
 }
+
+window.bzRefresh=refreshShipped;
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshShipped()});
 
 /* backup / restore */
 $('backupBtn').onclick=()=>{
