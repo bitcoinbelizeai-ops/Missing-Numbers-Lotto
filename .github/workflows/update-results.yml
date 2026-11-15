@@ -3,15 +3,19 @@ name: Update Belize results
 on:
   schedule:
     # Times are UTC. Belize is UTC-6 all year (no daylight saving).
-    # Draws (Belize time): Pick 3 Mon-Fri 8:30 pm, Boledo Mon-Fri 9:10 pm,
-    # Fantasy 5 Tue/Thu/Sat 8:00 pm, Sunday Lottery Sun 10:00 am.
+    # Draws (Belize time): Fantasy 5 Tue/Thu/Sat 8:00 pm, Pick 3 Mon-Fri 8:30 pm,
+    # Boledo Mon-Fri 9:10 pm, Sunday Jackpot Sun 10:00 am.
+    # A draw is only asked for once it is at least READY_HOURS old (set below), and a run
+    # with nothing missing makes no API calls, so the extra runs cost nothing.
     #
-    # Tue-Sun 6:23 am Belize: the previous evening's draws (about 9 hours after,
-    # so magayo has posted them). No Monday morning run: there are no Sunday evening draws.
+    # Same night, 9:40 pm Belize (Mon-Sat): Fantasy 5 (1 h 40 after) and Pick 3 (1 h 10 after).
+    - cron: "40 3 * * 0,2-6"
+    # Same night, 10:25 pm Belize (Mon-Fri): Boledo (1 h 15 after).
+    - cron: "25 4 * * 2-6"
+    # Sunday Jackpot: 11:20 am Belize on Sunday (1 h 20 after); Monday too in case it was postponed.
+    - cron: "20 17 * * 0,1"
+    # Safety net, 6:23 am Belize (Tue-Sun): anything magayo hadn't posted yet the night before.
     - cron: "23 12 * * 0,2-6"
-    # Sun and Mon 2:23 pm Belize: the Sunday Lottery, about 4 hours after the draw.
-    # The Monday run only calls magayo if Sunday's draw is still missing or was postponed.
-    - cron: "23 20 * * 0,1"
   workflow_dispatch:      # adds a "Run workflow" button on the Actions tab
     inputs:
       lookback_days:
@@ -42,6 +46,7 @@ jobs:
           MAX_CALLS_PER_RUN: ${{ vars.MAX_CALLS_PER_RUN }}   # optional, default 10
           API_RESET_DAY: ${{ vars.API_RESET_DAY }}           # optional, default 1
           LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '14' }}
+          READY_HOURS: '1'                                   # ask magayo 1 hour after each draw
         run: python3 scripts/update_results.py
 
       - name: Save the new results
