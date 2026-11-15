@@ -844,15 +844,22 @@ const adapter={
 };
 const app=startApp(adapter);
 
-async function refreshShipped(){
-  try{const r=await fetch('draws.json',{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();
-    if(j&&Array.isArray(j.draws)){shipped=j;store(CACHE,j)}}catch(e){}
+/* results come from draws.json on this site; while a result is awaited we also ask GitHub's raw file
+   service with a cache-buster, which usually shows a new result sooner than the site's 10-minute cache */
+const RAW_URL='https://raw.githubusercontent.com/bitcoinbelizeai-ops/Missing-Numbers-Lotto/main/draws.json';
+async function getJSON(u){const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();if(!j||!Array.isArray(j.draws))throw 0;return j}
+async function refreshShipped(fast){
+  const tries=[getJSON('draws.json')];if(fast)tries.push(getJSON(RAW_URL+'?t='+Date.now()));
+  const got=(await Promise.allSettled(tries)).filter(x=>x.status==='fulfilled').map(x=>x.value);
+  if(got.length){const byId={};got.forEach(j=>j.draws.forEach(d=>{byId[d.id]=d}));
+    const merged={updated:got.map(j=>j.updated||'').sort().pop(),draws:Object.values(byId).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0)};
+    shipped=merged;store(CACHE,merged)}
   $('storeNote').textContent=(shipped.updated?'Built-in results updated '+fmt(shipped.updated)+'. ':'')+'Draws you add are saved on this phone.';
   push();
 }
 
-window.bzRefresh=refreshShipped;
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshShipped()});
+window.bzRefresh=()=>refreshShipped(true);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshShipped(true)});
 
 /* backup / restore */
 $('backupBtn').onclick=()=>{

@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever you change index.html, app.css or app.js.
-const VERSION = 'boledo-v54';
+const VERSION = 'boledo-v55';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'draws.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
@@ -17,6 +17,9 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+
+  // The private admin page always loads fresh and is never stored for offline use.
+  if (url.pathname.endsWith('/admin.html')) return;
 
   // Results file: try the network first so new results show up, fall back to the saved copy.
   if (url.pathname.endsWith('/draws.json')) {

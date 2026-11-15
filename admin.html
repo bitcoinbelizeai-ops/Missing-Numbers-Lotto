@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#094692">
+<title>Results Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&family=Outfit:wght@800&display=swap">
+<style>
+:root{--bg:#042456;--panel:rgba(2,18,48,.55);--line:rgba(233,196,106,.38);--gold:#e9c46a;--gold-hi:#f6e1a3;--gold-deep:#b8902f;--yellow:#fec207;--cream:#f7f0dc;--muted:#c9d5ea;--ok:#3ddc84;--err:#ff7a7a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse 120% 70% at 50% 0%,#1a64c0,#094692 45%,#042456) fixed,var(--bg);color:var(--cream);font:16px/1.5 Barlow,system-ui,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{text-align:center}
+header small{display:block;font:700 12px "Barlow Condensed",sans-serif;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+header h1{margin:2px 0 0;font:800 30px/1.1 Outfit,Barlow,sans-serif;color:#fff}
+header h1 em{font-style:normal;color:var(--yellow)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+h2{margin:0;font:700 15px "Barlow Condensed",sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+input,select{font:600 18px Barlow,sans-serif;color:var(--cream);background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px}
+.btn{font:700 15px "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase;border:0;border-radius:999px;padding:11px 20px;cursor:pointer;color:#2a1d00;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-deep));box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.btn.ghost{background:none;color:var(--gold);border:1px solid var(--gold);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tabs button{font:700 13px "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:10px 4px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.2);color:var(--muted);cursor:pointer}
+.tabs button[aria-pressed="true"]{color:#fff;border-color:var(--gc);background:var(--gc2);box-shadow:0 0 10px var(--gc)}
+.balls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:52px}
+.ball{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 30%,var(--b1),var(--b2) 45%,var(--b3));box-shadow:0 3px 6px rgba(0,0,0,.4)}
+.ball i{font-style:normal;width:62%;aspect-ratio:1;border-radius:50%;background:#fff;display:grid;place-items:center;font:700 15px Barlow,sans-serif;color:#1b1b1b}
+.ball.blank{opacity:.35}
+.letter{width:40px;height:46px;border-radius:8px;border:2px solid var(--gold);display:grid;place-items:center;font:800 20px Barlow,sans-serif}
+.prize{display:flex;gap:6px;align-items:center}.prize span{width:60px;font-size:13px;color:var(--muted)}
+.msg{font-size:15px;padding:10px 12px;border-radius:10px;display:none}
+.msg.ok{display:block;background:rgba(61,220,132,.12);border:1px solid var(--ok);color:#b8ffd6}
+.msg.err{display:block;background:rgba(255,122,122,.12);border:1px solid var(--err);color:#ffd0d0}
+.msg.info{display:block;background:rgba(254,194,7,.1);border:1px solid var(--line);color:var(--cream)}
+.confirm{display:none;flex-direction:column;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--yellow);background:rgba(254,194,7,.08)}
+.confirm.show{display:flex}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.2);font-size:14.5px}
+.item b{color:#fff}.item small{color:var(--muted)}
+.item button{font:600 13px Barlow,sans-serif;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 10px;cursor:pointer}
+.help{font-size:14px;color:var(--muted);margin:0}
+.help a{color:var(--yellow)}
+.help ol{margin:6px 0 0;padding-left:20px}
+code{background:rgba(0,0,0,.35);padding:1px 6px;border-radius:6px;font-size:13.5px}
+[hidden]{display:none!important}
+body[data-g="boledo"]{--b1:#fff3a8;--b2:#f7c600;--b3:#c98f00;--gc:rgba(247,198,0,.6);--gc2:rgba(247,198,0,.25)}
+body[data-g="lottery"]{--b1:#ff9b9b;--b2:#d63c3c;--b3:#8f1717;--gc:rgba(214,60,60,.6);--gc2:rgba(214,60,60,.25)}
+body[data-g="fantasy5"]{--b1:#8fe6b0;--b2:#1c9a50;--b3:#0c5a2c;--gc:rgba(28,154,80,.6);--gc2:rgba(28,154,80,.25)}
+body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214,.6);--gc2:rgba(122,69,214,.25)}
+</style>
+</head>
+<body data-g="boledo">
+<div class="wrap">
+  <header><small>Belize Lottery · private</small><h1>Results <em>Admin</em></h1></header>
+
+  <!-- step 1: connect (only once per device) -->
+  <section class="panel" id="connect" hidden>
+    <h2>Connect this device</h2>
+    <p class="help">Paste your GitHub access key below. It is saved <b>only on this device</b> and is never shown to anyone. Make one like this:</p>
+    <ol class="help">
+      <li>On GitHub: your picture → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li>
+      <li>Name: <code>Results admin</code>. Expiration: up to 1 year.</li>
+      <li>Repository access: <b>Only select repositories</b> → <code>Missing-Numbers-Lotto</code>.</li>
+      <li>Permissions → Repository permissions → <b>Contents: Read and write</b>. Nothing else.</li>
+      <li>Click <b>Generate token</b>, copy it, paste it here.</li>
+    </ol>
+    <label>Access key<input type="password" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+    <div class="row"><button class="btn" id="saveToken">Connect</button></div>
+    <div class="msg" id="connMsg"></div>
+  </section>
+
+  <!-- step 2: enter a result -->
+  <section class="panel" id="entry" hidden>
+    <h2>Post a result</h2>
+    <div class="tabs" role="group" aria-label="Game">
+      <button data-g="boledo" aria-pressed="true">Boledo</button>
+      <button data-g="lottery" aria-pressed="false">Jackpot</button>
+      <button data-g="fantasy5" aria-pressed="false">Fantasy 5</button>
+      <button data-g="pick3" aria-pressed="false">Pick 3</button>
+    </div>
+    <label>Draw date<input type="date" id="date"></label>
+    <label><span id="numsLbl">Winning number</span><input id="nums" autocomplete="off" inputmode="numeric" placeholder="41"></label>
+    <div class="balls" id="preview" aria-live="polite"></div>
+    <div class="row"><button class="btn" id="review">Review</button><span class="help" id="sched"></span></div>
+    <div class="confirm" id="confirm">
+      <div id="confirmText"></div>
+      <div class="row"><button class="btn" id="publish">Publish to everyone</button><button class="btn ghost" id="cancel">Change</button></div>
+    </div>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <!-- recent -->
+  <section class="panel" id="recentBox" hidden>
+    <h2>Last 7 days on the site</h2>
+    <div class="list" id="recent"></div>
+    <p class="help">Results posted here reach phones within about 1 to 10 minutes (GitHub keeps the file cached for up to 10 minutes). The automatic job skips any draw already posted, so it saves a magayo call.</p>
+  </section>
+
+  <section class="panel" id="deviceBox" hidden>
+    <div class="row"><button class="btn ghost" id="forget">Disconnect this device</button></div>
+    <p class="help">Lost this phone? On GitHub go to Settings → Developer settings → Fine-grained tokens and delete <code>Results admin</code>. The key stops working at once.</p>
+  </section>
+</div>
+
+<script>
+(()=>{'use strict';
+const OWNER='bitcoinbelizeai-ops',REPO='Missing-Numbers-Lotto',BRANCH='main',PATH='draws.json';
+const API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+const KEY='bz-admin-token';
+const $=id=>document.getElementById(id);
+const pad=(n,w)=>String(n).padStart(w,'0');
+const LABEL={boledo:'Boledo',lottery:'Sunday Jackpot',fantasy5:'Fantasy 5',pick3:'Pick 3'};
+const SCHED={boledo:{days:[1,2,3,4,5],h:21,m:10,text:'Mon–Fri 9:10 pm'},pick3:{days:[1,2,3,4,5],h:20,m:30,text:'Mon–Fri 8:30 pm'},fantasy5:{days:[2,4,6],h:20,m:0,text:'Tue, Thu, Sat 8:00 pm'},lottery:{days:[0],h:10,m:0,text:'Sunday 10:00 am'}};
+const PH={boledo:['Winning number','41'],lottery:['1st, 2nd and 3rd prize','1652 0188 7876'],fantasy5:['5 numbers and the letter','03 05 11 20 27 Q'],pick3:['3 digits','390']};
+let game='boledo',token='',current=null,pending=null;
+const getTok=()=>{try{return localStorage.getItem(KEY)||''}catch(e){return ''}};
+const setTok=t=>{try{t?localStorage.setItem(KEY,t):localStorage.removeItem(KEY);return true}catch(e){return false}};
+function bz(){const d=new Date(Date.now()-6*3600e3);return{iso:d.toISOString().slice(0,10),dow:d.getUTCDay(),min:d.getUTCHours()*60+d.getUTCMinutes()}}
+function addDays(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function dowOf(iso){return new Date(iso+'T12:00:00Z').getUTCDay()}
+function lastDraw(g){const n=bz(),s=SCHED[g];let iso=n.iso;for(let i=0;i<8;i++){if(s.days.includes(dowOf(iso))&&(iso<n.iso||n.min>=s.h*60+s.m))return iso;iso=addDays(iso,-1)}return n.iso}
+const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+function msg(el,text,kind){el.textContent=text;el.className='msg '+(kind||'info')}
+const toks=()=>$('nums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
+const digits=t=>t.map(x=>x.replace(/\D/g,'')).filter(Boolean);
+function make(g,t){
+  const n=digits(t);
+  if(g==='boledo'){if(!n.length||n[0].length>2)return null;return{nums:[pad(n[0],2)]}}
+  if(g==='lottery'){const v=n.filter(x=>x.length<=4);if(v.length<3)return null;return{nums:v.slice(0,3).map(x=>pad(x,4))}}
+  if(g==='fantasy5'){const letter=(t.find(x=>/^[A-Za-z]$/.test(x))||'').toUpperCase();const v=[...new Set(n.map(Number))].filter(x=>x>=1&&x<=39);
+    if(v.length!==5||!letter)return null;return{nums:v.sort((a,b)=>a-b).map(x=>pad(x,2)),letter}}
+  let v=n;if(v.length===1&&v[0].length===3)v=v[0].split('');if(v.length<3||v.slice(0,3).some(x=>x.length!==1))return null;return{nums:v.slice(0,3)}
+}
+function ball(v){const b=document.createElement('span');b.className='ball'+(v?'':' blank');b.innerHTML='<i>'+(v||'?')+'</i>';return b}
+function preview(){
+  const box=$('preview');box.innerHTML='';const t=toks(),n=digits(t);
+  if(game==='boledo')box.appendChild(ball(n[0]&&n[0].slice(0,2)));
+  else if(game==='pick3'){const d=(n.length===1?n[0]:n.map(x=>x[0]).join('')).slice(0,3).split('');for(let i=0;i<3;i++)box.appendChild(ball(d[i]))}
+  else if(game==='fantasy5'){for(let i=0;i<5;i++)box.appendChild(ball(n[i]&&n[i].slice(0,2)));const l=document.createElement('span');l.className='letter';l.textContent=(t.find(x=>/^[A-Za-z]$/.test(x))||'?').toUpperCase();box.appendChild(l)}
+  else ['1st','2nd','3rd'].forEach((p,i)=>{const r=document.createElement('div');r.className='prize';r.innerHTML='<span>'+p+'</span>';(n[i]||'').slice(0,4).padEnd(4,' ').split('').forEach(c=>r.appendChild(ball(c.trim())));box.appendChild(r)});
+}
+function setGame(g){game=g;document.body.dataset.g=g;
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===g));
+  $('numsLbl').textContent=PH[g][0];$('nums').placeholder=PH[g][1];$('nums').inputMode=g==='fantasy5'?'text':'numeric';
+  $('date').value=lastDraw(g);$('date').max=bz().iso;$('sched').textContent='Drawn '+SCHED[g].text;
+  $('nums').value='';$('confirm').classList.remove('show');$('msg').className='msg';preview();}
+
+async function gh(method,body){
+  const r=await fetch(API+(method==='GET'?'?ref='+BRANCH+'&t='+Date.now():''),{method,cache:'no-store',
+    headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28',...(body?{'Content-Type':'application/json'}:{})},
+    body:body?JSON.stringify(body):undefined});
+  if(!r.ok){const e=new Error(r.status===401?'The access key was refused. Disconnect and paste a new one.':r.status===403||r.status===404?'The key can\'t open draws.json. Check it has Contents: Read and write for Missing-Numbers-Lotto.':r.status===409?'conflict':'GitHub error '+r.status);e.status=r.status;throw e}
+  return r.json();
+}
+const b64dec=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,'')),c=>c.charCodeAt(0)));
+const b64enc=s=>{const b=new TextEncoder().encode(s);let out='';for(let i=0;i<b.length;i+=0x8000)out+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(out)};
+async function load(){const j=await gh('GET');current={sha:j.sha,data:JSON.parse(b64dec(j.content))};showRecent();return current}
+async function commit(change,message){
+  for(let attempt=0;attempt<3;attempt++){
+    const {sha,data}=await load();
+    change(data);data.draws.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.game<b.game?-1:1);data.updated=bz().iso;
+    try{await gh('PUT',{message,content:b64enc(JSON.stringify(data,null,1)+'\n'),sha,branch:BRANCH});await load();return}
+    catch(e){if(e.status!==409||attempt===2)throw e}
+  }
+}
+function showRecent(){
+  const box=$('recent');box.innerHTML='';const from=addDays(bz().iso,-7);
+  const rows=(current.data.draws||[]).filter(d=>d.date>=from).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  if(!rows.length){box.innerHTML='<p class="help">Nothing in the last 7 days.</p>';return}
+  rows.forEach(d=>{const it=document.createElement('div');it.className='item';
+    const nums=d.nodraw?'no draw':d.nums.join(' ')+(d.letter?' '+d.letter:'');
+    it.innerHTML='<span><b>'+LABEL[d.game]+'</b> · '+fmtDay(d.date)+' · '+nums+(d.source==='admin'?' <small>(you)</small>':'')+'</span>';
+    if(d.source==='admin'){const b=document.createElement('button');b.textContent='Remove';b.onclick=()=>removeEntry(d);it.appendChild(b)}
+    box.appendChild(it)});
+}
+async function removeEntry(d){
+  const ok=await inlineConfirm('Remove '+LABEL[d.game]+' '+fmtDay(d.date)+' from the site?');if(!ok)return;
+  try{msg($('msg'),'Removing…');await commit(data=>{data.draws=data.draws.filter(x=>x.id!==d.id)},'Admin: remove '+d.id);msg($('msg'),'Removed '+LABEL[d.game]+' '+fmtDay(d.date)+'.','ok')}
+  catch(e){msg($('msg'),e.message,'err')}
+}
+function inlineConfirm(text){return new Promise(res=>{const c=$('confirm');$('confirmText').textContent=text;$('publish').textContent='Yes, remove';c.classList.add('show');
+  const done=v=>{c.classList.remove('show');$('publish').textContent='Publish to everyone';$('publish').onclick=doPublish;$('cancel').onclick=()=>c.classList.remove('show');res(v)};
+  $('publish').onclick=()=>done(true);$('cancel').onclick=()=>done(false);c.scrollIntoView({block:'center',behavior:'smooth'})})}
+
+function review(){
+  $('msg').className='msg';const date=$('date').value,t=toks();
+  if(!date){msg($('msg'),'Pick the draw date.','err');return}
+  if(date>bz().iso){msg($('msg'),'That date is in the future.','err');return}
+  const o=make(game,t);
+  if(!o){msg($('msg'),{boledo:'Type one number from 00 to 99.',lottery:'Type the 1st, 2nd and 3rd prize (4 digits each).',fantasy5:'Type 5 different numbers from 1 to 39 and the letter.',pick3:'Type 3 digits, like 390.'}[game],'err');return}
+  const id=game+'-'+date;const exists=current&&current.data.draws.find(d=>d.id===id);
+  const notDay=!SCHED[game].days.includes(dowOf(date));
+  pending=Object.assign({id,game,date},o,{source:'admin'});
+  $('confirmText').innerHTML='<b>'+LABEL[game]+'</b> · '+fmtDay(date)+'<br><span style="font-size:22px;font-weight:700;color:#fff">'+o.nums.join(' ')+(o.letter?' '+o.letter:'')+'</span>'+
+    (exists&&!exists.nodraw?'<br><small style="color:#ffd27a">This replaces the result already on the site: '+exists.nums.join(' ')+(exists.letter?' '+exists.letter:'')+'</small>':'')+
+    (notDay?'<br><small style="color:#ffd27a">'+LABEL[game]+' isn\'t normally drawn on that day.</small>':'');
+  $('publish').textContent='Publish to everyone';$('publish').onclick=doPublish;$('cancel').onclick=()=>$('confirm').classList.remove('show');
+  $('confirm').classList.add('show');
+}
+async function doPublish(){
+  if(!pending)return;const p=pending;$('publish').disabled=true;msg($('msg'),'Publishing…');
+  try{await commit(data=>{data.draws=data.draws.filter(x=>x.id!==p.id);data.draws.push(p)},'Admin: '+LABEL[p.game]+' '+p.date+' '+p.nums.join(' ')+(p.letter?' '+p.letter:''));
+    $('confirm').classList.remove('show');$('nums').value='';preview();pending=null;
+    msg($('msg'),'Posted! '+LABEL[p.game]+' '+fmtDay(p.date)+': '+p.nums.join(' ')+(p.letter?' '+p.letter:'')+'. Phones get it within about 1 to 10 minutes.','ok')}
+  catch(e){msg($('msg'),'Not posted: '+e.message,'err')}
+  finally{$('publish').disabled=false}
+}
+
+async function start(){
+  token=getTok();
+  if(!token){$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('deviceBox').hidden=true;return}
+  $('connect').hidden=true;$('entry').hidden=$('recentBox').hidden=$('deviceBox').hidden=false;setGame(game);
+  try{await load()}catch(e){msg($('msg'),e.message,'err')}
+}
+$('saveToken').onclick=async()=>{const t=$('token').value.trim();if(!/^(github_pat_|ghp_)/.test(t)){msg($('connMsg'),'That doesn\'t look like a GitHub access key.','err');return}
+  token=t;msg($('connMsg'),'Checking…');
+  try{await load();if(!setTok(t)){msg($('connMsg'),'This browser won\'t save it (private mode?). It will work until you close the page.','info')}$('token').value='';start()}
+  catch(e){token='';msg($('connMsg'),e.message,'err')}};
+$('forget').onclick=()=>{setTok('');token='';current=null;start()};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setGame(b.dataset.g));
+$('nums').addEventListener('input',()=>{$('confirm').classList.remove('show');preview()});
+$('nums').addEventListener('keydown',e=>{if(e.key==='Enter')review()});
+$('review').onclick=review;
+start();
+})();
+</script>
+</body>
+</html>
