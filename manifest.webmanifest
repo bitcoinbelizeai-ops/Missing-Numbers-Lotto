@@ -1,13 +1,13 @@
 {
   "name": "Boledo Missing Numbers",
   "short_name": "Boledo",
-  "description": "See which Belize Boledo, Sunday Lottery, Fantasy 5 and Pick 3 numbers haven't played in recent draws.",
+  "description": "See which Belize Boledo, Sunday Jackpot, Fantasy 5 and Pick 3 numbers haven't played in recent draws.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#042456",
-  "theme_color": "#094692",
+  "background_color": "#0d4ea6",
+  "theme_color": "#1866cc",
   "icons": [
     {
       "src": "icons/icon-192.png",

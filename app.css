@@ -1,9 +1,10 @@
 [hidden]{display:none!important}
 /* Layout: one column on royal blue (#094692) with logo yellow (#fec207) on the title — ball-badge header, game tabs, last draw, poker-chip look-back, missing, hot; hand entry folded at the bottom */
 :root{
-  --felt:#094692; --felt-deep:#042456; --felt-hi:#1a64c0; --panel:rgba(2,20,52,.62);
-  --gold:#e9c46a; --gold-hi:#fff0b8; --gold-deep:#a97a22; --cream:#f7f0dc; --muted:#c9d5ea;
-  --line:rgba(233,196,106,.38); --red:#d63c3c; --red-deep:#8f1717; --ok:#9fe0c4; --bulb:#fff3c4;
+  /* "Bright Royal" theme (Nov 15, 2026): lighter, more vivid blue and see-through panels */
+  --felt:#1866cc; --felt-deep:#0d4ea6; --felt-hi:#3d8ef2; --panel:rgba(255,255,255,.10);
+  --gold:#e9c46a; --gold-hi:#fff0b8; --gold-deep:#a97a22; --cream:#f7f0dc; --muted:#dde7f7;
+  --line:rgba(255,255,255,.24); --red:#d63c3c; --red-deep:#8f1717; --ok:#9fe0c4; --bulb:#fff3c4;
   --f-brand:"Outfit","Barlow",ui-sans-serif,system-ui,sans-serif;
   --f-label:"Barlow Condensed","Arial Narrow",ui-sans-serif,system-ui,sans-serif;
   --f-body:"Barlow",ui-sans-serif,system-ui,sans-serif;
@@ -563,6 +564,15 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .mixbox-in.reveal{animation:mixbox-open .35s cubic-bezier(.2,.8,.3,1) both}
 @keyframes mixbox-open{from{border-radius:40%;transform:scale(.9);opacity:.6}to{border-radius:20px;transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.mixbox-in.reveal{animation:none}}
+
+/* ---------- Bright Royal: white bottom menu ---------- */
+@media (max-width:700px){
+  .tabbar{background:rgba(255,255,255,.97);border-top:1px solid rgba(9,70,146,.15);box-shadow:0 -6px 18px rgba(4,36,86,.25)}
+  .tabbar button{color:#55688a}
+  .tabbar button.on{color:#094692}
+  .tabbar button.on svg{background:var(--logo-yellow);border-radius:10px;padding:2px;box-sizing:content-box;transform:none}
+  .tabbar button:focus-visible{outline-color:#094692}
+}
 
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
