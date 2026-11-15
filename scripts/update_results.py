@@ -44,13 +44,13 @@ USAGE_FILE = os.path.join(ROOT, "data", "api-usage.json")
 API_URL = "https://www.magayo.com/api/results.php"
 
 # Draw days (Monday=0 ... Sunday=6) and draw times, Belize time.
-# Sources (checked Nov 14, 2026): Belize Government Lotteries (Boledo, Sunday Lottery),
+# Sources (checked Nov 14, 2026): Belize Government Lotteries (Boledo, Sunday Jackpot),
 # the game operator's site (Fantasy 5, Pick 3).
 SCHEDULE = {
     "boledo": {0, 1, 2, 3, 4},   # Mon-Fri 9:10 pm
     "pick3": {0, 1, 2, 3, 4},    # Mon-Fri 8:30 pm
     "fantasy5": {1, 3, 5},       # Tue, Thu, Sat 8:00 pm
-    "lottery": {6},              # Sun 10:00 am (a postponed draw can move to Monday)
+    "lottery": {6},              # Sun 10:00 am, Sunday Jackpot (a postponed draw can move to Monday)
 }
 DRAW_TIME = {"boledo": (21, 10), "pick3": (20, 30), "fantasy5": (20, 0), "lottery": (10, 0)}
 # A "no draw" answer for a draw younger than this is treated as "not posted yet" and retried next run.
@@ -58,7 +58,7 @@ NODRAW_MIN_AGE_HOURS = 24
 FRESH_DAYS = 3        # draws newer than this are always fetched first (within the limits)
 MAX_TRIES = 3         # never ask magayo about the same draw more than this
 GAME_CODES = {"boledo": "bz_boledo", "lottery": "bz_jackpot", "fantasy5": "bz_fantasy", "pick3": "bz_pick3"}
-LABELS = {"boledo": "Boledo", "lottery": "Sunday Lottery", "fantasy5": "Fantasy 5", "pick3": "Pick 3"}
+LABELS = {"boledo": "Boledo", "lottery": "Sunday Jackpot", "fantasy5": "Fantasy 5", "pick3": "Pick 3"}
 BELIZE = timezone(timedelta(hours=-6))  # Belize has no daylight saving time
 
 
@@ -133,7 +133,7 @@ def missing_draws(draws, now, lookback, ready_hours):
         for game in ("boledo", "lottery", "fantasy5", "pick3"):
             on_schedule = day.weekday() in SCHEDULE[game]
             if game == "lottery" and day.weekday() == 0:
-                # A Sunday Lottery draw postponed to Monday: only look if Sunday had no draw.
+                # A Sunday Jackpot draw postponed to Monday: only look if Sunday had no draw.
                 sun = by_id.get(f"lottery-{(day - timedelta(days=1)).isoformat()}")
                 on_schedule = bool(sun and sun.get("nodraw"))
             if on_schedule and f"{game}-{iso}" not in by_id and draw_moment(game, iso) <= ready_before:
