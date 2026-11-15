@@ -1,7 +1,7 @@
 {
- "calls": 16,
+ "calls": 17,
  "limit_note": "Calls to the magayo API this month (the 2 browser tests on Nov 12 included). The job resets this each month.",
- "updated": "2026-11-14T03:59-06:00",
+ "updated": "2026-11-15T06:23-06:00",
  "period": "2026-11-14",
  "tries": {},
  "reset_day": 14,
