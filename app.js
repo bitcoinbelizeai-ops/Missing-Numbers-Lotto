@@ -72,9 +72,9 @@ let prefs={game:'boledo',wins:{}};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(PREF)||'{}'))}catch(e){}
 const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),draws:[],sample:null,canWrite:true,loaded:false};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
-const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins}))}catch(e){}};
+const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,mine:prefs.mine||{}}))}catch(e){}};
 
-/* ---------- game tabs and look-back chips ---------- */
+/* ---------- game tabs and look-back picker ---------- */
 const seg=$('gameSeg');
 const BALL={boledo:'00',lottery:'1st',fantasy5:'5',pick3:'3'};
 ORDER.forEach(g=>{const b=document.createElement('button');b.type='button';b.dataset.g=g;
@@ -103,7 +103,8 @@ function drawsFor(){
   return src.filter(d=>d.game===state.game).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
 }
 function ballEl(k,small){const t=document.createElement('div');t.className='tile'+(small?' sm':'');const s=document.createElement('span');s.textContent=k;t.appendChild(s);return t}
-function ballWithTag(k,tagHTML,detail){const w=document.createElement('button');w.type='button';w.className='bwrap';w.appendChild(ballEl(k));
+function ballWithTag(k,tagHTML,detail,key){const w=document.createElement('button');w.type='button';w.className='bwrap';w.appendChild(ballEl(k));
+  if(key!==undefined){w.dataset.key=key;if(isMine(key))w.classList.add('is-mine')}
   const t=document.createElement('div');t.className='tag';t.innerHTML=tagHTML;w.appendChild(t);
   if(detail){w.dataset.detail=detail;w.setAttribute('aria-label',k+'. '+detail.replace(/<[^>]+>/g,''))}return w}
 /* a grid of balls plus the note that appears when one is tapped */
@@ -111,11 +112,168 @@ function grid(items,extra){const set=document.createElement('div');set.className
   const g=document.createElement('div');g.className='tiles'+(extra?' '+extra:'');items.forEach(el=>g.appendChild(el));
   const p=document.createElement('p');p.className='balldetail';p.hidden=true;p.setAttribute('aria-live','polite');
   set.append(g,p);return set}
+/* ---------- My Numbers: favourite numbers per game, saved on this device ---------- */
+function mineList(g){const m=prefs.mine||{};return Array.isArray(m[g||state.game])?m[g||state.game]:[]}
+function isMine(key){return mineList().includes(String(key))}
+function toggleMine(key){key=String(key);const m=prefs.mine||(prefs.mine={});const L=mineList().slice();
+  const i=L.indexOf(key);if(i>=0)L.splice(i,1);else{if(L.length>=12){toast('My Numbers holds up to 12 per game');return}L.push(key)}
+  m[state.game]=L;savePrefs();
+  document.querySelectorAll('.bwrap[data-key]').forEach(b=>b.classList.toggle('is-mine',L.includes(b.dataset.key)));
+  document.querySelectorAll('.top-star').forEach(topStarLabel);
+  renderMine();}
+function topStarLabel(b){const on=isMine(b.dataset.key);b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);
+  b.setAttribute('aria-label',(on?'Remove ':'Add ')+b.dataset.key+(on?' from':' to')+' My Numbers');b.textContent=on?'★':'☆'}
+function mineLabel(key){if(state.game!=='pick3')return{ball:key,sub:''};const [i,d]=key.split(':');return{ball:d,sub:SPOTS[+i]+' spot'}}
+function renderMine(){
+  const box=$('mine'),sec=$('secMine');if(!box||!sec)return;
+  const G=GAMES[state.game],all=drawsFor(),L=mineList();
+  if(!state.loaded&&!state.sample){sec.hidden=true;return}
+  sec.hidden=false;box.innerHTML='';
+  $('mineHint').hidden=!!L.length;
+  if(!L.length)return;
+  const seqFor=key=>state.game==='pick3'?all.map(d=>[String(d.nums[+key.split(':')[0]])]):all.map(G.keys);
+  // sort: just played first, then longest out
+  const rows=L.map(key=>{const lbl=mineLabel(key),k=state.game==='pick3'?lbl.ball:key,seq=seqFor(key);
+    let out=null;for(let i=seq.length-1;i>=0;i--){if(seq[i].includes(k)){out=seq.length-1-i;break}}return{key,lbl,out}})
+    .sort((a,b)=>(a.out===0?-1:0)-(b.out===0?-1:0)||(b.out==null?1e9:b.out)-(a.out==null?1e9:a.out));
+  rows.forEach(({key,lbl,out})=>{
+    const it=document.createElement('div');it.className='mine-item'+(out===0?' hit':'');
+    const t=ballEl(lbl.ball);it.appendChild(t);
+    const s=document.createElement('div');s.className='mine-tag';
+    s.innerHTML=(lbl.sub?'<small>'+esc(lbl.sub)+'</small>':'')+(out===0?'<b>Played!</b><small>latest draw</small>':out==null?'<b>'+all.length+'+</b><small>draws out</small>':'<b>'+out+'</b><small>draw'+(out===1?'':'s')+' out</small>');
+    it.appendChild(s);
+    const x=document.createElement('button');x.type='button';x.className='mine-x';x.dataset.key=key;x.setAttribute('aria-label','Remove '+lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+' from My Numbers');x.textContent='×';it.appendChild(x);
+    box.appendChild(it)});
+}
+
+/* ---------- Longest out: top 5 with bars, above the Missing grid ---------- */
+function topOut(missing,total){
+  const top=missing.slice(0,5),val=o=>o==null?total+1:o,max=val(top[0][1])||1;
+  const wrap=document.createElement('div');wrap.className='topout';
+  wrap.innerHTML='<h3 class="topout-h">Longest out</h3>';
+  const ol=document.createElement('ol');ol.className='topout-list';
+  top.forEach(([k,o],i)=>{const li=document.createElement('li');li.style.setProperty('--i',i);
+    li.innerHTML='<span class="rk">'+(i+1)+'</span>';li.appendChild(ballEl(k,true));
+    const bar=document.createElement('span');bar.className='tbar';bar.innerHTML='<s style="--w:'+Math.max(6,Math.round(val(o)/max*100))+'%"></s>';li.appendChild(bar);
+    const v=document.createElement('span');v.className='tval';v.innerHTML=o==null?'<b>'+total+'+</b> draws':'<b>'+o+'</b> draw'+(o===1?'':'s');li.appendChild(v);
+    const st=document.createElement('button');st.type='button';st.className='top-star';st.dataset.key=k;topStarLabel(st);li.appendChild(st);
+    ol.appendChild(li)});
+  wrap.appendChild(ol);return wrap;
+}
+
+/* ---------- trend chart in the tap note: times played per week, last 10 weeks ---------- */
+function trendChart(key){
+  const all=drawsFor();if(!all.length)return null;
+  const G=GAMES[state.game];let k=key,keysOf=G.keys;
+  if(state.game==='pick3'){const [i,dg]=key.split(':');k=dg;keysOf=d=>[String(d.nums[+i])]}
+  const WEEKS=10,end=all[all.length-1].date,endMs=Date.UTC(+end.slice(0,4),+end.slice(5,7)-1,+end.slice(8,10));
+  const bins=Array.from({length:WEEKS},(_,i)=>({n:0,draws:0,start:new Date(endMs-(WEEKS-i)*7*864e5+864e5)}));
+  all.forEach(d=>{const ms=Date.UTC(+d.date.slice(0,4),+d.date.slice(5,7)-1,+d.date.slice(8,10));
+    const w=WEEKS-1-Math.floor((endMs-ms)/(7*864e5));if(w<0||w>=WEEKS)return;bins[w].draws++;if(keysOf(d).includes(k))bins[w].n++});
+  const max=Math.max(1,...bins.map(b=>b.n)),tot=bins.reduce((a,b)=>a+b.n,0);
+  const box=document.createElement('div');box.className='trend';
+  const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  box.innerHTML='<div class="trend-h"><span>Times played per week</span><span>last 10 weeks · <b>'+tot+'</b></span></div>'+
+    '<div class="trend-bars">'+bins.map((b,i)=>'<span class="tb'+(b.n?'':' zero')+'" style="--h:'+(b.n?Math.max(12,Math.round(b.n/max*100)):4)+'%;--i:'+i+'" title="Week of '+mon[b.start.getUTCMonth()]+' '+b.start.getUTCDate()+': '+b.n+' of '+b.draws+' draws">'+(b.n?'<em>'+b.n+'</em>':'')+'</span>').join('')+'</div>'+
+    '<div class="trend-x">'+bins.map((b,i)=>'<span>'+(i%3===0||i===WEEKS-1?mon[b.start.getUTCMonth()]+' '+b.start.getUTCDate():'')+'</span>').join('')+'</div>';
+  return box;
+}
+
+/* ---------- share the last draw as a picture ---------- */
+let shareBlob=null;
+function ballColors(){const cs=getComputedStyle(document.body);const v=n=>cs.getPropertyValue(n).trim();
+  return{hi:v('--b-hi')||'#fff3a8',main:v('--b-main')||'#f7c600',deep:v('--b-deep')||'#c98f00'}}
+function drawBall(ctx,x,y,r,label,c){
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.45)';ctx.shadowBlur=r*.35;ctx.shadowOffsetY=r*.12;
+  const g=ctx.createRadialGradient(x-r*.32,y-r*.38,r*.1,x,y,r);g.addColorStop(0,c.hi);g.addColorStop(.45,c.main);g.addColorStop(1,c.deep);
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,r*.6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1b1b1b';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='700 '+Math.round(r*(label.length>2?.5:.62))+'px Barlow, "Barlow Condensed", system-ui, sans-serif';ctx.fillText(label,x,y+r*.03);
+}
+async function makeShareImage(){
+  const all=drawsFor(),d=all[all.length-1];if(!d||d.nodraw)return null;
+  try{await document.fonts.ready}catch(e){}
+  const S=1080,cv=document.createElement('canvas');cv.width=cv.height=S;const ctx=cv.getContext('2d');
+  const bg=ctx.createRadialGradient(S/2,0,50,S/2,S*.4,S*.95);bg.addColorStop(0,'#1a64c0');bg.addColorStop(.5,'#094692');bg.addColorStop(1,'#042456');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,S,S);
+  ctx.strokeStyle='rgba(233,196,106,.7)';ctx.lineWidth=6;ctx.beginPath();ctx.roundRect?ctx.roundRect(40,40,S-80,S-80,48):ctx.rect(40,40,S-80,S-80);ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#c9d5ea';ctx.font='700 34px "Barlow Condensed", Barlow, sans-serif';ctx.fillText('B E L I Z E   L O T T E R Y',S/2,150);
+  ctx.fillStyle='#ffffff';ctx.font='800 74px Outfit, Barlow, sans-serif';const t1='Missing ',t2='Numbers';
+  const w1=ctx.measureText(t1).width,w2=ctx.measureText(t2).width,x0=S/2-(w1+w2)/2;ctx.textAlign='left';ctx.fillText(t1,x0,240);ctx.fillStyle='#fec207';ctx.fillText(t2,x0+w1,240);
+  ctx.textAlign='center';ctx.fillStyle='#e9c46a';ctx.font='700 58px "Barlow Condensed", Barlow, sans-serif';ctx.fillText(GAMES[state.game].label.toUpperCase(),S/2,360);
+  ctx.fillStyle='#f7f0dc';ctx.font='500 38px Barlow, sans-serif';ctx.fillText(fmtDay(d.date)+' · '+fmtTime(state.game),S/2,420);
+  const c=ballColors(),cy=640;
+  if(state.game==='lottery'){
+    const prizes=['1st','2nd','3rd'];d.nums.forEach((n,row)=>{const digits=pad(n,4).split(''),y=530+row*130,r=52,gap=124,xs=S/2-gap*1.5+60;
+      ctx.fillStyle='#c9d5ea';ctx.font='700 34px "Barlow Condensed", sans-serif';ctx.textAlign='right';ctx.fillText(prizes[row],xs-80,y+12);
+      digits.forEach((dg,i)=>drawBall(ctx,xs+i*gap,y,r,dg,c))});
+  }else{
+    const labels=state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String);if(d.letter)labels.push(d.letter);
+    const r=state.game==='boledo'?150:labels.length>4?72:100,gap=r*2.25,x1=S/2-gap*(labels.length-1)/2;
+    labels.forEach((l,i)=>drawBall(ctx,x1+i*gap,cy,r,l,i===labels.length-1&&d.letter?{hi:'#ffffff',main:'#e9e2cf',deep:'#9a917a'}:c));
+  }
+  ctx.textAlign='center';ctx.fillStyle='#c9d5ea';ctx.font='500 30px Barlow, sans-serif';ctx.fillText('Every draw is random. Independent tracker.',S/2,S-110);
+  return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
+}
+$('shareBtn').addEventListener('click',async()=>{
+  const blob=await makeShareImage();if(!blob){toast('Nothing to share yet');return}
+  shareBlob=blob;const file=new File([blob],'belize-'+state.game+'-result.png',{type:'image/png'});
+  const text=GAMES[state.game].label+' result · Belize Lottery Missing Numbers';
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}catch(e){if(e&&e.name==='AbortError')return}
+  const url=URL.createObjectURL(blob),img=$('shareImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.src=url;img.dataset.url=url;img.alt=text;
+  $('shareGo').hidden=!(navigator.canShare&&navigator.canShare({files:[file]}));
+  $('shareBox').hidden=false;$('shareClose').focus();
+});
+$('shareClose').addEventListener('click',()=>{$('shareBox').hidden=true;$('shareBtn').focus()});
+$('shareBox').addEventListener('click',e=>{if(e.target.id==='shareBox')$('shareBox').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('shareBox').hidden)$('shareBox').hidden=true});
+$('shareGo').addEventListener('click',async()=>{if(!shareBlob)return;try{await navigator.share({files:[new File([shareBlob],'belize-result.png',{type:'image/png'})]})}catch(e){}});
+
+/* ---------- live countdown to the next draw (Belize time, UTC-6) ---------- */
+let cdTimer=null;
+function drawEpoch(g,iso){const [y,m,d]=iso.split('-').map(Number);return Date.UTC(y,m-1,d)+(atMin(g)+360)*60000}
+function fmtLeft(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),sec=t%60;
+  return d?d+'d '+h+'h '+pad(m,2)+'m':pad(h,2)+':'+pad(m,2)+':'+pad(sec,2)}
+function tickCountdown(){
+  const el=$('cdTime');if(!el){clearInterval(cdTimer);return}
+  const g=state.game,n=bzNow(),chip=$('cdChip');
+  const drawing=isDrawDay(g,n.iso)&&n.min>=atMin(g)&&n.min<atMin(g)+RESULT_LAG_MIN;
+  chip.classList.toggle('live',drawing);
+  if(drawing){$('cdLbl').textContent='Drawing now';el.textContent='results soon';return}
+  const left=drawEpoch(g,nextDrawDate(g))-Date.now();
+  if(left<=0){render();return}
+  $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
+  chip.classList.toggle('soon',left<3600e3);
+}
+function startCountdown(){clearInterval(cdTimer);tickCountdown();cdTimer=setInterval(tickCountdown,1000)}
+
+/* ---------- bottom tab bar (phones) ---------- */
+const TABS=[['tabGames','secGames'],['tabMiss','secMiss'],['tabHot','secHot'],['tabRes','histFold']];
+TABS.forEach(([b,sec])=>{const btn=$(b);if(!btn)return;btn.addEventListener('click',()=>{
+  const el=$(sec);if(sec==='histFold')el.open=true;
+  el.scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'});setTab(b)})});
+function setTab(id){TABS.forEach(([b])=>{const x=$(b);if(x){x.classList.toggle('on',b===id);x.setAttribute('aria-current',b===id?'true':'false')}})}
+try{const seen=new Map();const io=new IntersectionObserver(es=>{es.forEach(e=>seen.set(e.target.id,e.isIntersecting?e.intersectionRatio:0));
+  let best=null,br=0;TABS.forEach(([b,sec])=>{const r=seen.get(sec)||0;if(r>br){br=r;best=b}});if(best)setTab(best)},{threshold:[0,.15,.3,.5,.75,1],rootMargin:'-10% 0px -35% 0px'});
+  TABS.forEach(([,sec])=>{const el=$(sec);if(el)io.observe(el)})}catch(e){}
+
+/* ---------- entrance styles: roll, drop or flip, picked at random, never the same twice in a row ---------- */
+const ENTER_STYLES=['roll','drop','flip'];
+let enterPickedAt=0;
+function pickEnter(){
+  enterPickedAt=Date.now();
+  const cur=document.body.dataset.enter;
+  const pool=ENTER_STYLES.filter(x=>x!==cur);
+  document.body.dataset.enter=pool[Math.floor(Math.random()*pool.length)];
+}
+
 /* ---------- drama for Missing and Hot Numbers ----------
    A wave that always lasts about 0.8 s however many balls there are, then a
    spotlight on the leader (longest wait / hottest), with the numbers counting up.
    Plays once per game or look-back change, when the section scrolls into view. */
-const WAVE_S=.8;
+const WAVE_S=.8,TOP_STEP=.3;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const dramaState={tiles:{key:null,played:false},hot:{key:null,played:false}};
 let dramaIO=null;
@@ -133,7 +291,7 @@ function playDrama(id){
   st.played=true;box.classList.remove('dpending');box.classList.add('dplay');
   const hot=id==='hot';
   box.querySelectorAll('.tiles').forEach(g=>{
-    const balls=[...g.querySelectorAll('.bwrap')],n=balls.length;
+    const balls=[...g.querySelectorAll('.bwrap')].filter(b=>!b.hidden),n=balls.length;
     balls.forEach((b,i)=>{
       if(i===0){b.classList.add(hot?'dstar-hot':'dstar');b.style.setProperty('--d',(WAVE_S+.15)+'s')}
       else b.style.setProperty('--d',(n>2?((i-1)/(n-2))*WAVE_S:0).toFixed(3)+'s');
@@ -141,14 +299,15 @@ function playDrama(id){
       if(num)countUp(num,i===0?1100:700,i===0?(WAVE_S+.15)*1000:(parseFloat(b.style.getPropertyValue('--d'))||0)*1000);
     });
   });
-  if(!hot){const sb=$('say').querySelector('b');if(sb)countUp(sb,WAVE_S*1000+300,0)}
-  setTimeout(()=>box.classList.remove('dplay'),(WAVE_S+3.2)*1000);
+  if(!hot){const sb=$('say').querySelector('b');if(sb)countUp(sb,WAVE_S*1000+300,0);
+    box.querySelectorAll('.topout-list li').forEach((li,i)=>{const v=li.querySelector('.tval b');if(v)countUp(v,700,TOP_STEP*1000*i+900)})}
+  setTimeout(()=>box.classList.remove('dplay'),(WAVE_S+4)*1000);
 }
 function drama(key){
   if(reduceMotion())return;
   ['tiles','hot'].forEach(id=>{
     const st=dramaState[id],box=$(id);if(!box)return;
-    if(st.key!==key){st.key=key;st.played=false}
+    if(st.key!==key){st.key=key;st.played=false;if(id==='tiles'&&Date.now()-enterPickedAt>120)pickEnter()}
     if(st.played)return;           // already shown for this game and look-back
     if(!box.querySelector('.bwrap')){st.played=true;return}
     box.classList.add('dpending');
@@ -158,17 +317,67 @@ function drama(key){
   });
 }
 
+/* ---------- Missing Numbers: show a few rows, "Continue" opens more ---------- */
+const MISS_FIRST_ROWS=0,MISS_STEP_ROWS=4; // the grid starts folded: the Longest-out top 5 is the summary
+const missView={key:null,rows:MISS_FIRST_ROWS};
+function gridCols(g){return getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length||1}
+function limitMissing(key,reveal){
+  const box=$('tiles'),g=box.querySelector('.tiles'),mb=box.querySelector('.showmore');
+  if(!g||!mb)return;
+  if(key!==undefined&&key!==missView.key){missView.key=key;missView.rows=MISS_FIRST_ROWS}
+  const balls=[...g.children],cols=gridCols(g),total=balls.length;
+  let show=Math.min(total,missView.rows*cols);
+  if(show>0&&total-show<=cols){show=total}   // don't leave a lonely last row behind the button
+  if(total<=5)show=0;                        // all of them are already in the top 5
+  g.closest('.ballset').hidden=show===0;
+  const fresh=[];
+  balls.forEach((b,i)=>{const hide=i>=show;if(!hide&&b.hidden&&reveal)fresh.push(b);b.hidden=hide});
+  if(fresh.length&&!reduceMotion()){
+    // one by one, slower: stagger shrinks a little for big batches so it never drags past ~2.6 s
+    const step=Math.min(.16,1.6/Math.max(1,fresh.length-1));
+    fresh.forEach((b,j)=>{b.classList.remove('reveal','reveal-star');void b.offsetWidth;
+      b.style.setProperty('--r',(j*step).toFixed(3)+'s');b.classList.add('reveal');
+      if(j===fresh.length-1)b.classList.add('reveal-star');
+      const num=b.querySelector('.tag b');if(num)countUp(num,650,j*step*1000+350)});
+    const first=fresh[0];setTimeout(()=>first.scrollIntoView({block:'center',behavior:'smooth'}),60);
+  }
+  const left=total-show,btn=mb.querySelector('button');
+  if(total<=5){mb.hidden=true;return}
+  mb.hidden=false;mb.classList.toggle('folded',show===0);
+  if(show===0){btn.innerHTML='Show all <span class="cnt">'+total+' missing numbers</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
+  else if(left>0){btn.innerHTML='Continue <span class="cnt">'+left+' more</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
+  else{btn.innerHTML='Hide the balls <span class="chev" aria-hidden="true">▴</span>';btn.dataset.act='less';btn.setAttribute('aria-expanded','true')}
+}
+$('tiles').addEventListener('click',e=>{
+  const btn=e.target.closest('.showmore-btn');if(!btn)return;
+  if(btn.dataset.act==='more'){pickEnter();missView.rows+=MISS_STEP_ROWS;limitMissing(undefined,true)}
+  else{missView.rows=MISS_FIRST_ROWS;limitMissing();$('say').scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'})}
+});
+window.addEventListener('resize',()=>limitMissing());
+
 /* "More info": fine print stays folded until the person asks for it */
 function setNote(main,extra){
   $('note').textContent=main;$('noteFine').textContent=extra;
-  const b=document.querySelector('[data-more="noteFine"]');b.hidden=!extra;if(!extra)$('noteFine').hidden=true;
-  if(extra&&b.getAttribute('aria-expanded')==='true')$('noteFine').hidden=false;
+  const b=document.querySelector('[data-more="noteFine"]');b.hidden=!extra;
+  applyMore();
+}
+// each game remembers its own open "More info" boxes; the footer one is shared
+const moreOpen={};
+const MORE_SHARED=new Set(['footFine']);
+function setMoreBtn(b,open){
+  const t=$(b.dataset.more);if(!t)return;
+  t.hidden=!open||b.hidden;b.setAttribute('aria-expanded',open);
+  const base=b.dataset.label||'More info';b.textContent=open?(base==='More info'?'Less info':'Close'):base;
+}
+function applyMore(){
+  const set=moreOpen[state.game]||new Set();
+  document.querySelectorAll('button.more').forEach(b=>{if(!MORE_SHARED.has(b.dataset.more))setMoreBtn(b,set.has(b.dataset.more))});
 }
 document.addEventListener('click',e=>{
   const b=e.target.closest('button.more');if(!b)return;
-  const t=$(b.dataset.more),open=b.getAttribute('aria-expanded')!=='true';
-  t.hidden=!open;b.setAttribute('aria-expanded',open);
-  const base=b.dataset.label||'More info';b.textContent=open?(base==='More info'?'Less info':'Close'):base;
+  const id=b.dataset.more,open=b.getAttribute('aria-expanded')!=='true';
+  if(!MORE_SHARED.has(id)){const set=moreOpen[state.game]||(moreOpen[state.game]=new Set());open?set.add(id):set.delete(id)}
+  setMoreBtn(b,open);
 });
 
 /* per-key facts for the tap note: last date, draws since, times in the chosen draws */
@@ -232,9 +441,10 @@ function render(){
     const many=state.game!=='boledo';
     const badge=document.createElement('p');badge.className='winbadge';badge.textContent=many?'Winning Numbers':'Winning Number';last.appendChild(badge);
     const animKey=state.game+'|'+d.id+'|'+(state.sample?'s':'r');
-    const roll=animKey!==lastAnim;lastAnim=animKey;
+    const roll=animKey!==lastAnim;lastAnim=animKey;if(roll)pickEnter();
     last.classList.toggle('roll',roll);
     $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
+    $('shareBtn').hidden=!!d.nodraw;
     let bi=0;
     if(state.game==='lottery'){
       d.nums.forEach((n,i)=>{const row=document.createElement('div');row.className='prizerow';
@@ -246,13 +456,18 @@ function render(){
       (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach(k=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);last.appendChild(t)});
       if(d.letter){const l=document.createElement('div');l.className='letter';l.textContent=d.letter;l.title='Free letter';l.style.setProperty('--i',bi++);last.appendChild(l)}
     }
-  }else{last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>'}
+  }else{last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
-    $('drawNext').innerHTML='<b>Next draw:</b> '+(tonight?'today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' at '+fmtTime(state.game);
+    $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
+      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>';
+    startCountdown();
     $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:''); }
 
-  const say=$('say');
-  if(!state.loaded&&!state.sample){say.textContent='Loading results…'}
+  const say=$('say');say.removeAttribute('aria-busy');
+  if(!state.loaded&&!state.sample){say.innerHTML='<span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span>';say.setAttribute('aria-busy','true');
+    body.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(12)+'</div>';
+    hot.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(4)+'</div>';
+    last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
   else if(!win.length){say.textContent='There are no '+G.label+' results yet. Add one at the bottom of the page.'}
   else{
     const n=win.length,span=n===1?'the last draw':'the last <b>'+n+'</b> draws';
@@ -262,13 +477,16 @@ function render(){
       const facts=factsFor(allSeq,all.map(d=>d.date),n);
       const missing=missingSorted(winSeq,allSeq,G.board);
       say.innerHTML=missing.length===1?'This <b>1</b> number has <em>not</em> played in '+span+'.'
-        :missing.length?'These <b>'+missing.length+'</b> numbers have <em>not</em> played in '+span+'. Longest wait first. Under each ball: how many draws since it last played. Tap a ball for more.'
+        :missing.length?'These <b>'+missing.length+'</b> numbers have <em>not</em> played in '+span+'. The longest waits are below'+(missing.length>5?'; tap <b class="plain">Show all</b> to see every ball.':'.')
         :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has played in '+span+'.';
-      if(missing.length)body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · ')))));
+      if(missing.length){body.appendChild(topOut(missing,all.length));
+        body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · '),k))));
+        const mb=document.createElement('div');mb.className='showmore';mb.hidden=true;
+        mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button>';body.appendChild(mb)}
       setNote(dates,G.note||'');
       const hl=hotList(winSeq,G.board,state.game==='fantasy5'?6:8);
       $('hotSay').innerHTML=hl.length?'These numbers played the most in '+span+'. Under each ball: how many times.':'No number has played more than once in '+span+'. Try more draws.';
-      if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '))),'hot'));
+      if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '),k)),'hot'));
     }else{
       let total=0,anyHot=false;
       SPOTS.forEach((spot,i)=>{
@@ -277,12 +495,12 @@ function render(){
         const missing=missingSorted(winSeq,allSeq,G.board);total+=missing.length;
         const row=document.createElement('div');row.className='posrow';
         row.innerHTML='<h3>'+spot+' digit</h3>';
-        if(missing.length)row.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,pre(k))))));
+        if(missing.length)row.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,pre(k)),i+':'+k))));
         else row.insertAdjacentHTML('beforeend','<p class="allplayed">Every digit has played here.</p>');
         body.appendChild(row);
         const hl=hotList(winSeq,G.board,3);
         const hrow=document.createElement('div');hrow.className='posrow';hrow.innerHTML='<h3>'+spot+' digit</h3>';
-        if(hl.length){anyHot=true;hrow.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,pre(k)))),'hot'))}
+        if(hl.length){anyHot=true;hrow.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,pre(k)),i+':'+k)),'hot'))}
         else hrow.insertAdjacentHTML('beforeend','<p class="allplayed">No digit has played twice here.</p>');
         hot.appendChild(hrow);
       });
@@ -292,9 +510,12 @@ function render(){
       setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
     }
     shadeColumns();
+    limitMissing(state.game+'|'+W);
+    renderMine();
     drama(state.game+'|'+W+'|'+(state.sample?'s':'r')+'|'+win.length+'|'+win[win.length-1].id);
   }
 
+  applyMore();
   const h=$('hist');h.innerHTML='';
   // past results plus skipped ("no draw") dates for this game, newest first
   const rows=(state.sample||state.draws).filter(d=>d.game===state.game).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
@@ -328,7 +549,16 @@ function onBallTap(e){
   if(was)return;
   b.classList.add('sel');b.setAttribute('aria-pressed','true');
   const p=b.closest('.ballset').querySelector('.balldetail');p.innerHTML=b.dataset.detail;p.hidden=false;
+  if(b.dataset.key!==undefined){const tc=trendChart(b.dataset.key);if(tc)p.appendChild(tc);
+    const sb=document.createElement('button');sb.type='button';sb.className='starbtn';sb.dataset.key=b.dataset.key;starLabel(sb);p.appendChild(sb)}
 }
+function starLabel(sb){const on=isMine(sb.dataset.key);sb.classList.toggle('on',on);sb.setAttribute('aria-pressed',on);
+  sb.innerHTML=on?'<span aria-hidden="true">★</span> In My Numbers · tap to remove':'<span aria-hidden="true">☆</span> Add to My Numbers'}
+document.addEventListener('click',e=>{
+  const sb=e.target.closest('.starbtn');if(sb){e.stopPropagation();toggleMine(sb.dataset.key);starLabel(sb);return}
+  const x=e.target.closest('.mine-x');if(x){toggleMine(x.dataset.key);return}
+  const ts=e.target.closest('.top-star');if(ts){e.stopPropagation();toggleMine(ts.dataset.key);if(isMine(ts.dataset.key))toast('★ '+ts.dataset.key+' added to My Numbers')}
+},true);
 $('tiles').addEventListener('click',onBallTap);$('hot').addEventListener('click',onBallTap);
 try{const ro=new ResizeObserver(shadeColumns);ro.observe($('tiles'));ro.observe($('hot'))}catch(e){window.addEventListener('resize',shadeColumns)}
 
@@ -515,22 +745,6 @@ $('restoreFile').onchange=async e=>{
   e.target.value='';
 };
 
-/* install */
-const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-const ua=navigator.userAgent;
-const ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const android=/android/i.test(ua);
-let deferred=null;
-function tipHidden(){try{return localStorage.getItem('installTipHidden')==='1'}catch(e){return false}}
-function showTip(text,withBtn){if(standalone||tipHidden())return;
-  $('installText').textContent=text;$('installBtn').hidden=!withBtn;$('installBar').hidden=false}
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;showTip('Put this app on your home screen.',true)});
-$('installBtn').onclick=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;$('installBar').hidden=true};
-$('installClose').onclick=()=>{$('installBar').hidden=true;try{localStorage.setItem('installTipHidden','1')}catch(e){}};
-window.addEventListener('appinstalled',()=>{$('installBar').hidden=true});
-if(ios)showTip('To install: tap the Share button (the square with the arrow), then "Add to Home Screen".',false);
-else if(android)showTip('To install: tap the browser menu (⋮), then "Add to Home screen" or "Install app".',false);
-else showTip('To install: open your browser menu and choose "Install app" or "Add to Home screen".',false);
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
