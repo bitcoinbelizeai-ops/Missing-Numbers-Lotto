@@ -3,18 +3,25 @@ name: Update Belize results
 on:
   schedule:
     # Times are UTC. Belize is UTC-6 all year (no daylight saving).
-    # Draws (Belize time): Fantasy 5 Tue/Thu/Sat 8:00 pm, Pick 3 Mon-Fri 8:30 pm,
-    # Boledo Mon-Fri 9:10 pm, Sunday Jackpot Sun 10:00 am.
-    # A draw is only asked for once it is at least READY_HOURS old (set below), and a run
-    # with nothing missing makes no API calls, so the extra runs cost nothing.
+    # Each game is asked for about 20 minutes after its draw (READY_HOURS below is 15 minutes).
+    # If magayo hasn't posted it yet, a later run tries again, but only while there are enough
+    # calls left for every draw still to come this period. Runs with nothing missing make no calls.
+    # GitHub can start scheduled runs 5-20 minutes late.
     #
-    # Same night, 9:40 pm Belize (Mon-Sat): Fantasy 5 (1 h 40 after) and Pick 3 (1 h 10 after).
-    - cron: "40 3 * * 0,2-6"
-    # Same night, 10:25 pm Belize (Mon-Fri): Boledo (1 h 15 after).
-    - cron: "25 4 * * 2-6"
-    # Sunday Jackpot: 11:20 am Belize on Sunday (1 h 20 after); Monday too in case it was postponed.
-    - cron: "20 17 * * 0,1"
-    # Safety net, 6:23 am Belize (Tue-Sun): anything magayo hadn't posted yet the night before.
+    # Fantasy 5 (Tue/Thu/Sat 8:00 pm): 8:20 pm Belize
+    - cron: "20 2 * * 0,3,5"
+    # Pick 3 (Mon-Fri 8:30 pm): 8:50 pm Belize
+    - cron: "50 2 * * 2-6"
+    # Boledo (Mon-Fri 9:10 pm): 9:30 pm Belize
+    - cron: "30 3 * * 2-6"
+    # Late sweep for anything not posted yet: 10:25 pm Belize (Mon-Sat)
+    - cron: "25 4 * * 0,2-6"
+    # Sunday Jackpot (Sun 10:00 am, finished about 10:30 am): 11:00 am Belize,
+    # then 11:45 am and 2:23 pm Sun and Mon (Monday in case it was postponed)
+    - cron: "0 17 * * 0"
+    - cron: "45 17 * * 0,1"
+    - cron: "23 20 * * 0,1"
+    # Morning safety net: 6:23 am Belize (Tue-Sun)
     - cron: "23 12 * * 0,2-6"
   workflow_dispatch:      # adds a "Run workflow" button on the Actions tab
     inputs:
@@ -42,11 +49,11 @@ jobs:
         env:
           MAGAYO_API_KEY: ${{ secrets.MAGAYO_API_KEY }}
           MONTHLY_API_LIMIT: ${{ vars.MONTHLY_API_LIMIT }}   # 100 on Bronze
-          SAFETY_RESERVE: ${{ vars.SAFETY_RESERVE }}         # optional, default 5 spare
+          SAFETY_RESERVE: ${{ vars.SAFETY_RESERVE || '1' }}  # keep 1 spare: stops at 99 of 100
           MAX_CALLS_PER_RUN: ${{ vars.MAX_CALLS_PER_RUN }}   # optional, default 10
           API_RESET_DAY: ${{ vars.API_RESET_DAY }}           # optional, default 1
           LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '14' }}
-          READY_HOURS: '1'                                   # ask magayo 1 hour after each draw
+          READY_HOURS: '0.25'                                # ask magayo 15 minutes after each draw
         run: python3 scripts/update_results.py
 
       - name: Save the new results
