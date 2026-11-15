@@ -43,6 +43,8 @@ const SCHEDULE={
   fantasy5:{days:[2,4,6],at:'20:00',text:'Tuesday, Thursday and Saturday at 8:00 pm'},
   lottery:{days:[0],at:'10:00',text:'Sunday at 10:00 am',extra:'If a Sunday draw is postponed, it can be held on Monday instead.'}
 };
+// how long each drawing lasts (minutes); the chip says "Drawing now" during it
+const DRAW_LEN={lottery:30,boledo:15,pick3:15,fantasy5:15};
 const SCHED={};Object.keys(SCHEDULE).forEach(g=>SCHED[g]=SCHEDULE[g].days);
 const RESULT_LAG_MIN=30; // give each draw 30 minutes before counting it as waiting
 /* Belize clock, whatever time zone the viewer is in */
@@ -354,7 +356,7 @@ function tickCountdown(){
   chip.classList.toggle('live',!!waiting);chip.classList.remove(waiting?'soon':'x');
   if(waiting){
     const mins=Math.floor(since/60000);
-    $('cdLbl').textContent=mins<RESULT_LAG_MIN?'Drawing now':'Waiting for results';
+    $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Waiting for results';
     el.textContent=mins<1?'just drawn':mins<60?mins+' min ago':Math.floor(mins/60)+' h '+pad(mins%60,2)+' m ago';
     if(when)when.textContent=(held===bzNow().iso?'Today':fmtDay(held).replace(/,? \d{4}$/,''))+' · '+fmtTime(g)+' draw';
     // the phone app re-checks for new results every 3 minutes while waiting
