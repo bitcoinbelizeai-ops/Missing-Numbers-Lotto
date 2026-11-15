@@ -130,6 +130,7 @@ function renderMine(){
   if(!state.loaded&&!state.sample){sec.hidden=true;return}
   sec.hidden=false;box.innerHTML='';
   $('mineHint').hidden=!!L.length;
+  $('mixWrap').hidden=L.length<2;
   if(!L.length)return;
   const seqFor=key=>state.game==='pick3'?all.map(d=>[String(d.nums[+key.split(':')[0]])]):all.map(G.keys);
   // sort: just played first, then longest out
@@ -145,6 +146,109 @@ function renderMine(){
     const x=document.createElement('button');x.type='button';x.className='mine-x';x.dataset.key=key;x.setAttribute('aria-label','Remove '+lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+' from My Numbers');x.textContent='×';it.appendChild(x);
     box.appendChild(it)});
 }
+
+/* ---------- Mixer: swirl My Numbers like a tornado, then show ways to play them ---------- */
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const uniq=a=>[...new Set(a)];
+function pairsOf(L){const out=[];for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++)out.push([L[i],L[j]]);return out}
+function mixPatterns(){
+  const g=state.game,L=mineList();const groups=[];
+  if(g==='boledo'){
+    groups.push({label:'Your numbers',plays:L.map(n=>[n])});
+    const flips=uniq(L.map(n=>n[1]+n[0]).filter(f=>!L.includes(f)));
+    if(flips.length)groups.push({label:'Flipped around',plays:flips.map(n=>[n])});
+    const mix=uniq(shuffle(pairsOf(L)).flatMap(([a,b])=>[a[0]+b[1],b[0]+a[1],a[0]+b[0],a[1]+b[1]])).filter(n=>!L.includes(n)&&!flips.includes(n));
+    if(mix.length)groups.push({label:'Pairs mixed from two of your numbers',plays:shuffle(mix).slice(0,10).map(n=>[n])});
+  }else if(g==='pick3'){
+    const spots=[[],[],[]],all=[];L.forEach(k=>{const [i,d]=k.split(':');spots[+i].push(d);all.push(d)});
+    const pool=uniq(all),pick=i=>{const s=spots[i].length?spots[i]:pool;return s[Math.floor(Math.random()*s.length)]};
+    const st=new Set();for(let t=0;t<60&&st.size<6;t++)st.add([pick(0),pick(1),pick(2)].join(''));
+    groups.push({label:'Straight (exact order)',plays:[...st].map(x=>x.split(''))});
+    const bx=new Set();for(let t=0;t<60&&bx.size<4;t++){const c=[0,1,2].map(()=>pool[Math.floor(Math.random()*pool.length)]).sort().join('');if(pool.length>=3&&new Set(c).size<3&&t<40)continue;bx.add(c)}
+    groups.push({label:'Box (any order)',plays:[...bx].map(x=>shuffle(x.split('')))});
+  }else if(g==='fantasy5'){
+    const nums=shuffle(L);const sets=[];
+    if(nums.length>=5){const n=nums.length,count=n===5?1:Math.ceil(n/5)+1;
+      for(let i=0;i<count;i++){const start=(i*5)%n;let set=[];for(let k=0;k<5;k++)set.push(nums[(start+k)%n]);if(i===count-1&&n>5)set=shuffle(nums).slice(0,5);sets.push(uniq(set).sort())}
+      groups.push({label:n===5?'Your 5 numbers':'Sets of 5 that use all your numbers',plays:sets});
+    }else{
+      const fill=[];for(let i=0;i<3;i++){const extra=shuffle(Array.from({length:39},(_,i)=>pad(i+1,2)).filter(x=>!nums.includes(x))).slice(0,5-nums.length);fill.push([...nums,...extra].sort().map(x=>nums.includes(x)?x:'+'+x))}
+      groups.push({label:'Your numbers + random fill (outlined)',plays:fill});
+    }
+  }else{ // Sunday Jackpot
+    const t=uniq(shuffle(pairsOf(L)).flatMap(([a,b])=>[a+b,b+a]));
+    groups.push({label:'4-digit tickets from two of your numbers',plays:t.slice(0,8).map(x=>x.split(''))});
+    groups.push({label:'Last two digits (the $2 prize)',plays:L.map(n=>[n])});
+  }
+  return groups;
+}
+let mixAnim=null,mixGroups=[];
+function showMixResults(){
+  const out=$('mixOut');out.innerHTML='';let n=0;
+  mixGroups.forEach(gr=>{const sec=document.createElement('div');sec.className='mixgroup';
+    const h=document.createElement('h3');h.textContent=gr.label;sec.appendChild(h);
+    const single=gr.plays.every(p=>p.length===1);
+    const rows=document.createElement('div');rows.className='mixplays'+(single?' single':'');
+    gr.plays.forEach(p=>{const row=document.createElement('div');row.className='mixplay';
+      p.forEach(x=>{const fill=String(x).startsWith('+');const b=ballEl(fill?x.slice(1):x,true);if(fill)b.classList.add('fill');b.style.setProperty('--n',n++);row.appendChild(b)});
+      rows.appendChild(row)});
+    sec.appendChild(rows);out.appendChild(sec)});
+  $('mixNote').hidden=false;$('mixBtns').hidden=false;out.hidden=false;
+  const box=document.querySelector('.mixbox-in');box.classList.remove('swirl');box.classList.add('reveal');
+}
+function runMixer(){
+  cancelAnimationFrame(mixAnim);
+  mixGroups=mixPatterns();
+  const stage=$('mixStage'),out=$('mixOut');out.hidden=true;out.innerHTML='';$('mixNote').hidden=true;$('mixBtns').hidden=true;
+  stage.innerHTML='';stage.hidden=false;stage.classList.remove('flash');
+  const box=document.querySelector('.mixbox-in');box.classList.remove('reveal');
+  if(!reduceMotion())box.classList.add('swirl');
+  const labels=mineList().map(k=>state.game==='pick3'?k.split(':')[1]:k);
+  if(reduceMotion()){stage.hidden=true;showMixResults();return}
+  const balls=[];const copies=labels.length<6?2:1;
+  for(let c=0;c<copies;c++)labels.forEach(l=>{const b=ballEl(l,true);b.classList.add('mixball');stage.appendChild(b);balls.push({el:b,a:(balls.length/Math.max(1,labels.length*copies))*Math.PI*2,r0:.82+Math.random()*.18,ph:Math.random()})});
+  const dur=3000+Math.random()*2000,t0=performance.now();
+  const step=now=>{
+    const W=stage.clientWidth,H=stage.clientHeight,R=Math.min(W,H)/2-24,t=Math.min(1,(now-t0)/dur);
+    balls.forEach(b=>{
+      const ease=t*t*(3-2*t),rad=R*(t<.12?1:b.r0)*(1-ease*.95),spin=(1.2+9*t*t)*(now-t0)/1000;
+      const ang=b.a+spin*Math.PI*2*.35, lift=Math.sin(ang*2+b.ph*6)*R*.08*(1-t);
+      const x=W/2+Math.cos(ang)*rad,y=H/2+Math.sin(ang)*rad+lift*.5;
+      const sc=.55+.6*(1-ease)+.25*Math.sin(t*Math.PI);
+      b.el.style.transform='translate('+(x-18)+'px,'+(y-18)+'px) rotate('+(spin*400%360)+'deg) scale('+sc.toFixed(3)+')';
+      b.el.style.opacity=t>.93?String(1-(t-.93)/.07):'1';
+    });
+    if(t<1){mixAnim=requestAnimationFrame(step)}
+    else{stage.classList.add('flash');setTimeout(()=>{stage.hidden=true;stage.innerHTML='';showMixResults()},380)}
+  };
+  mixAnim=requestAnimationFrame(step);
+}
+$('mixBtn').addEventListener('click',()=>{$('mixTitle').textContent='Mixer · '+GAMES[state.game].label;$('mixBox').hidden=false;runMixer();$('mixClose').focus({preventScroll:true})});
+$('mixAgain').addEventListener('click',runMixer);
+function closeMix(){cancelAnimationFrame(mixAnim);$('mixBox').hidden=true;$('mixBtn').focus()}
+$('mixClose').addEventListener('click',closeMix);
+$('mixBox').addEventListener('click',e=>{if(e.target.id==='mixBox')closeMix()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('mixBox').hidden)closeMix()});
+$('mixShare').addEventListener('click',async()=>{
+  try{await document.fonts.ready}catch(e){}
+  const rowsN=mixGroups.reduce((a,g)=>a+1+Math.ceil(g.plays.length/2),0),S=1080,H=Math.max(1080,320+rowsN*120);
+  const cv=document.createElement('canvas');cv.width=S;cv.height=H;const ctx=cv.getContext('2d');
+  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0b4aa0');bg.addColorStop(1,'#042456');ctx.fillStyle=bg;ctx.fillRect(0,0,S,H);
+  ctx.textAlign='center';ctx.fillStyle='#c9d5ea';ctx.font='700 32px "Barlow Condensed", sans-serif';ctx.fillText('B E L I Z E   L O T T E R Y',S/2,90);
+  ctx.fillStyle='#fec207';ctx.font='800 64px Outfit, Barlow, sans-serif';ctx.fillText('My Numbers Mix',S/2,170);
+  ctx.fillStyle='#e9c46a';ctx.font='700 40px "Barlow Condensed", sans-serif';ctx.fillText(GAMES[state.game].label.toUpperCase(),S/2,230);
+  const c=ballColors();let y=300;
+  mixGroups.forEach(gr=>{ctx.textAlign='left';ctx.fillStyle='#f7f0dc';ctx.font='600 30px Barlow, sans-serif';ctx.fillText(gr.label,70,y+10);y+=60;
+    gr.plays.forEach((p,i)=>{const col=i%2,x0=110+col*480,r=p.length>3?30:36,gap=r*2.3;
+      p.forEach((v,k)=>{const fill=String(v).startsWith('+');drawBall(ctx,x0+k*gap,y,r,fill?v.slice(1):String(v),fill?{hi:'#ffffff',main:'#cfd6e4',deep:'#7b879e'}:c)});
+      if(col===1||i===gr.plays.length-1)y+=110});
+    y+=10});
+  ctx.textAlign='center';ctx.fillStyle='#c9d5ea';ctx.font='500 28px Barlow, sans-serif';ctx.fillText('These are ways to play your numbers. No pattern improves your odds.',S/2,H-60);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));const file=new File([blob],'my-numbers-mix.png',{type:'image/png'});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}}catch(e){if(e&&e.name==='AbortError')return}
+  shareBlob=blob;const url=URL.createObjectURL(blob),img=$('shareImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.src=url;img.dataset.url=url;img.alt='My Numbers mix';
+  $('shareTitle').textContent='Share your mix';$('shareGo').hidden=true;$('mixBox').hidden=true;$('shareBox').hidden=false;$('shareClose').focus();
+});
 
 /* ---------- Longest out: top 5 with bars, above the Missing grid ---------- */
 function topOut(missing,total){
@@ -224,7 +328,7 @@ $('shareBtn').addEventListener('click',async()=>{
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}catch(e){if(e&&e.name==='AbortError')return}
   const url=URL.createObjectURL(blob),img=$('shareImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.src=url;img.dataset.url=url;img.alt=text;
   $('shareGo').hidden=!(navigator.canShare&&navigator.canShare({files:[file]}));
-  $('shareBox').hidden=false;$('shareClose').focus();
+  $('shareTitle').textContent='Share this result';$('shareBox').hidden=false;$('shareClose').focus();
 });
 $('shareClose').addEventListener('click',()=>{$('shareBox').hidden=true;$('shareBtn').focus()});
 $('shareBox').addEventListener('click',e=>{if(e.target.id==='shareBox')$('shareBox').hidden=true});

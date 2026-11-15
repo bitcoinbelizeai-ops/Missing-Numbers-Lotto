@@ -519,6 +519,51 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .top-star.on{color:#2a1d00;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-deep));border-color:var(--gold)}
 @media (max-width:420px){.tval{min-width:62px}.tval small,.tval{font-size:12px}}
 
+/* ---------- Mixer ---------- */
+.panel-head .mixwrap{margin-left:auto;display:flex;flex-direction:row;align-items:center;gap:8px}
+.mixcap{font:600 11.5px var(--f-body);letter-spacing:.06em;color:var(--muted)}
+.mixbtn{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;cursor:pointer;font:700 14px var(--f-label);letter-spacing:.1em;text-transform:uppercase;
+  color:#2a1d00;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-deep));border:0;box-shadow:0 2px 8px rgba(0,0,0,.4),0 0 12px rgba(254,194,7,.3);transition:transform .15s,box-shadow .15s}
+.mixbtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.mixbtn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.45),0 0 18px rgba(254,194,7,.5)}
+.mixbtn:hover svg{animation:mixspin 1s linear infinite}
+@keyframes mixspin{to{transform:rotate(360deg)}}
+.mixbox{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px max(12px,env(safe-area-inset-right,0px)) 16px max(12px,env(safe-area-inset-left,0px));background:rgba(2,10,28,.82)}
+.mixbox-in{width:min(100%,520px);max-height:calc(100dvh - 32px);overflow:auto;display:flex;flex-direction:column;gap:14px;align-items:center;
+  background:radial-gradient(ellipse 120% 70% at 50% 0%,#1a64c0,#094692 45%,#042456);border:1px solid var(--gold);border-radius:20px;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.mixbox-in h2{margin:0;font:700 18px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.mixstage{position:relative;width:100%;height:300px;border-radius:50%/40%;background:radial-gradient(ellipse at center,rgba(254,194,7,.12),rgba(0,0,0,0) 65%);overflow:hidden}
+.mixstage .mixball{position:absolute;left:0;top:0;width:36px;height:36px;will-change:transform}
+.mixstage .mixball span{font-size:13px}
+.mixstage.flash::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(254,194,7,.8) 40%,rgba(254,194,7,0) 70%);animation:mixflash .38s ease-out forwards}
+@keyframes mixflash{to{transform:scale(28);opacity:0}}
+.mixout{width:100%;display:flex;flex-direction:column;gap:14px}
+.mixgroup h3{margin:0 0 8px;font:700 13px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mixplays{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mixplay{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px;border-radius:12px;background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.mixplay .tile.sm{width:36px;height:36px;animation:mixpop .45s cubic-bezier(.2,.8,.3,1.4) both;animation-delay:calc(var(--n) * .05s)}
+.mixplay .tile.sm span{font-size:13px}
+.mixplay .tile.fill{filter:saturate(.15) brightness(1.1);outline:2px dashed rgba(255,255,255,.55);outline-offset:2px}
+@keyframes mixpop{from{opacity:0;transform:scale(.2) translateY(-30px)}to{opacity:1;transform:none}}
+.mixnote{margin:0;text-align:center;font-size:14px;color:var(--cream);opacity:.9}
+.mixbtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+@media (prefers-reduced-motion:reduce){.mixplay .tile.sm,.mixbtn:hover svg{animation:none}}
+.mixplays.single{display:flex;flex-wrap:wrap;gap:10px;padding:10px;border-radius:12px;background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.mixplays.single .mixplay{padding:0;background:none;border:0}
+.mixplays.single .tile.sm{width:44px;height:44px}
+.mixplays.single .tile.sm span{font-size:15px}
+#secMine .panel-head{align-items:center}
+
+/* Mixer: round box while the tornado spins, rectangle for the results */
+.mixbox-in.swirl{width:min(88vw,360px);height:min(88vw,360px);max-height:none;aspect-ratio:1;padding:0;border-radius:50%;overflow:hidden;position:relative;justify-content:center;
+  box-shadow:0 0 0 6px rgba(233,196,106,.15),0 20px 50px rgba(0,0,0,.6),inset 0 0 40px rgba(0,0,0,.45)}
+.mixbox-in.swirl h2{position:absolute;top:47%;left:0;right:0;text-align:center;font-size:13px;z-index:0;opacity:.35;pointer-events:none}
+.mixbox-in.swirl .mixstage{z-index:1}
+.mixbox-in.swirl .mixstage{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at center,rgba(254,194,7,.16),rgba(0,0,0,0) 62%)}
+.mixbox-in.reveal{animation:mixbox-open .35s cubic-bezier(.2,.8,.3,1) both}
+@keyframes mixbox-open{from{border-radius:40%;transform:scale(.9);opacity:.6}to{border-radius:20px;transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.mixbox-in.reveal{animation:none}}
+
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}

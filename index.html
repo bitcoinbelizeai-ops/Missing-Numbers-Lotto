@@ -50,7 +50,8 @@
   </section>
 
   <section class="panel minepanel" id="secMine" aria-labelledby="mineTitle" hidden>
-    <div class="panel-head"><h2 id="mineTitle"><span class="star" aria-hidden="true">★</span> My Numbers</h2></div>
+    <div class="panel-head"><h2 id="mineTitle"><span class="star" aria-hidden="true">★</span> My Numbers</h2>
+      <div class="mixwrap" id="mixWrap" hidden><small class="mixcap">Ways to play</small><button type="button" class="mixbtn" id="mixBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 1-8.5 6"/><path d="M12 7a5 5 0 1 1-4.6 3"/><circle cx="12" cy="12" r="1.6"/></svg>Mixer</button></div></div>
     <p class="mine-hint" id="mineHint">Keep an eye on your favourite numbers: tap any ball below, then <b>☆ Add to My Numbers</b>. They're saved on this device.</p>
     <div class="mine" id="mine"></div>
   </section>
@@ -124,6 +125,15 @@
     <button type="button" id="tabHot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 4 6 5 6 10a6 6 0 0 1-12 0c0-3 2-4 2-7 2 1 3 2 4-3z"/></svg>Hot</button>
     <button type="button" id="tabRes"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Results</button>
   </nav>
+  <div class="mixbox" id="mixBox" hidden role="dialog" aria-modal="true" aria-labelledby="mixTitle">
+    <div class="mixbox-in">
+      <h2 id="mixTitle">Mixer</h2>
+      <div class="mixstage" id="mixStage" aria-hidden="true"></div>
+      <div class="mixout" id="mixOut" aria-live="polite"></div>
+      <p class="mixnote" id="mixNote" hidden>These are ways to play your numbers. No pattern improves your odds.</p>
+      <div class="mixbtns" id="mixBtns" hidden><button type="button" class="btn" id="mixAgain">Mix again</button><button type="button" class="btn ghost" id="mixShare">Share</button><button type="button" class="btn ghost" id="mixClose">Close</button></div>
+    </div>
+  </div>
   <div class="sharebox" id="shareBox" hidden role="dialog" aria-modal="true" aria-labelledby="shareTitle">
     <div class="sharebox-in">
       <h2 id="shareTitle">Share this result</h2>
