@@ -50,6 +50,11 @@
       <h2 id="missTitle">Missing Numbers</h2>
       <div class="lookback"><span class="lookback-lbl" id="lookLbl">Last</span><div class="seg" role="group" aria-labelledby="lookLbl" id="winSeg"></div></div>
     </div>
+    <div class="missdates" id="missDates" hidden>
+      <label class="label" for="missFrom">From</label><input type="date" id="missFrom">
+      <label class="label" for="missTo">To</label><input type="date" id="missTo">
+      <button type="button" class="btn ghost small" id="missClear">Use the slider</button>
+    </div>
     <p class="say" id="say" aria-busy="true"><span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span></p>
     <div id="tiles" class="answer-body"></div>
     <div class="notebar"><p class="note" id="note"></p><button type="button" class="more" data-more="noteFine" aria-expanded="false" aria-controls="noteFine">More info</button></div>
@@ -59,6 +64,7 @@
   <section class="panel" id="secHot" aria-labelledby="hotTitle">
     <div class="panel-head">
       <h2 id="hotTitle">Hot Numbers</h2>
+      <div class="lookback"><span class="lookback-lbl" id="hotLbl">Last</span><div class="seg" role="group" aria-labelledby="hotLbl" id="hotSeg"></div></div>
     </div>
     <p class="say" id="hotSay"></p>
     <div id="hot" class="answer-body"></div>
@@ -152,6 +158,19 @@
       <div class="pickdots" id="pickDots" aria-hidden="true"></div>
       <div class="pickbtns"><button type="button" class="btn ghost" id="pickBack">Back</button><button type="button" class="btn" id="pickNext">Continue</button></div>
       <button type="button" class="pickdone" id="pickDone">Done</button>
+    </div>
+  </div>
+  <div class="sheet" id="ballSheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-in">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <div class="sheet-ball" id="sheetBall"></div>
+        <div class="sheet-txt"><h2 id="sheetTitle"></h2><p id="sheetSub"></p></div>
+        <button type="button" class="sheet-x" id="sheetClose" aria-label="Close">×</button>
+      </div>
+      <p class="sheet-facts" id="sheetFacts"></p>
+      <div id="sheetTrend"></div>
+      <div class="sheet-star" id="sheetStar"></div>
     </div>
   </div>
   <div class="sharebox" id="shareBox" hidden role="dialog" aria-modal="true" aria-labelledby="shareTitle">

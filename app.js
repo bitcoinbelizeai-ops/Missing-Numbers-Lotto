@@ -2,7 +2,11 @@
    startApp(adapter): adapter = {subscribe(cb), save(list)->Promise, remove(id)->Promise} */
 function startApp(adapter){
 'use strict';
-const $=id=>document.getElementById(id);
+// if a page element is missing (for example index.html is older than app.js after a partial upload),
+// hand back a spare element so the rest of the app still loads instead of stopping
+const $=id=>{const el=document.getElementById(id);if(el)return el;
+  if(!$.warned){$.warned=true;console.warn('Missing page element #'+id+': index.html may be older than app.js. Upload all the files together.')}
+  const d=document.createElement('div');d.id=id;d.hidden=true;return d};
 const pad=(n,w)=>String(n).padStart(w,'0');
 const fmtDate=s=>{try{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}catch(e){return s}};
 const fmtDay=s=>{try{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})}catch(e){return s}};
@@ -1033,7 +1037,7 @@ $('sheetClose').addEventListener('click',closeBallSheet);
 $('ballSheet').addEventListener('click',e=>{if(e.target.id==='ballSheet')closeBallSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('ballSheet').hidden)closeBallSheet()});
 // swipe the card down to close it
-(()=>{const inn=$('ballSheet').querySelector('.sheet-in');let y0=null,dy=0;
+(()=>{const inn=$('ballSheet').querySelector('.sheet-in')||document.createElement('div');let y0=null,dy=0;
   inn.addEventListener('touchstart',e=>{if(inn.scrollTop>0)return;y0=e.touches[0].clientY;dy=0;inn.style.transition='none'},{passive:true});
   inn.addEventListener('touchmove',e=>{if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);inn.style.transform=dy?'translateY('+dy+'px)':''},{passive:true});
   inn.addEventListener('touchend',()=>{if(y0==null)return;inn.style.transition='';if(dy>90)closeBallSheet();else inn.style.transform='';y0=null})})();
