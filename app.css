@@ -688,6 +688,15 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .mixmute[aria-pressed="true"]{color:var(--muted);background:rgba(0,0,0,.3)}
 .mixmute:hover,.mixmute:focus-visible{background:rgba(255,255,255,.22);outline:none;box-shadow:0 0 0 2px var(--gold)}
 
+/* site sound on/off: small speaker at the top-right of the header */
+.top{position:relative}
+.sndbtn{position:absolute;top:0;right:0;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);touch-action:manipulation;transition:background-color .15s,box-shadow .15s}
+.sndbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sndbtn svg path:first-child{fill:currentColor;fill-opacity:.25}
+.sndbtn[aria-pressed="true"]{color:var(--muted);background:rgba(0,0,0,.18)}
+.sndbtn:hover,.sndbtn:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
+
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}
