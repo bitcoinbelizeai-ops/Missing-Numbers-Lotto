@@ -15,22 +15,22 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 
 /* ---------- the four games ---------- */
 const GAMES={
-  boledo:{label:'Boledo',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',
+  boledo:{label:'Boledo',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',hotWins:['20','40','60','all'],hotDef:'40',
     ph:'41',hint:'Type the winning number, like 41.',
     keys:d=>[pad(d.nums[0],2)],show:d=>pad(d.nums[0],2),
     make(t){const n=digitsOf(t);if(!n.length||n[0].length>2)return null;return{nums:[pad(n[0],2)]}}},
-  lottery:{label:'Sunday Jackpot',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',
+  lottery:{label:'Sunday Jackpot',mode:'board',board:range(0,99),wins:['10','20','30','all'],def:'30',hotWins:['10','20','30','all'],hotDef:'30',
     ph:'1652 0188 7876',hint:'Type the 1st, 2nd and 3rd prize, like 1652 0188 7876. On a phone you can type all 12 digits in a row (165201887876) or use a dot between them.',
     note:'For the Sunday Jackpot, the board counts the last two digits of the 1st prize, the 2-digit number that wins. The 2nd and 3rd prizes are shown but not counted.',
     keys:d=>[pad(d.nums[0],4).slice(-2)],show:d=>d.nums.map(n=>pad(n,4)).join(' · '),
     make(t){const n=jackDigits(t);if(!n.length)return null;return{nums:n.slice(0,3).map(x=>pad(x,4))}}},
-  fantasy5:{label:'Fantasy 5',mode:'board',board:range(1,39),wins:['5','10','15','all'],def:'10',
+  fantasy5:{label:'Fantasy 5',mode:'board',board:range(1,39),wins:['5','10','15','all'],def:'10',hotWins:['10','20','30','all'],hotDef:'20',
     ph:'12 18 25 27 33 Y',hint:'Type the five numbers with spaces between, then the letter if you have it, like 12 18 25 27 33 Y.',
     keys:d=>d.nums.map(n=>pad(n,2)),show:d=>d.nums.map(n=>pad(n,2)).join(' ')+(d.letter?' · '+d.letter:''),
     make(t){const letter=(t.find(x=>/^[A-Za-z]$/.test(x))||'').toUpperCase();
       const n=[...new Set(digitsOf(t).map(Number))].filter(x=>x>=1&&x<=39);
       if(n.length!==5)return null;const o={nums:n.sort((a,b)=>a-b).map(x=>pad(x,2))};if(letter)o.letter=letter;return o}},
-  pick3:{label:'Pick 3',mode:'position',board:['0','1','2','3','4','5','6','7','8','9'],wins:['5','10','15','all'],def:'10',
+  pick3:{label:'Pick 3',mode:'position',board:['0','1','2','3','4','5','6','7','8','9'],wins:['5','10','15','all'],def:'10',hotWins:['10','20','30','all'],hotDef:'20',
     ph:'390',hint:'Type the three digits in order, like 390.',
     show:d=>d.nums.join('-'),
     make(t){let n=digitsOf(t);if(n.length===1&&n[0].length===3)n=n[0].split('');if(n.length<3||n.slice(0,3).some(x=>x.length!==1))return null;return{nums:n.slice(0,3)}}}
@@ -74,9 +74,10 @@ const ERR={boledo:'Type a number from 00 to 99.',lottery:'Type at least the 1st 
 const PREF='bz-prefs-v1';
 let prefs={game:'boledo',wins:{}};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(PREF)||'{}'))}catch(e){}
-const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:'',missRange:{}};
+const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),hotWins:Object.assign({},prefs.hotWins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:'',missRange:{}};
+const curHot=()=>{const G=GAMES[state.game],w=state.hotWins[state.game];return G.hotWins.includes(w)?w:G.hotDef};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
-const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,mine:prefs.mine||{}}))}catch(e){}};
+const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,hotWins:state.hotWins,mine:prefs.mine||{}}))}catch(e){}};
 
 /* ---------- game tabs and look-back picker ---------- */
 const seg=$('gameSeg');
@@ -97,6 +98,10 @@ function setup(){
       const all=drawsFor();if(!all.length)return;const to=all[all.length-1].date,from=isoAdd(to,-29);
       state.missRange[state.game]={from:from<all[0].date?all[0].date:from,to};render();$('missFrom').focus({preventScroll:true})};
     box.appendChild(c) }
+  const hs=$('hotSeg');hs.innerHTML='';
+  G.hotWins.forEach(w=>{const b=document.createElement('button');b.type='button';b.dataset.w=w;b.textContent=w==='all'?'All':w;
+    b.setAttribute('aria-label',w==='all'?'All draws':'Last '+w+' draws');
+    b.onclick=()=>{state.hotWins[state.game]=w;savePrefs();render()};hs.appendChild(b)});
   const rs=$('resSeg');rs.innerHTML='';
   [1,2,3,4].forEach(w=>{const b=document.createElement('button');b.type='button';b.dataset.w=w;b.textContent=w+'W';
     b.setAttribute('aria-label',w===1?'1 week':w+' weeks');
@@ -659,11 +664,11 @@ function playDrama(id){
   });
   if(!hot){const sb=$('say').querySelector('b');if(sb)countUp(sb,WAVE_S*1000+300,0);
     box.querySelectorAll('.topout-list li').forEach((li,i)=>{const v=li.querySelector('.tval b');if(v)countUp(v,700,TOP_STEP*1000*i+900)})}
-  setTimeout(()=>box.classList.remove('dplay'),(WAVE_S+4)*1000);
+  clearTimeout(box._dt);box._dt=setTimeout(()=>box.classList.remove('dplay'),(WAVE_S+4)*1000);
 }
-function drama(key){
+function drama(key,ids){
   if(reduceMotion())return;
-  ['tiles','hot'].forEach(id=>{
+  (ids||['tiles']).forEach(id=>{
     const st=dramaState[id],box=$(id);if(!box)return;
     if(st.key!==key){st.key=key;st.played=false;if(id==='tiles'&&Date.now()-enterPickedAt>120)pickEnter()}
     if(st.played)return;           // already shown for this game and look-back
@@ -839,7 +844,7 @@ function render(){
     body.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(12)+'</div>';
     hot.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(4)+'</div>';
     last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
-  else if(!win.length&&RANGE){say.innerHTML='There were no '+esc(G.label)+' draws between <b>'+esc(fmtDate(RANGE.from))+'</b> and <b>'+esc(fmtDate(RANGE.to))+'</b>. Try other dates.';$('hotSay').textContent='No draws in these dates.'}
+  else if(!win.length&&RANGE){say.innerHTML='There were no '+esc(G.label)+' draws between <b>'+esc(fmtDate(RANGE.from))+'</b> and <b>'+esc(fmtDate(RANGE.to))+'</b>. Try other dates.'}
   else if(!win.length){say.textContent='There are no '+G.label+' results yet. Add one at the bottom of the page.'}
   else{
     const n=win.length,short=d=>esc(fmtDate(d).replace(/,? \d{4}$/,''));
@@ -860,9 +865,6 @@ function render(){
         const mb=document.createElement('div');mb.className='showmore';mb.hidden=true;
         mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button><button type="button" class="btn showless-btn" aria-controls="tiles" hidden>Close <span class="chev" aria-hidden="true">▴</span></button>';body.appendChild(mb)}
       setNote(dates,G.note||'');
-      const hl=hotList(winSeq,G.board,state.game==='fantasy5'?6:8);
-      $('hotSay').innerHTML=hl.length?'The numbers that came out most often in '+span+'. The number under each ball shows how many times.':'No number came out more than once in '+span+'. Try more draws.';
-      if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '),k)),'hot'));
     }else{
       let total=0,anyHot=false;
       SPOTS.forEach((spot,i)=>{
@@ -874,15 +876,9 @@ function render(){
         if(missing.length)row.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,pre(k)),i+':'+k))));
         else row.insertAdjacentHTML('beforeend','<p class="allplayed">Every digit has played here.</p>');
         body.appendChild(row);
-        const hl=hotList(winSeq,G.board,3);
-        const hrow=document.createElement('div');hrow.className='posrow';hrow.innerHTML='<h3>'+spot+' digit</h3>';
-        if(hl.length){anyHot=true;hrow.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,pre(k)),i+':'+k)),'hot'))}
-        else hrow.insertAdjacentHTML('beforeend','<p class="allplayed">No digit has played twice here.</p>');
-        hot.appendChild(hrow);
       });
       say.innerHTML=total?'A Pick 3 number has 3 spots. Below, for each spot, are the digits that have <em>not</em> come out there in '+span+'. The number under each ball shows how many draws it has been waiting. Tap a ball for details.'
         :'Every digit from 0 to 9 has come out in every spot in '+span+'.';
-      $('hotSay').innerHTML=anyHot?'The digits that came out most often in each spot in '+span+'.':'No digit came out more than once in any spot. Try more draws.';
       setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
     }
     shadeColumns();
@@ -890,6 +886,7 @@ function render(){
     renderMine();
     drama(state.game+'|'+WK+'|'+(state.sample?'s':'r')+'|'+win.length+'|'+win[win.length-1].id);
   }
+  renderHot(all);
 
   applyMore();
   renderRes(false);
@@ -962,6 +959,37 @@ $('resBox').addEventListener('click',e=>{if(e.target.id==='resBox')closeRes()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('resBox').hidden)closeRes()});
 $('resFrom').addEventListener('change',e=>{const v=e.target.value;if(v&&v>bzNow().iso){e.target.value=state.resFrom;return}state.resFrom=v||'';renderRes(!!v)});
 $('resLatest').addEventListener('click',()=>{state.resFrom='';$('resFrom').value='';renderRes(false)});
+
+/* Hot Numbers has its own look-back switch, separate from Missing Numbers */
+function renderHot(all){
+  const G=GAMES[state.game],HW=curHot(),hot=$('hot');
+  $('hotSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.w===HW));
+  if(!state.loaded&&!state.sample)return;
+  hot.innerHTML='';
+  if(!all.length){$('hotSay').textContent='There are no '+G.label+' results yet.';return}
+  const win=HW==='all'?all:all.slice(-Number(HW)),n=win.length,lo=all.length-n,hi=all.length-1;
+  const span=HW==='all'?'all <b>'+n+'</b> draws we have':n===1?'the last draw':'the last <b>'+n+'</b> draws',spanTxt=span.replace(/<[^>]+>/g,'');
+  const dates=all.map(d=>d.date);
+  if(G.mode==='board'){
+    const facts=factsFor(all.map(G.keys),dates,n,lo,hi,spanTxt);
+    const hl=hotList(win.map(G.keys),G.board,state.game==='fantasy5'?6:8);
+    $('hotSay').innerHTML=hl.length?'The numbers that came out most often in '+span+'. The number under each ball shows how many times.':'No number came out more than once in '+span+'. Try more draws.';
+    if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '),k)),'hot'));
+  }else{
+    let anyHot=false;
+    SPOTS.forEach((spot,i)=>{
+      const facts=factsFor(all.map(d=>[String(d.nums[i])]),dates,n,lo,hi,spanTxt),pre=k=>'<b>'+k+'</b> in the '+spot+' spot · ';
+      const hl=hotList(win.map(d=>[String(d.nums[i])]),G.board,3);
+      const hrow=document.createElement('div');hrow.className='posrow';hrow.innerHTML='<h3>'+spot+' digit</h3>';
+      if(hl.length){anyHot=true;hrow.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,pre(k)),i+':'+k)),'hot'))}
+      else hrow.insertAdjacentHTML('beforeend','<p class="allplayed">No digit came out twice here.</p>');
+      hot.appendChild(hrow)});
+    $('hotSay').innerHTML=anyHot?'The digits that came out most often in each spot in '+span+'.':'No digit came out more than once in any spot. Try more draws.';
+  }
+  shadeColumns();
+  // replay the hot reveal when its switch changes
+  drama(state.game+'|'+HW+'|'+(state.sample?'s':'r')+'|'+n+'|'+all[all.length-1].id,['hot']);
+}
 
 /* alternate light/dark shade by column, whatever the screen width */
 function shadeColumns(){
