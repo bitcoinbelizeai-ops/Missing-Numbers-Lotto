@@ -330,6 +330,7 @@ document.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;
   if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#mixMute,#mixBtn'))return;
   if(t.closest('.games button')){SND.select();return}
   if(t.closest('.bwrap')){SND.pop();return}
+  if(t.closest('.showless-btn'))return;
   if(t.closest('.seg button,.tabbar button,button.more,.showmore-btn,.btn,summary,#resMore,.pickbtns button,.pickdone,.sharebtn'))SND.tap();
 },true);
 muteLabel();
@@ -688,17 +689,19 @@ function limitMissing(key,reveal){
       const num=b.querySelector('.tag b');if(num)countUp(num,650,j*step*1000+350)});
     const first=fresh[0];setTimeout(()=>first.scrollIntoView({block:'center',behavior:'smooth'}),60);
   }
-  const left=total-show,btn=mb.querySelector('button');
+  const left=total-show,btn=mb.querySelector('.showmore-btn'),less=mb.querySelector('.showless-btn');
   if(total<=5){mb.hidden=true;return}
-  mb.hidden=false;mb.classList.toggle('folded',show===0);
+  mb.hidden=false;mb.classList.toggle('folded',show===0);mb.classList.toggle('open',show>0);
+  // once opened, a Close button sits beside Continue and the bar follows you down the list
+  if(less){less.hidden=!(show>0&&left>0);less.setAttribute('aria-label','Close the list and go back to the top of Missing Numbers')}
   if(show===0){btn.innerHTML='Show all <span class="cnt">'+total+' missing numbers</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
   else if(left>0){btn.innerHTML='Continue <span class="cnt">'+left+' more</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
-  else{btn.innerHTML='Hide the balls <span class="chev" aria-hidden="true">▴</span>';btn.dataset.act='less';btn.setAttribute('aria-expanded','true')}
+  else{btn.innerHTML='Close <span class="chev" aria-hidden="true">▴</span>';btn.dataset.act='less';btn.setAttribute('aria-expanded','true')}
 }
 $('tiles').addEventListener('click',e=>{
-  const btn=e.target.closest('.showmore-btn');if(!btn)return;
-  if(btn.dataset.act==='more'){pickEnter();missView.rows+=MISS_STEP_ROWS;limitMissing(undefined,true)}
-  else{missView.rows=MISS_FIRST_ROWS;limitMissing();$('say').scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'})}
+  const btn=e.target.closest('.showmore-btn,.showless-btn');if(!btn)return;
+  if(btn.classList.contains('showmore-btn')&&btn.dataset.act==='more'){pickEnter();missView.rows+=MISS_STEP_ROWS;limitMissing(undefined,true)}
+  else{missView.rows=MISS_FIRST_ROWS;limitMissing();SND.close();$('secMiss').scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'})}
 });
 window.addEventListener('resize',()=>limitMissing());
 
@@ -832,7 +835,7 @@ function render(){
       if(missing.length){body.appendChild(topOut(missing,all.length));
         body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · '),k))));
         const mb=document.createElement('div');mb.className='showmore';mb.hidden=true;
-        mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button>';body.appendChild(mb)}
+        mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button><button type="button" class="btn showless-btn" aria-controls="tiles" hidden>Close <span class="chev" aria-hidden="true">▴</span></button>';body.appendChild(mb)}
       setNote(dates,G.note||'');
       const hl=hotList(winSeq,G.board,state.game==='fantasy5'?6:8);
       $('hotSay').innerHTML=hl.length?'Numbers that played the most in '+span+'. Under each ball: how many times.':'No number has played more than once in '+span+'. Try more draws.';

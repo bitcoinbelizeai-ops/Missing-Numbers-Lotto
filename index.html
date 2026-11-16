@@ -72,6 +72,29 @@
     <div class="mine" id="mine"></div>
   </section>
 
+
+  <details class="nudge" id="nudge" open hidden aria-live="polite">
+    <summary><h2 id="nudgeTitle">Results are waiting</h2></summary>
+    <div class="nudge-body">
+      <ul id="nudgeList"></ul>
+      <p class="nudge-more" id="nudgeMore"></p>
+    </div>
+  </details>
+
+  <section class="panel" id="secRes" aria-labelledby="resTitle">
+    <div class="panel-head">
+      <h2 id="resTitle">Past Results</h2>
+      <div class="lookback"><span class="lookback-lbl" id="resLbl">Show</span><div class="seg" role="group" aria-labelledby="resLbl" id="resSeg"></div></div>
+    </div>
+    <p class="say" id="resSay"></p>
+    <div class="reslist" id="resList"></div>
+    <div class="showmore" id="resMoreWrap" hidden><button type="button" class="showmore-btn" id="resMore"></button></div>
+    <div class="resfrom">
+      <label class="label" for="resFrom">Start from a date</label>
+      <div class="resfrom-row"><input type="date" id="resFrom"><button type="button" class="btn ghost small" id="resLatest" hidden>Back to latest</button></div>
+    </div>
+  </section>
+
   <details id="addFold">
     <summary>Add a result by hand</summary>
     <div class="fold">
@@ -96,28 +119,6 @@
         <input type="file" id="restoreFile" accept="application/json,.json"></div>
     </div>
   </details>
-
-  <details class="nudge" id="nudge" open hidden aria-live="polite">
-    <summary><h2 id="nudgeTitle">Results are waiting</h2></summary>
-    <div class="nudge-body">
-      <ul id="nudgeList"></ul>
-      <p class="nudge-more" id="nudgeMore"></p>
-    </div>
-  </details>
-
-  <section class="panel" id="secRes" aria-labelledby="resTitle">
-    <div class="panel-head">
-      <h2 id="resTitle">Past Results</h2>
-      <div class="lookback"><span class="lookback-lbl" id="resLbl">Show</span><div class="seg" role="group" aria-labelledby="resLbl" id="resSeg"></div></div>
-    </div>
-    <p class="say" id="resSay"></p>
-    <div class="reslist" id="resList"></div>
-    <div class="showmore" id="resMoreWrap" hidden><button type="button" class="showmore-btn" id="resMore"></button></div>
-    <div class="resfrom">
-      <label class="label" for="resFrom">Start from a date</label>
-      <div class="resfrom-row"><input type="date" id="resFrom"><button type="button" class="btn ghost small" id="resLatest" hidden>Back to latest</button></div>
-    </div>
-  </section>
 
   <nav class="tabbar" aria-label="Sections">
     <button type="button" id="tabGames" class="on" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/></svg>Games</button>
