@@ -821,7 +821,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .iz-play .iz-bloom{animation:iz-bloom 640ms cubic-bezier(.4,0,.2,1) 1000ms both}
 .iz-play .iz-w2 .iz-shine{animation:iz-shine 300ms ease-in-out 1560ms both}
 .iz-play .iz-tag{animation:iz-tag 260ms ease-out 1460ms both}
-.iz-play.iz-exit{animation:iz-vanish 200ms ease-in 1800ms both}
+.iz-play.iz-exit{animation:iz-vanish 260ms ease-in 2600ms both}
 
 @keyframes iz-grow{0%{transform:scale(.04);filter:brightness(2.2)}70%{transform:scale(1.08);filter:brightness(1.15)}100%{transform:scale(1);filter:none}}
 @keyframes iz-floor{from{opacity:0;transform:scaleX(.2)}to{opacity:1;transform:none}}

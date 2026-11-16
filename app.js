@@ -1223,7 +1223,7 @@ const INTRO=(()=>{
     running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip');void sp.offsetWidth;measure();
     sp.classList.add('iz-play','iz-exit');
     if(withSound)SND.intro();
-    timer=setTimeout(end,2050);return true;
+    timer=setTimeout(end,2900);return true;
   }
   // tap anywhere on the intro to skip it
   sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;clearTimeout(timer);sp.classList.add('iz-skip');timer=setTimeout(end,220)});
