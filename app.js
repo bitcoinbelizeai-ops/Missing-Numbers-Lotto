@@ -74,7 +74,7 @@ const ERR={boledo:'Type a number from 00 to 99.',lottery:'Type at least the 1st 
 const PREF='bz-prefs-v1';
 let prefs={game:'boledo',wins:{}};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(PREF)||'{}'))}catch(e){}
-const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),draws:[],sample:null,canWrite:true,loaded:false};
+const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:''};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
 const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,mine:prefs.mine||{}}))}catch(e){}};
 
@@ -91,6 +91,11 @@ function setup(){
   G.wins.forEach(w=>{const b=document.createElement('button');b.type='button';b.dataset.w=w;b.textContent=w==='all'?'All':w;
     b.setAttribute('aria-label',w==='all'?'All draws':'Last '+w+' draws');
     b.onclick=()=>{state.wins[state.game]=w;savePrefs();render()};box.appendChild(b)});
+  const rs=$('resSeg');rs.innerHTML='';
+  [1,2,3,4].forEach(w=>{const b=document.createElement('button');b.type='button';b.dataset.w=w;b.textContent=w+'W';
+    b.setAttribute('aria-label',w===1?'1 week':w+' weeks');
+    b.onclick=()=>{state.resW=w;renderRes(true)};rs.appendChild(b)});
+  $('resFrom').value=state.resFrom;
   $('quickNums').placeholder=G.ph;
   $('quickNums').inputMode=state.game==='fantasy5'?'text':state.game==='lottery'?'decimal':'numeric';
   $('quickLabel').textContent=G.label+' numbers';
@@ -132,24 +137,81 @@ function renderMine(){
   const box=$('mine'),sec=$('secMine');if(!box||!sec)return;
   const G=GAMES[state.game],all=drawsFor(),L=mineList();
   if(!state.loaded&&!state.sample){sec.hidden=true;return}
-  sec.hidden=false;box.innerHTML='';
-  $('mineHint').hidden=!!L.length;
+  sec.hidden=false;box.innerHTML='';mineArmed=null;
+  $('mineHint').hidden=!!L.length;$('mineTip').hidden=!L.length;
   $('mixWrap').hidden=L.length<2;
-  if(!L.length)return;
   const seqFor=key=>state.game==='pick3'?all.map(d=>[String(d.nums[+key.split(':')[0]])]):all.map(G.keys);
   // sort: just played first, then longest out
   const rows=L.map(key=>{const lbl=mineLabel(key),k=state.game==='pick3'?lbl.ball:key,seq=seqFor(key);
     let out=null;for(let i=seq.length-1;i>=0;i--){if(seq[i].includes(k)){out=seq.length-1-i;break}}return{key,lbl,out}})
     .sort((a,b)=>(a.out===0?-1:0)-(b.out===0?-1:0)||(b.out==null?1e9:b.out)-(a.out==null?1e9:a.out));
   rows.forEach(({key,lbl,out})=>{
-    const it=document.createElement('div');it.className='mine-item'+(out===0?' hit':'');
+    const it=document.createElement('div');it.className='mine-item'+(out===0?' hit':'');it.dataset.key=key;
+    it.tabIndex=0;it.setAttribute('role','button');
+    const outTxt=out===0?'played in the latest draw':out==null?all.length+'+ draws out':out+' draw'+(out===1?'':'s')+' out';
+    it.setAttribute('aria-label',lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+', '+outTxt+'. Double-tap to remove.');
     const t=ballEl(lbl.ball);it.appendChild(t);
     const s=document.createElement('div');s.className='mine-tag';
     s.innerHTML=(lbl.sub?'<small>'+esc(lbl.sub)+'</small>':'')+(out===0?'<b>Played!</b><small>latest draw</small>':out==null?'<b>'+all.length+'+</b><small>draws out</small>':'<b>'+out+'</b><small>draw'+(out===1?'':'s')+' out</small>');
     it.appendChild(s);
-    const x=document.createElement('button');x.type='button';x.className='mine-x';x.dataset.key=key;x.setAttribute('aria-label','Remove '+lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+' from My Numbers');x.textContent='×';it.appendChild(x);
+    const rm=document.createElement('span');rm.className='mine-rm';rm.setAttribute('aria-hidden','true');rm.textContent='Tap again to remove';it.appendChild(rm);
     box.appendChild(it)});
+  if(L.length<12){const add=document.createElement('button');add.type='button';add.className='mine-add';add.id='mineAdd';
+    add.innerHTML='<span class="mine-add-ring" aria-hidden="true">＋</span><span class="mine-add-txt">Add</span>';
+    add.setAttribute('aria-label','Add numbers to My Numbers');box.appendChild(add)}
 }
+/* double-tap (or two taps close together) removes a number; the first tap arms it */
+let mineArmed=null,mineArmTimer=0;
+function mineDisarm(){clearTimeout(mineArmTimer);document.querySelectorAll('.mine-item.armed').forEach(x=>x.classList.remove('armed'));mineArmed=null}
+function mineRemove(it){mineDisarm();const key=it.dataset.key,lbl=mineLabel(key);it.classList.add('leaving');
+  setTimeout(()=>{toggleMine(key);toast('Removed '+lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+' from My Numbers')},matchMedia('(prefers-reduced-motion:reduce)').matches?0:230)}
+$('mine').addEventListener('click',e=>{
+  if(e.target.closest('.mine-add')){mineDisarm();openPick();return}
+  const it=e.target.closest('.mine-item');if(!it||it.classList.contains('leaving'))return;
+  if(mineArmed===it.dataset.key){mineRemove(it);return}
+  mineDisarm();mineArmed=it.dataset.key;it.classList.add('armed');mineArmTimer=setTimeout(mineDisarm,1800);
+});
+$('mine').addEventListener('keydown',e=>{const it=e.target.closest('.mine-item');if(!it)return;
+  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();mineRemove(it)}
+  else if(e.key==='Enter'||e.key===' '){e.preventDefault();it.click()}});
+document.addEventListener('click',e=>{if(mineArmed&&!e.target.closest('#mine'))mineDisarm()});
+
+/* ---------- add numbers one at a time: a picker shown a page at a time ---------- */
+let pickPage=0,pickOpener=null;
+function pickPages(){
+  const g=state.game;
+  if(g==='pick3')return SPOTS.map((sp,i)=>({label:sp+' digit',keys:GAMES.pick3.board.map(d=>i+':'+d)}));
+  const B=GAMES[g].board,size=g==='fantasy5'?20:25,out=[];
+  for(let i=0;i<B.length;i+=size){const k=B.slice(i,i+size);out.push({label:k[0]+'–'+k[k.length-1],keys:k})}
+  return out;
+}
+function pickCount(){const n=mineList().length;$('pickCount').textContent=n+' of 12 picked'}
+function renderPick(){
+  const pages=pickPages(),pg=pages[pickPage],grid=$('pickGrid');
+  $('pickRange').textContent=pg.label;pickCount();grid.innerHTML='';
+  grid.dataset.cols=state.game==='pick3'?'5':'5';
+  pg.keys.forEach(key=>{const lbl=mineLabel(key);const b=document.createElement('button');b.type='button';b.className='pickball';b.dataset.key=key;
+    const on=isMine(key);b.setAttribute('aria-pressed',on);b.setAttribute('aria-label',lbl.ball+(lbl.sub?' in the '+lbl.sub:'')+(on?', in My Numbers':''));
+    b.appendChild(ballEl(lbl.ball,true));const st=document.createElement('i');st.className='pickstar';st.setAttribute('aria-hidden','true');st.textContent='★';b.appendChild(st);
+    grid.appendChild(b)});
+  $('pickDots').innerHTML=pages.map((_,i)=>'<span'+(i===pickPage?' class="on"':'')+'></span>').join('');
+  $('pickBack').hidden=pickPage===0;
+  const last=pickPage===pages.length-1;
+  $('pickNext').textContent=last?'Done':'Continue';
+  $('pickNext').setAttribute('aria-label',last?'Done':'Continue to '+pages[pickPage+1].label);
+  $('pickDone').hidden=last;
+}
+function openPick(){pickPage=0;pickOpener=document.activeElement;$('pickBoxTitle').textContent='Add '+GAMES[state.game].label+' numbers';
+  $('pickBox').hidden=false;renderPick();$('pickNext').focus({preventScroll:true})}
+function closePick(){if($('pickBox').hidden)return;$('pickBox').hidden=true;const a=$('mineAdd');(a||pickOpener||document.body).focus&&(a||pickOpener).focus({preventScroll:true})}
+$('pickGrid').addEventListener('click',e=>{const b=e.target.closest('.pickball');if(!b)return;
+  toggleMine(b.dataset.key);const on=isMine(b.dataset.key);b.setAttribute('aria-pressed',on);
+  if(on){b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop')}pickCount()});
+$('pickNext').addEventListener('click',()=>{const n=pickPages().length;if(pickPage>=n-1){closePick();return}pickPage++;renderPick()});
+$('pickBack').addEventListener('click',()=>{if(pickPage>0){pickPage--;renderPick()}});
+$('pickDone').addEventListener('click',closePick);
+$('pickBox').addEventListener('click',e=>{if(e.target.id==='pickBox')closePick()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('pickBox').hidden)closePick()});
 
 /* ---------- Mixer: swirl My Numbers like a tornado, then show ways to play them ---------- */
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -209,21 +271,40 @@ function runMixer(){
   if(!reduceMotion())box.classList.add('swirl');
   const labels=mineList().map(k=>state.game==='pick3'?k.split(':')[1]:k);
   if(reduceMotion()){stage.hidden=true;showMixResults();return}
-  const balls=[];const copies=labels.length<6?2:1;
-  for(let c=0;c<copies;c++)labels.forEach(l=>{const b=ballEl(l,true);b.classList.add('mixball');stage.appendChild(b);balls.push({el:b,a:(balls.length/Math.max(1,labels.length*copies))*Math.PI*2,r0:.82+Math.random()*.18,ph:Math.random()})});
-  const dur=3000+Math.random()*2000,t0=performance.now();
+  // A lottery air-mix drum: balls drop in through the top tube one by one, bounce to the
+  // bottom, then the air blower switches on and tumbles them around the glass globe.
+  stage.innerHTML='<div class="globe"><span class="globe-tube"></span><span class="globe-shine"></span><span class="globe-vent"></span></div>';
+  const copies=labels.length<6?2:1,balls=[];
+  for(let c=0;c<copies;c++)labels.forEach(l=>{const b=ballEl(l,true);b.classList.add('mixball');b.style.opacity='0';stage.appendChild(b);balls.push({el:b,x:0,y:0,vx:0,vy:0,rot:0,inAt:0,live:false})});
+  const N=balls.length,DROP=Math.min(1600,220*N),dur=3000+Math.random()*2000,t0=performance.now();
+  balls.forEach((b,i)=>b.inAt=i*(DROP/N));
+  const r=18;let last=t0;
   const step=now=>{
-    const W=stage.clientWidth,H=stage.clientHeight,R=Math.min(W,H)/2-24,t=Math.min(1,(now-t0)/dur);
-    balls.forEach(b=>{
-      const ease=t*t*(3-2*t),rad=R*(t<.12?1:b.r0)*(1-ease*.95),spin=(1.2+9*t*t)*(now-t0)/1000;
-      const ang=b.a+spin*Math.PI*2*.35, lift=Math.sin(ang*2+b.ph*6)*R*.08*(1-t);
-      const x=W/2+Math.cos(ang)*rad,y=H/2+Math.sin(ang)*rad+lift*.5;
-      const sc=.55+.6*(1-ease)+.25*Math.sin(t*Math.PI);
-      b.el.style.transform='translate('+(x-18)+'px,'+(y-18)+'px) rotate('+(spin*400%360)+'deg) scale('+sc.toFixed(3)+')';
-      b.el.style.opacity=t>.93?String(1-(t-.93)/.07):'1';
-    });
-    if(t<1){mixAnim=requestAnimationFrame(step)}
-    else{stage.classList.add('flash');setTimeout(()=>{stage.hidden=true;stage.innerHTML='';showMixResults()},380)}
+    const W=stage.clientWidth,H=stage.clientHeight,cx=W/2,cy=H/2,R=Math.min(W,H)/2-10-r;
+    const el=now-t0,dt=Math.min(.033,(now-last)/1000);last=now;
+    const blowing=el>DROP+250&&el<dur-350;
+    stage.classList.toggle('blowing',blowing);
+    for(const b of balls){
+      if(!b.live){if(el<b.inAt)continue;b.live=true;b.x=cx+(Math.random()-.5)*8;b.y=cy-R+2;b.vx=(Math.random()-.5)*90;b.vy=120;b.el.style.opacity='1'}
+      // gravity, plus the air blower pushing up from the bottom and swirling
+      let ax=0,ay=900;
+      if(blowing){const low=(b.y-cy)/R;ay-=low>.3?2600+2300*Math.random():low>-.2?550+950*Math.random():300*Math.random();ax+=(Math.random()-.5)*1500}
+      b.vx+=ax*dt;b.vy+=ay*dt;b.vx*=.995;b.vy*=.995;
+      const sp=Math.hypot(b.vx,b.vy),max=blowing?950:800;if(sp>max){b.vx*=max/sp;b.vy*=max/sp}
+      b.x+=b.vx*dt;b.y+=b.vy*dt;
+      // bounce off the glass
+      const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy);
+      if(d>R){const nx=dx/d,ny=dy/d;b.x=cx+nx*R;b.y=cy+ny*R;const vn=b.vx*nx+b.vy*ny;if(vn>0){b.vx-=1.65*vn*nx;b.vy-=1.65*vn*ny}}
+      b.rot+=b.vx*dt*2.2;
+    }
+    // balls knock into each other
+    for(let i=0;i<N;i++)for(let k=i+1;k<N;k++){const a=balls[i],c=balls[k];if(!a.live||!c.live)continue;
+      const dx=c.x-a.x,dy=c.y-a.y,d=Math.hypot(dx,dy)||.01,min=2*r;
+      if(d<min){const nx=dx/d,ny=dy/d,o=(min-d)/2;a.x-=nx*o;a.y-=ny*o;c.x+=nx*o;c.y+=ny*o;
+        const rv=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny;if(rv<0){const j=-.9*rv;a.vx-=j*nx;a.vy-=j*ny;c.vx+=j*nx;c.vy+=j*ny}}}
+    for(const b of balls)if(b.live)b.el.style.transform='translate('+(b.x-r)+'px,'+(b.y-r)+'px) rotate('+(b.rot%360).toFixed(1)+'deg)';
+    if(el<dur){mixAnim=requestAnimationFrame(step)}
+    else{stage.classList.remove('blowing');stage.classList.add('flash');setTimeout(()=>{stage.hidden=true;stage.innerHTML='';showMixResults()},380)}
   };
   mixAnim=requestAnimationFrame(step);
 }
@@ -374,9 +455,9 @@ function tickCountdown(){
 function startCountdown(){clearInterval(cdTimer);tickCountdown();cdTimer=setInterval(tickCountdown,1000)}
 
 /* ---------- bottom tab bar (phones) ---------- */
-const TABS=[['tabGames','secGames'],['tabMiss','secMiss'],['tabHot','secHot'],['tabRes','histFold']];
+const TABS=[['tabGames','secGames'],['tabMiss','secMiss'],['tabHot','secHot'],['tabRes','secRes']];
 TABS.forEach(([b,sec])=>{const btn=$(b);if(!btn)return;btn.addEventListener('click',()=>{
-  const el=$(sec);if(sec==='histFold')el.open=true;
+  const el=$(sec);
   el.scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'});setTab(b)})});
 function setTab(id){TABS.forEach(([b])=>{const x=$(b);if(x){x.classList.toggle('on',b===id);x.setAttribute('aria-current',b===id?'true':'false')}})}
 try{const seen=new Map();const io=new IntersectionObserver(es=>{es.forEach(e=>seen.set(e.target.id,e.isIntersecting?e.intersectionRatio:0));
@@ -541,7 +622,6 @@ function render(){
   const G=GAMES[state.game],W=curWin();
   seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===state.game));
   $('winSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.w===W));
-  $('sampleBanner').hidden=!state.sample;
   $('addForm').hidden=!state.canWrite;
   if($('readonlyNote'))$('readonlyNote').hidden=state.canWrite;
 
@@ -601,7 +681,7 @@ function render(){
       const facts=factsFor(allSeq,all.map(d=>d.date),n);
       const missing=missingSorted(winSeq,allSeq,G.board);
       say.innerHTML=missing.length===1?'This <b>1</b> number has <em>not</em> played in '+span+'.'
-        :missing.length?'These <b>'+missing.length+'</b> numbers have <em>not</em> played in '+span+'. The longest waits are below'+(missing.length>5?'; tap <b class="plain">Show all</b> to see every ball.':'.')
+        :missing.length?'<b>'+missing.length+'</b> numbers have <em>not</em> played in '+span+'.'
         :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has played in '+span+'.';
       if(missing.length){body.appendChild(topOut(missing,all.length));
         body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · '),k))));
@@ -609,7 +689,7 @@ function render(){
         mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button>';body.appendChild(mb)}
       setNote(dates,G.note||'');
       const hl=hotList(winSeq,G.board,state.game==='fantasy5'?6:8);
-      $('hotSay').innerHTML=hl.length?'These numbers played the most in '+span+'. Under each ball: how many times.':'No number has played more than once in '+span+'. Try more draws.';
+      $('hotSay').innerHTML=hl.length?'Numbers that played the most in '+span+'. Under each ball: how many times.':'No number has played more than once in '+span+'. Try more draws.';
       if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '),k)),'hot'));
     }else{
       let total=0,anyHot=false;
@@ -628,7 +708,7 @@ function render(){
         else hrow.insertAdjacentHTML('beforeend','<p class="allplayed">No digit has played twice here.</p>');
         hot.appendChild(hrow);
       });
-      say.innerHTML=total?'These digits have <em>not</em> played in each spot in '+span+'. Longest wait first. Under each ball: how many draws since it last played. Tap a ball for more.'
+      say.innerHTML=total?'Digits that have <em>not</em> played in each spot in '+span+'. Longest wait first. Under each ball: how many draws since it last played. Tap a ball for more.'
         :'Every digit from 0 to 9 has played in every spot in '+span+'.';
       $('hotSay').innerHTML=anyHot?'The digits that played the most in each spot in '+span+'.':'No digit has played more than once in any spot. Try more draws.';
       setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
@@ -640,23 +720,70 @@ function render(){
   }
 
   applyMore();
-  const h=$('hist');h.innerHTML='';
-  // past results plus skipped ("no draw") dates for this game, newest first
-  const rows=(state.sample||state.draws).filter(d=>d.game===state.game).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
-  $('histEmpty').hidden=rows.length>0;
-  $('histEmpty').textContent='No '+G.label+' results yet.';
-  rows.forEach(d=>{const tr=document.createElement('tr');if(d.nodraw)tr.className='skipped';
-    const a=document.createElement('td');a.textContent=fmtDate(d.date);
-    const b=document.createElement('td');b.className='num';b.textContent=d.nodraw?'No draw (skipped)':G.show(d);
-    const td=document.createElement('td');td.className='x';
-    if(!state.sample&&state.canWrite){const x=document.createElement('button');x.type='button';
-      if(d.nodraw){x.className='undo';x.textContent='Undo';x.setAttribute('aria-label','Undo skip for '+d.date);
-        x.onclick=()=>undoSkip(d)}
-      else{x.className='del';x.textContent='Remove';x.setAttribute('aria-label','Remove draw on '+d.date);
-        x.onclick=async()=>{try{await adapter.remove(d.id);toast('Removed '+fmtDate(d.date))}catch(e){toast("That draw wasn't removed. Try again.")}}}
-      td.appendChild(x)}
-    tr.append(a,b,td);h.appendChild(tr)});
+  renderRes(false);
 }
+
+/* ---------- past results: balls by week ---------- */
+const RES_INLINE=6;
+const shortDay=iso=>{const [y,m,d]=iso.split('-').map(Number);const t=new Date(y,m-1,d);
+  return{wd:t.toLocaleDateString(undefined,{weekday:'short'}),dm:t.toLocaleDateString(undefined,{day:'numeric',month:'short'}),yr:y}};
+function resRange(){
+  const today=bzNow().iso,days=state.resW*7;
+  if(state.resFrom){const start=state.resFrom;let end=isoAdd(start,days-1);if(end>today)end=today;return{start,end}}
+  return{start:isoAdd(today,-(days-1)),end:today};
+}
+function resRow(d){
+  const row=document.createElement('div');row.className='resrow'+(d.nodraw?' skipped':'');
+  const sd=shortDay(d.date);
+  const dt=document.createElement('div');dt.className='resdate';
+  dt.innerHTML='<b>'+esc(sd.wd)+'</b><span>'+esc(sd.dm)+(sd.yr!==new Date().getFullYear()?' '+sd.yr:'')+'</span>';
+  const bx=document.createElement('div');bx.className='resballs';
+  if(d.nodraw){bx.innerHTML='<span class="resnone">No draw</span>'}
+  else if(state.game==='lottery'){
+    const first=document.createElement('div');first.className='resprize';
+    pad(d.nums[0],4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('rb');if(j>=2)t.classList.add('counted');first.appendChild(t)});
+    bx.appendChild(first);
+    const rest=document.createElement('span');rest.className='resrest';
+    rest.innerHTML='2nd <b>'+esc(pad(d.nums[1],4))+'</b> · 3rd <b>'+esc(pad(d.nums[2],4))+'</b>';bx.appendChild(rest);
+  }else{
+    (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach(k=>{const t=ballEl(k,true);t.classList.add('rb');bx.appendChild(t)});
+    if(d.letter){const l=document.createElement('div');l.className='letter rbl';l.textContent=d.letter;l.title='Free letter';bx.appendChild(l)}
+  }
+  row.append(dt,bx);return row;
+}
+function fillRes(box,rows){box.innerHTML='';rows.forEach(d=>box.appendChild(resRow(d)))}
+function renderRes(fromUser){
+  const G=GAMES[state.game];
+  $('resSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.w)===state.resW)));
+  const {start,end}=resRange();
+  const mine=(state.draws||[]).filter(d=>d.game===state.game);
+  const rows=mine.filter(d=>d.date>=start&&d.date<=end).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  const first=mine.reduce((m,d)=>!m||d.date<m?d.date:m,'');
+  const inp=$('resFrom');inp.max=bzNow().iso;if(first)inp.min=first;
+  $('resLatest').hidden=!state.resFrom;
+  const span=fmtDay(start).replace(/,? \d{4}$/,'')+' – '+fmtDay(end).replace(/,? \d{4}$/,'');
+  const cnt=rows.filter(d=>!d.nodraw).length;
+  const say=$('resSay');
+  if(!state.loaded&&!mine.length){say.textContent='Loading results…'}
+  else if(!rows.length)say.innerHTML='No '+esc(G.label)+' draws from <b>'+esc(span)+'</b>.'+(state.resFrom?'':' Try more weeks or pick a date below.');
+  else say.innerHTML='<b>'+esc(span)+'</b> · '+cnt+' draw'+(cnt===1?'':'s');
+  fillRes($('resList'),rows.slice(0,RES_INLINE));
+  const big=rows.length>RES_INLINE;
+  $('resMoreWrap').hidden=!big;
+  if(big)$('resMore').innerHTML='See all '+rows.length+' results <span class="chev" aria-hidden="true">↗</span>';
+  $('resBoxTitle').textContent=G.label+' results';
+  $('resBoxSub').textContent=span+' · '+cnt+' draw'+(cnt===1?'':'s');
+  if(!$('resBox').hidden||(fromUser&&big)){fillRes($('resBoxList'),rows);if(rows.length)openRes();else closeRes()}
+}
+let resOpener=null;
+function openRes(){if(!$('resBox').hidden)return;resOpener=document.activeElement;$('resBox').hidden=false;$('resBoxList').scrollTop=0;$('resClose').focus({preventScroll:true})}
+function closeRes(){if($('resBox').hidden)return;$('resBox').hidden=true;if(resOpener&&resOpener.focus)resOpener.focus({preventScroll:true})}
+$('resMore').addEventListener('click',()=>{renderRes(true)});
+$('resClose').addEventListener('click',closeRes);
+$('resBox').addEventListener('click',e=>{if(e.target.id==='resBox')closeRes()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('resBox').hidden)closeRes()});
+$('resFrom').addEventListener('change',e=>{const v=e.target.value;if(v&&v>bzNow().iso){e.target.value=state.resFrom;return}state.resFrom=v||'';renderRes(!!v)});
+$('resLatest').addEventListener('click',()=>{state.resFrom='';$('resFrom').value='';renderRes(false)});
 
 /* alternate light/dark shade by column, whatever the screen width */
 function shadeColumns(){
@@ -797,21 +924,6 @@ $('addForm').addEventListener('submit',async e=>{e.preventDefault();
   catch(err){flash("That result didn't save. "+(err&&err.message?err.message:'Try again.'),false)}
 });
 
-/* ---------- practice numbers (made up, never saved) ---------- */
-$('sampleBtn').onclick=()=>{
-  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
-  const out=[];const t=new Date();
-  for(let i=0;i<150;i++){const d=new Date(t);d.setDate(t.getDate()-i-1);const day=d.getDay();
-    const iso=d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2);
-    if(day!==0)out.push({id:'boledo-'+iso,game:'boledo',date:iso,nums:[pad(Math.floor(rnd()*100),2)]});
-    if(day===0)out.push({id:'lottery-'+iso,game:'lottery',date:iso,nums:[0,1,2].map(()=>pad(Math.floor(rnd()*10000),4))});
-    if(day===2||day===4||day===6){const s=new Set();while(s.size<5)s.add(1+Math.floor(rnd()*39));
-      out.push({id:'fantasy5-'+iso,game:'fantasy5',date:iso,nums:[...s].sort((a,b)=>a-b).map(x=>pad(x,2)),letter:String.fromCharCode(65+Math.floor(rnd()*26))})}
-    if(day>=1&&day<=5)out.push({id:'pick3-'+iso,game:'pick3',date:iso,nums:[0,1,2].map(()=>String(Math.floor(rnd()*10)))});
-  }
-  state.sample=out;render();window.scrollTo({top:0,behavior:'smooth'});
-};
-$('clearSample').onclick=()=>{state.sample=null;render()};
 
 setup();render();
 adapter.subscribe(rows=>{state.draws=rows;state.loaded=true;render()});

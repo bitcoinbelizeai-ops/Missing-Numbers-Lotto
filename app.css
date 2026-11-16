@@ -332,12 +332,13 @@ footer .fine{text-align:left;margin-top:8px}
 .seg{display:inline-flex;padding:3px;gap:2px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid var(--line);box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
 .seg button{min-width:34px;height:28px;padding:0 9px;border:0;border-radius:999px;background:none;cursor:pointer;
   font:700 13px/1 var(--f-label);letter-spacing:.04em;color:var(--muted);transition:background-color .18s,color .18s,box-shadow .18s}
-.seg button:hover{color:var(--cream);background:rgba(254,194,7,.1)}
 /* the picked choice takes the current game's ball color */
 .seg button[aria-pressed="true"]{color:#fff;background:radial-gradient(circle at 35% 25%,var(--b-hi,var(--gold-hi)) 0%,var(--b-main,var(--gold)) 45%,var(--b-deep,var(--gold-deep)) 100%);
   box-shadow:0 1px 4px rgba(0,0,0,.45),0 0 10px var(--gc,rgba(254,194,7,.35));text-shadow:0 1px 1px rgba(0,0,0,.45)}
 body[data-game="boledo"] .seg button[aria-pressed="true"]{color:#2a1d00;text-shadow:none}
-.seg button:hover{background:color-mix(in srgb,var(--b-main,#fec207) 18%,transparent)}
+/* hover only tints buttons that are not picked, and only on devices with a real pointer,
+   so the picked button keeps its ball color after a tap on a phone */
+@media (hover:hover){.seg button:not([aria-pressed="true"]):hover{color:var(--cream);background:color-mix(in srgb,var(--b-main,#fec207) 18%,transparent)}}
 .seg button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 /* ---------- entrance styles (body[data-enter]); "roll" is the default above ---------- */
@@ -408,7 +409,7 @@ body[data-enter="flip"] .bwrap.reveal.reveal-star{animation-name:flipin,starglow
   .tabbar button.on{color:var(--logo-yellow)}
   .tabbar button.on svg{transform:translateY(-1px) scale(1.08)}
   .tabbar button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;border-radius:10px}
-  section.panel,#histFold,.top{scroll-margin-top:12px}
+  section.panel,.top{scroll-margin-top:12px}
 }
 @media (prefers-reduced-motion:reduce){.cd-dot,.sk,.skl{animation:none}}
 
@@ -573,6 +574,88 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
   .tabbar button.on svg{background:var(--logo-yellow);border-radius:10px;padding:2px;box-sizing:content-box;transform:none}
   .tabbar button:focus-visible{outline-color:#094692}
 }
+
+/* ---------- Mixer: lottery air-mix drum (glass globe) ---------- */
+.mixbox-in.swirl{background:radial-gradient(circle at 50% 45%,#2a78dc,#0d4ea6 70%,#082f6e)}
+.globe{position:absolute;inset:6px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 50% 60%,rgba(255,255,255,.04),rgba(255,255,255,.10) 70%,rgba(255,255,255,.28) 96%,rgba(255,255,255,.5) 100%);
+  box-shadow:inset 0 -18px 30px rgba(0,0,0,.25),inset 0 10px 24px rgba(255,255,255,.12),0 0 0 2px rgba(255,255,255,.35)}
+.globe-shine{position:absolute;left:16%;top:9%;width:34%;height:22%;border-radius:50%;transform:rotate(-28deg);
+  background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%);z-index:3}
+.globe-tube{position:absolute;left:50%;top:-8px;width:44px;height:30px;margin-left:-22px;border-radius:0 0 12px 12px;
+  background:linear-gradient(90deg,rgba(255,255,255,.18),rgba(255,255,255,.45) 45%,rgba(255,255,255,.18));border:2px solid rgba(255,255,255,.45);border-top:0}
+.globe-vent{position:absolute;left:50%;bottom:4px;width:70px;height:14px;margin-left:-35px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(255,255,255,.35),rgba(255,255,255,0) 70%);opacity:.4;transition:opacity .3s}
+.mixstage.blowing .globe-vent{opacity:1;animation:vent .25s ease-in-out infinite alternate}
+@keyframes vent{to{transform:scaleX(1.25);opacity:.7}}
+.mixstage .mixball{z-index:2}
+@media (prefers-reduced-motion:reduce){.mixstage.blowing .globe-vent{animation:none}}
+
+/* ---------- past results: balls by week ---------- */
+.reslist{display:flex;flex-direction:column;gap:8px}
+.resrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.08)}
+.resrow.skipped{opacity:.7}
+.resdate{flex:0 0 54px;display:flex;flex-direction:column;line-height:1.15}
+.resdate b{font:700 13px var(--f-label);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.resdate span{font-size:13.5px;color:var(--cream);white-space:nowrap}
+.resballs{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.tile.rb{width:clamp(32px,8.8vw,38px)}
+.tile.rb span{font-size:clamp(13px,3.6vw,15px);width:66%}
+.tile.rb.counted{box-shadow:0 0 0 2px var(--gold),0 0 10px rgba(233,196,106,.45),inset -3px -4px 8px rgba(0,0,0,.25)}
+.letter.rbl{width:clamp(28px,8vw,34px);height:clamp(30px,8.6vw,36px);font-size:17px;border-radius:8px}
+.resprize{display:flex;gap:5px}
+.resrest{flex-basis:100%;font-size:12.5px;color:var(--muted)}
+.resrest b{font:700 14px var(--f-label);letter-spacing:.06em;color:var(--cream)}
+.resnone{font-size:14px;color:var(--muted);font-style:italic}
+#resMoreWrap{margin-top:0}
+.resfrom{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--line)}
+.resfrom-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.resfrom-row input{flex:1 1 180px;min-width:0}
+.backup:empty{display:none}
+.resbox-in{align-items:stretch}
+.resbox-in h2{text-align:center}
+.resbox-sub{margin:-8px 0 0;text-align:center;font-size:14px;color:var(--muted)}
+.resbox-in .reslist{overflow:auto;max-height:calc(100dvh - 200px);padding-right:2px}
+.resbox-in #resClose{align-self:center}
+
+/* ---------- My Numbers: double-tap to remove, add button, number picker ---------- */
+.mine-tip{margin:-6px 0 0;font-size:13px;color:var(--muted)}
+.mine-item{cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .2s,opacity .2s,border-color .15s,box-shadow .15s}
+.mine-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mine-rm{position:absolute;inset:auto 4px 6px;display:none;font:700 11px/1.15 var(--f-label);letter-spacing:.06em;text-transform:uppercase;text-align:center;color:#fff}
+.mine-item.armed{border-color:#ff7a7a;box-shadow:0 0 0 1px rgba(255,122,122,.5),0 0 14px rgba(255,122,122,.35);background:rgba(120,10,10,.28);animation:mine-shake .35s}
+.mine-item.armed .mine-tag{visibility:hidden}
+.mine-item.armed .mine-rm{display:block}
+.mine-item.leaving{transform:scale(.6);opacity:0}
+@keyframes mine-shake{0%,100%{transform:none}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
+.mine-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:76px;padding:10px 8px 8px;border-radius:14px;cursor:pointer;
+  background:none;border:1.5px dashed var(--gold);color:var(--gold);touch-action:manipulation}
+.mine-add-ring{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font:700 28px/1 var(--f-label);background:rgba(254,194,7,.1);border:1px solid rgba(254,194,7,.5)}
+.mine-add-txt{font:700 14px var(--f-label);letter-spacing:.1em;text-transform:uppercase}
+.mine-add:hover .mine-add-ring,.mine-add:focus-visible .mine-add-ring{background:rgba(254,194,7,.22);box-shadow:0 0 12px rgba(254,194,7,.45)}
+.mine-add:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.pickbox-in{width:min(100%,400px)}
+.pick-sub{margin:-8px 0 0;font-size:14px;color:var(--muted);text-align:center}
+.pick-sub #pickRange{font:700 15px var(--f-label);letter-spacing:.08em;color:var(--cream)}
+.pickgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 8px;width:100%;justify-items:center}
+.pickball{position:relative;width:100%;max-width:60px;padding:4px;border:0;border-radius:50%;background:none;cursor:pointer;touch-action:manipulation;display:grid;place-items:center}
+.pickball .tile{width:100%;max-width:52px;transition:transform .15s,box-shadow .15s}
+.pickball .tile span{font-size:clamp(15px,4.4vw,19px)}
+.pickball:hover .tile{transform:translateY(-2px)}
+.pickball:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.pickball[aria-pressed="true"] .tile{box-shadow:0 0 0 3px var(--gold),0 0 16px rgba(254,194,7,.6),inset -4px -6px 10px rgba(0,0,0,.25)}
+.pickstar{position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-radius:50%;display:none;place-items:center;font-style:normal;font-size:12px;line-height:1;background:var(--gold);color:#2a1d00;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.pickball[aria-pressed="true"] .pickstar{display:grid}
+.pickball.pop .tile{animation:pick-pop .3s}
+@keyframes pick-pop{50%{transform:scale(1.15)}}
+.pickdots{display:flex;gap:6px;justify-content:center}
+.pickdots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25)}
+.pickdots span.on{background:var(--gold);box-shadow:0 0 6px rgba(254,194,7,.6)}
+.pickbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%}
+.pickbtns .btn{min-width:130px}
+.pickdone{border:0;background:none;color:var(--muted);font:600 14px var(--f-body);text-decoration:underline;cursor:pointer;padding:4px 8px}
+.toast{z-index:70}
+@media (prefers-reduced-motion:reduce){.mine-item.armed,.pickball.pop .tile{animation:none}.mine-item{transition:none}}
 
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
