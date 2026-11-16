@@ -297,6 +297,20 @@ const SND=(()=>{
     pop(){if(!ok()||!gap('pop',50))return;tone(520,.06,.06,'sine',900)},
     star(on){if(!ok())return;on?(tone(988,.08,.055,'sine'),tone(1480,.14,.05,'sine',null,.06)):tone(880,.12,.045,'sine',520)},
     roll(i){if(!ok())return;tone(260+i*35,.07,.07,'sine',150);noise(.025,1800+i*120,4,.04)},
+    // a ball rolling in: a low rumble that flutters slower as it rolls to a stop, then a soft settle
+    rollIn(i,dur){if(!ok())return;const t=ctx.currentTime,src=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),am=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
+      src.buffer=noiseBuf;src.loop=true;fl.type='bandpass';fl.frequency.setValueAtTime(420+i*25,t);fl.frequency.exponentialRampToValueAtTime(220,t+dur);fl.Q.value=2.2;
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.11,t+.08);g.gain.setValueAtTime(.11,t+dur*.7);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+      am.gain.value=.55;lfo.frequency.setValueAtTime(24,t);lfo.frequency.exponentialRampToValueAtTime(6,t+dur);depth.gain.value=.45;lfo.connect(depth);depth.connect(am.gain);
+      src.connect(fl);fl.connect(am);am.connect(g);g.connect(master);src.start(t,Math.random()*.5);lfo.start(t);src.stop(t+dur+.05);lfo.stop(t+dur+.05);
+      tone(330+i*30,.06,.045,'sine',220,dur*.95)},
+    // a ball spinning in: an airy whir that flutters faster then slows like a spinning coin, then a light ting
+    spinIn(i,dur){if(!ok())return;const t=ctx.currentTime,src=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),am=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
+      src.buffer=noiseBuf;src.loop=true;fl.type='bandpass';fl.frequency.setValueAtTime(2600,t);fl.frequency.exponentialRampToValueAtTime(1300,t+dur);fl.Q.value=3;
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.06,t+.05);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+      am.gain.value=.5;lfo.type='triangle';lfo.frequency.setValueAtTime(16,t);lfo.frequency.exponentialRampToValueAtTime(4,t+dur);depth.gain.value=.5;lfo.connect(depth);depth.connect(am.gain);
+      src.connect(fl);fl.connect(am);am.connect(g);g.connect(master);src.start(t,Math.random()*.5);lfo.start(t);src.stop(t+dur+.05);lfo.stop(t+dur+.05);
+      tone(1568+i*90,.22,.035,'sine',null,dur);tone(2349+i*120,.15,.015,'sine',null,dur+.01)},
     open(){if(!ok()||!gap('open',150))return;noise(.18,500,1,.05,'bandpass',2200);tone(660,.09,.03,'sine',990,.05)},
     close(){if(!ok()||!gap('close',150))return;noise(.14,1800,1,.04,'bandpass',500)},
     success(){if(!ok())return;[784,1046.5,1318.5].forEach((f,i)=>tone(f,.3,.06,'sine',null,i*.08))},
@@ -775,7 +789,10 @@ function render(){
     const animKey=state.game+'|'+d.id+'|'+(state.sample?'s':'r');
     const roll=animKey!==lastAnim;lastAnim=animKey;if(roll)pickEnter();
     last.classList.toggle('roll',roll);
-    if(roll&&!reduceMotion())requestAnimationFrame(()=>{const ts=[...last.querySelectorAll('.tile,.letter')];ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');SND.later((200+i*(pr?200:380)+(pr?1250:1500)*.6),()=>SND.roll(j))})});
+    if(roll&&!reduceMotion())requestAnimationFrame(()=>{const ts=[...last.querySelectorAll('.tile,.letter')];ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
+      if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
+      else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
+      else SND.later(st+D*.45,()=>SND.roll(j))})});
     $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
     $('shareBtn').hidden=!!d.nodraw;
     let bi=0;
