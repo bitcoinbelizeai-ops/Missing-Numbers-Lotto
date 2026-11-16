@@ -138,17 +138,17 @@ function grid(items,extra){const set=document.createElement('div');set.className
   const g=document.createElement('div');g.className='tiles'+(extra?' '+extra:'');items.forEach(el=>g.appendChild(el));
   const p=document.createElement('p');p.className='balldetail';p.hidden=true;p.setAttribute('aria-live','polite');
   set.append(g,p);return set}
-/* ---------- My Numbers: favourite numbers per game, saved on this device ---------- */
+/* ---------- My Lucky Numbers: favourite numbers per game, saved on this device ---------- */
 function mineList(g){const m=prefs.mine||{};return Array.isArray(m[g||state.game])?m[g||state.game]:[]}
 function isMine(key){return mineList().includes(String(key))}
 function toggleMine(key){key=String(key);const m=prefs.mine||(prefs.mine={});const L=mineList().slice();
-  const i=L.indexOf(key);if(i>=0)L.splice(i,1);else{if(L.length>=12){toast('My Numbers holds up to 12 per game');return}L.push(key)}
+  const i=L.indexOf(key);if(i>=0)L.splice(i,1);else{if(L.length>=12){toast('My Lucky Numbers holds up to 12 per game');return}L.push(key)}
   m[state.game]=L;savePrefs();SND.star(i<0);
   document.querySelectorAll('.bwrap[data-key]').forEach(b=>b.classList.toggle('is-mine',L.includes(b.dataset.key)));
   document.querySelectorAll('.top-star').forEach(topStarLabel);
   renderMine();}
 function topStarLabel(b){const on=isMine(b.dataset.key);b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);
-  b.setAttribute('aria-label',(on?'Remove ':'Add ')+b.dataset.key+(on?' from':' to')+' My Numbers');b.textContent=on?'★':'☆'}
+  b.setAttribute('aria-label',(on?'Remove ':'Add ')+b.dataset.key+(on?' from':' to')+' My Lucky Numbers');b.textContent=on?'★':'☆'}
 function mineLabel(key){if(state.game!=='pick3')return{ball:key,sub:''};const [i,d]=key.split(':');return{ball:d,sub:SPOTS[+i]+' spot'}}
 function renderMine(){
   const box=$('mine'),sec=$('secMine');if(!box||!sec)return;
@@ -175,13 +175,13 @@ function renderMine(){
     box.appendChild(it)});
   if(L.length<12){const add=document.createElement('button');add.type='button';add.className='mine-add';add.id='mineAdd';
     add.innerHTML='<span class="mine-add-ring" aria-hidden="true">＋</span><span class="mine-add-txt">Add</span>';
-    add.setAttribute('aria-label','Add numbers to My Numbers');box.appendChild(add)}
+    add.setAttribute('aria-label','Add numbers to My Lucky Numbers');box.appendChild(add)}
 }
 /* double-tap (or two taps close together) removes a number; the first tap arms it */
 let mineArmed=null,mineArmTimer=0;
 function mineDisarm(){clearTimeout(mineArmTimer);document.querySelectorAll('.mine-item.armed').forEach(x=>x.classList.remove('armed'));mineArmed=null}
 function mineRemove(it){mineDisarm();const key=it.dataset.key,lbl=mineLabel(key);it.classList.add('leaving');
-  setTimeout(()=>{toggleMine(key);toast('Removed '+lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+' from My Numbers')},matchMedia('(prefers-reduced-motion:reduce)').matches?0:230)}
+  setTimeout(()=>{toggleMine(key);toast('Removed '+lbl.ball+(lbl.sub?' ('+lbl.sub+')':'')+' from My Lucky Numbers')},matchMedia('(prefers-reduced-motion:reduce)').matches?0:230)}
 $('mine').addEventListener('click',e=>{
   if(e.target.closest('.mine-add')){mineDisarm();openPick();return}
   const it=e.target.closest('.mine-item');if(!it||it.classList.contains('leaving'))return;
@@ -208,7 +208,7 @@ function renderPick(){
   $('pickRange').textContent=pg.label;pickCount();grid.innerHTML='';
   grid.dataset.cols=state.game==='pick3'?'5':'5';
   pg.keys.forEach(key=>{const lbl=mineLabel(key);const b=document.createElement('button');b.type='button';b.className='pickball';b.dataset.key=key;
-    const on=isMine(key);b.setAttribute('aria-pressed',on);b.setAttribute('aria-label',lbl.ball+(lbl.sub?' in the '+lbl.sub:'')+(on?', in My Numbers':''));
+    const on=isMine(key);b.setAttribute('aria-pressed',on);b.setAttribute('aria-label',lbl.ball+(lbl.sub?' in the '+lbl.sub:'')+(on?', in My Lucky Numbers':''));
     b.appendChild(ballEl(lbl.ball,true));const st=document.createElement('i');st.className='pickstar';st.setAttribute('aria-hidden','true');st.textContent='★';b.appendChild(st);
     grid.appendChild(b)});
   $('pickDots').innerHTML=pages.map((_,i)=>'<span'+(i===pickPage?' class="on"':'')+'></span>').join('');
@@ -230,7 +230,7 @@ $('pickDone').addEventListener('click',closePick);
 $('pickBox').addEventListener('click',e=>{if(e.target.id==='pickBox')closePick()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('pickBox').hidden)closePick()});
 
-/* ---------- Mixer: swirl My Numbers like a tornado, then show ways to play them ---------- */
+/* ---------- Mixer: swirl My Lucky Numbers like a tornado, then show ways to play them ---------- */
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const uniq=a=>[...new Set(a)];
 function pairsOf(L){const out=[];for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++)out.push([L[i],L[j]]);return out}
@@ -344,7 +344,7 @@ function muteLabel(){const m=SND.isMuted();['mixMute','sndBtn'].forEach(id=>{con
 ['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(b)b.addEventListener('click',e=>{e.stopPropagation();const m=!SND.isMuted();SND.setMuted(m);muteLabel();if(!m)setTimeout(()=>SND.select(),60)})});
 // the browser only allows sound after a tap, so wake the sound up on the first one
 ['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true}));
-// soft taps for buttons and switches across the page (the mixer and My Numbers make their own)
+// soft taps for buttons and switches across the page (the mixer and My Lucky Numbers make their own)
 document.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;
   if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#mixMute,#mixBtn'))return;
   if(t.closest('.games button')){SND.select();return}
@@ -481,7 +481,7 @@ $('mixShare').addEventListener('click',async()=>{
   const cv=document.createElement('canvas');cv.width=S;cv.height=H;const ctx=cv.getContext('2d');
   const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0b4aa0');bg.addColorStop(1,'#042456');ctx.fillStyle=bg;ctx.fillRect(0,0,S,H);
   ctx.textAlign='center';ctx.fillStyle='#c9d5ea';ctx.font='700 32px "Barlow Condensed", sans-serif';ctx.fillText('B E L I Z E   L O T T E R Y',S/2,90);
-  ctx.fillStyle='#fec207';ctx.font='800 64px Outfit, Barlow, sans-serif';ctx.fillText('My Numbers Mix',S/2,170);
+  ctx.fillStyle='#fec207';ctx.font='800 64px Outfit, Barlow, sans-serif';ctx.fillText('My Lucky Numbers Mix',S/2,170);
   ctx.fillStyle='#e9c46a';ctx.font='700 40px "Barlow Condensed", sans-serif';ctx.fillText(GAMES[state.game].label.toUpperCase(),S/2,230);
   const c=ballColors();let y=300;
   mixGroups.forEach(gr=>{ctx.textAlign='left';ctx.fillStyle='#f7f0dc';ctx.font='600 30px Barlow, sans-serif';ctx.fillText(gr.label,70,y+10);y+=60;
@@ -492,7 +492,7 @@ $('mixShare').addEventListener('click',async()=>{
   ctx.textAlign='center';ctx.fillStyle='#c9d5ea';ctx.font='500 28px Barlow, sans-serif';ctx.fillText('These are ways to play your numbers. No pattern improves your odds.',S/2,H-60);
   const blob=await new Promise(r=>cv.toBlob(r,'image/png'));const file=new File([blob],'my-numbers-mix.png',{type:'image/png'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}}catch(e){if(e&&e.name==='AbortError')return}
-  shareBlob=blob;const url=URL.createObjectURL(blob),img=$('shareImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.src=url;img.dataset.url=url;img.alt='My Numbers mix';
+  shareBlob=blob;const url=URL.createObjectURL(blob),img=$('shareImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.src=url;img.dataset.url=url;img.alt='My Lucky Numbers mix';
   $('shareTitle').textContent='Share your mix';$('shareGo').hidden=true;$('mixBox').hidden=true;$('shareBox').hidden=false;$('shareClose').focus();
 });
 
@@ -1044,11 +1044,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('ballSheet').hid
   inn.addEventListener('touchmove',e=>{if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);inn.style.transform=dy?'translateY('+dy+'px)':''},{passive:true});
   inn.addEventListener('touchend',()=>{if(y0==null)return;inn.style.transition='';if(dy>90)closeBallSheet();else inn.style.transform='';y0=null})})();
 function starLabel(sb){const on=isMine(sb.dataset.key);sb.classList.toggle('on',on);sb.setAttribute('aria-pressed',on);
-  sb.innerHTML=on?'<span aria-hidden="true">★</span> In My Numbers · tap to remove':'<span aria-hidden="true">☆</span> Add to My Numbers'}
+  sb.innerHTML=on?'<span aria-hidden="true">★</span> In My Lucky Numbers · tap to remove':'<span aria-hidden="true">☆</span> Add to My Lucky Numbers'}
 document.addEventListener('click',e=>{
   const sb=e.target.closest('.starbtn');if(sb){e.stopPropagation();toggleMine(sb.dataset.key);starLabel(sb);return}
   const x=e.target.closest('.mine-x');if(x){toggleMine(x.dataset.key);return}
-  const ts=e.target.closest('.top-star');if(ts){e.stopPropagation();toggleMine(ts.dataset.key);if(isMine(ts.dataset.key))toast('★ '+ts.dataset.key+' added to My Numbers')}
+  const ts=e.target.closest('.top-star');if(ts){e.stopPropagation();toggleMine(ts.dataset.key);if(isMine(ts.dataset.key))toast('★ '+ts.dataset.key+' added to My Lucky Numbers')}
 },true);
 $('tiles').addEventListener('click',onBallTap);$('hot').addEventListener('click',onBallTap);
 try{const ro=new ResizeObserver(shadeColumns);ro.observe($('tiles'));ro.observe($('hot'))}catch(e){window.addEventListener('resize',shadeColumns)}
