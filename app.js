@@ -88,7 +88,9 @@ const seg=$('gameSeg');
 const BALL={boledo:'00',lottery:'1st',fantasy5:'5',pick3:'3'};
 ORDER.forEach(g=>{const b=document.createElement('button');b.type='button';b.dataset.g=g;
   b.innerHTML='<span class="tile gball" data-game="'+g+'"><span>'+BALL[g]+'</span></span><span class="gtxt"><b>'+esc(GAMES[g].label).replace(/ (\d)$/,'&nbsp;$1')+'</b><small id="gl-'+g+'">&nbsp;</small></span>';
-  b.onclick=()=>{state.game=g;savePrefs();setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render()};seg.appendChild(b)});
+  b.onclick=()=>{state.game=g;savePrefs();setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render();
+    // bring the Last Draw box to the middle of the screen so the new game's result is in view
+    requestAnimationFrame(()=>$('secLast').scrollIntoView({block:'center',behavior:reduceMotion()?'auto':'smooth'}))};seg.appendChild(b)});
 function setup(){
   const G=GAMES[state.game];
   document.body.dataset.game=state.game;
@@ -1213,21 +1215,6 @@ async function refreshShipped(fast){
 window.bzRefresh=()=>refreshShipped(true);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshShipped(true)});
 
-/* backup / restore */
-$('backupBtn').onclick=()=>{
-  const blob=new Blob([JSON.stringify({app:'boledo-missing-numbers',saved:app.todayISO(),draws:allDraws()},null,1)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='boledo-backup-'+app.todayISO()+'.json';
-  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);app.toast('Backup saved');
-};
-$('restoreFile').onchange=async e=>{
-  const f=e.target.files[0];if(!f)return;
-  try{const j=JSON.parse(await f.text());
-    const ok=['boledo','lottery','fantasy5','pick3'];
-    const list=(j.draws||[]).filter(d=>d&&d.id&&d.date&&Array.isArray(d.nums)&&ok.includes(d.game));
-    if(!list.length)throw 0;await adapter.save(list);app.toast('Restored '+list.length+' draws');
-  }catch(err){app.toast("That file isn't a backup from this app.")}
-  e.target.value='';
-};
 
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(reg=>{
