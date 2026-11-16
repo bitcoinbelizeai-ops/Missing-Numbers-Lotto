@@ -74,7 +74,7 @@ const ERR={boledo:'Type a number from 00 to 99.',lottery:'Type at least the 1st 
 const PREF='bz-prefs-v1';
 let prefs={game:'boledo',wins:{}};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(PREF)||'{}'))}catch(e){}
-const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:''};
+const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:'',missRange:{}};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
 const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,mine:prefs.mine||{}}))}catch(e){}};
 
@@ -90,7 +90,13 @@ function setup(){
   const box=$('winSeg');box.innerHTML='';
   G.wins.forEach(w=>{const b=document.createElement('button');b.type='button';b.dataset.w=w;b.textContent=w==='all'?'All':w;
     b.setAttribute('aria-label',w==='all'?'All draws':'Last '+w+' draws');
-    b.onclick=()=>{state.wins[state.game]=w;savePrefs();render()};box.appendChild(b)});
+    b.onclick=()=>{state.wins[state.game]=w;state.missRange[state.game]=null;savePrefs();render()};box.appendChild(b)});
+  { const c=document.createElement('button');c.type='button';c.dataset.w='cal';c.className='segcal';c.setAttribute('aria-label','Pick dates instead');c.title='Pick dates';
+    c.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+    c.onclick=()=>{if(state.missRange[state.game]){$('missDates').hidden=!$('missDates').hidden;return}
+      const all=drawsFor();if(!all.length)return;const to=all[all.length-1].date,from=isoAdd(to,-29);
+      state.missRange[state.game]={from:from<all[0].date?all[0].date:from,to};render();$('missFrom').focus({preventScroll:true})};
+    box.appendChild(c) }
   const rs=$('resSeg');rs.innerHTML='';
   [1,2,3,4].forEach(w=>{const b=document.createElement('button');b.type='button';b.dataset.w=w;b.textContent=w+'W';
     b.setAttribute('aria-label',w===1?'1 week':w+' weeks');
@@ -738,10 +744,10 @@ document.addEventListener('click',e=>{
 });
 
 /* per-key facts for the tap note: last date, draws since, times in the chosen draws */
-function factsFor(allSeq,dates,n){
-  const m={},L=allSeq.length;
-  allSeq.forEach((ks,i)=>ks.forEach(k=>{const f=m[k]||(m[k]={last:-1,inWin:0});f.last=i;if(i>=L-n)f.inWin++}));
-  return (k,prefix)=>{const f=m[k],span='the last '+n+' draw'+(n===1?'':'s');
+function factsFor(allSeq,dates,n,lo,hi,spanTxt){
+  const m={},L=allSeq.length;if(lo==null){lo=L-n;hi=L-1}
+  allSeq.forEach((ks,i)=>ks.forEach(k=>{const f=m[k]||(m[k]={last:-1,inWin:0});f.last=i;if(i>=lo&&i<=hi)f.inWin++}));
+  return (k,prefix)=>{const f=m[k],span=spanTxt||'the last '+n+' draw'+(n===1?'':'s');
     if(!f)return prefix+'Not seen in any of the '+L+' draws we have.';
     const out=L-1-f.last;
     return prefix+'Last played <b>'+esc(fmtDay(dates[f.last]))+'</b> · '+(out===0?'in the latest draw':out+' draw'+(out===1?'':'s')+' ago')+(f.inWin?' · played <b>'+f.inWin+'</b> time'+(f.inWin===1?'':'s')+' in '+span:'')+'.'}
@@ -773,7 +779,8 @@ function missingSorted(winSeq,allSeq,board){
 function render(){
   const G=GAMES[state.game],W=curWin();
   seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===state.game));
-  $('winSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.w===W));
+  const RANGE=state.missRange[state.game]||null;
+  $('winSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',RANGE?b.dataset.w==='cal':b.dataset.w===W));
   $('addForm').hidden=!state.canWrite;
   if($('readonlyNote'))$('readonlyNote').hidden=state.canWrite;
 
@@ -786,7 +793,11 @@ function render(){
   $('fresh').innerHTML=newest?'Latest results: <b>'+esc(fmtDate(newest))+'</b>':'';
 
   const all=drawsFor();
-  const win=W==='all'?all:all.slice(-Number(W));
+  const win=RANGE?all.filter(d=>d.date>=RANGE.from&&d.date<=RANGE.to):W==='all'?all:all.slice(-Number(W));
+  { const md=$('missDates');md.hidden=!RANGE;
+    if(RANGE){$('missFrom').value=RANGE.from;$('missTo').value=RANGE.to;const mn=all.length?all[0].date:'',mx=bzNow().iso;
+      ['missFrom','missTo'].forEach(id=>{$(id).min=mn;$(id).max=mx})} }
+  const WK=RANGE?'d'+RANGE.from+'_'+RANGE.to:W;
   const body=$('tiles'),hot=$('hot'),last=$('lastDraw');
   body.innerHTML='';hot.innerHTML='';last.innerHTML='';
   setNote('','');$('hotSay').textContent='';$('lastDate').textContent='';
@@ -828,30 +839,35 @@ function render(){
     body.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(12)+'</div>';
     hot.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(4)+'</div>';
     last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
+  else if(!win.length&&RANGE){say.innerHTML='There were no '+esc(G.label)+' draws between <b>'+esc(fmtDate(RANGE.from))+'</b> and <b>'+esc(fmtDate(RANGE.to))+'</b>. Try other dates.';$('hotSay').textContent='No draws in these dates.'}
   else if(!win.length){say.textContent='There are no '+G.label+' results yet. Add one at the bottom of the page.'}
   else{
-    const n=win.length,span=n===1?'the last draw':'the last <b>'+n+'</b> draws';
+    const n=win.length,short=d=>esc(fmtDate(d).replace(/,? \d{4}$/,''));
+    const span=RANGE?'the <b>'+n+'</b> draw'+(n===1?'':'s')+' from <b>'+short(RANGE.from)+'</b> to <b>'+short(RANGE.to)+'</b>':n===1?'the last draw':'the last <b>'+n+'</b> draws';
+    const lo=all.indexOf(win[0]),hi=all.indexOf(win[win.length-1]),spanTxt=span.replace(/<[^>]+>/g,'');
     const dates='Draws from '+fmtDate(win[0].date)+' to '+fmtDate(win[win.length-1].date)+'.';
     if(G.mode==='board'){
       const winSeq=win.map(G.keys),allSeq=all.map(G.keys);
-      const facts=factsFor(allSeq,all.map(d=>d.date),n);
+      const facts=factsFor(allSeq,all.map(d=>d.date),n,lo,hi,spanTxt);
       const missing=missingSorted(winSeq,allSeq,G.board);
-      say.innerHTML=missing.length===1?'This <b>1</b> number has <em>not</em> played in '+span+'.'
-        :missing.length?'<b>'+missing.length+'</b> numbers have <em>not</em> played in '+span+'.'
-        :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has played in '+span+'.';
+      const jp=state.game==='lottery'?' Only the last 2 digits of the 1st prize count.':'';
+      say.innerHTML=(missing.length===1?'<b>1</b> number has <em>not</em> come out in '+span+'.'
+        :missing.length?'<b>'+missing.length+'</b> numbers have <em>not</em> come out in '+span+'.'
+        :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has come out at least once in '+span+'.')+jp+
+        (missing.length?' The number under each ball shows how many draws it has been waiting. Tap a ball for details.':'');
       if(missing.length){body.appendChild(topOut(missing,all.length));
         body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · '),k))));
         const mb=document.createElement('div');mb.className='showmore';mb.hidden=true;
         mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button><button type="button" class="btn showless-btn" aria-controls="tiles" hidden>Close <span class="chev" aria-hidden="true">▴</span></button>';body.appendChild(mb)}
       setNote(dates,G.note||'');
       const hl=hotList(winSeq,G.board,state.game==='fantasy5'?6:8);
-      $('hotSay').innerHTML=hl.length?'Numbers that played the most in '+span+'. Under each ball: how many times.':'No number has played more than once in '+span+'. Try more draws.';
+      $('hotSay').innerHTML=hl.length?'The numbers that came out most often in '+span+'. The number under each ball shows how many times.':'No number came out more than once in '+span+'. Try more draws.';
       if(hl.length)hot.appendChild(grid(hl.map(([k,c])=>ballWithTag(k,hotTag(c),facts(k,'<b>'+k+'</b> · '),k)),'hot'));
     }else{
       let total=0,anyHot=false;
       SPOTS.forEach((spot,i)=>{
         const winSeq=win.map(d=>[String(d.nums[i])]),allSeq=all.map(d=>[String(d.nums[i])]);
-        const facts=factsFor(allSeq,all.map(d=>d.date),n),pre=k=>'<b>'+k+'</b> in the '+spot+' spot · ';
+        const facts=factsFor(allSeq,all.map(d=>d.date),n,lo,hi,spanTxt),pre=k=>'<b>'+k+'</b> in the '+spot+' spot · ';
         const missing=missingSorted(winSeq,allSeq,G.board);total+=missing.length;
         const row=document.createElement('div');row.className='posrow';
         row.innerHTML='<h3>'+spot+' digit</h3>';
@@ -864,20 +880,26 @@ function render(){
         else hrow.insertAdjacentHTML('beforeend','<p class="allplayed">No digit has played twice here.</p>');
         hot.appendChild(hrow);
       });
-      say.innerHTML=total?'Digits that have <em>not</em> played in each spot in '+span+'. Longest wait first. Under each ball: how many draws since it last played. Tap a ball for more.'
-        :'Every digit from 0 to 9 has played in every spot in '+span+'.';
-      $('hotSay').innerHTML=anyHot?'The digits that played the most in each spot in '+span+'.':'No digit has played more than once in any spot. Try more draws.';
+      say.innerHTML=total?'A Pick 3 number has 3 spots. Below, for each spot, are the digits that have <em>not</em> come out there in '+span+'. The number under each ball shows how many draws it has been waiting. Tap a ball for details.'
+        :'Every digit from 0 to 9 has come out in every spot in '+span+'.';
+      $('hotSay').innerHTML=anyHot?'The digits that came out most often in each spot in '+span+'.':'No digit came out more than once in any spot. Try more draws.';
       setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
     }
     shadeColumns();
-    limitMissing(state.game+'|'+W);
+    limitMissing(state.game+'|'+WK);
     renderMine();
-    drama(state.game+'|'+W+'|'+(state.sample?'s':'r')+'|'+win.length+'|'+win[win.length-1].id);
+    drama(state.game+'|'+WK+'|'+(state.sample?'s':'r')+'|'+win.length+'|'+win[win.length-1].id);
   }
 
   applyMore();
   renderRes(false);
 }
+
+/* ---------- Missing Numbers: pick dates instead of the slider ---------- */
+function missDatesChanged(){let f=$('missFrom').value,t=$('missTo').value;if(!f||!t)return;
+  const mx=bzNow().iso;if(t>mx)t=mx;if(f>t)[f,t]=[t,f];state.missRange[state.game]={from:f,to:t};render()}
+$('missFrom').addEventListener('change',missDatesChanged);$('missTo').addEventListener('change',missDatesChanged);
+$('missClear').addEventListener('click',()=>{state.missRange[state.game]=null;render()});
 
 /* ---------- past results: balls by week ---------- */
 const RES_INLINE=6;

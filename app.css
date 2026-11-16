@@ -740,6 +740,13 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .trend-sum b{color:var(--cream)}
 @media (prefers-reduced-motion:reduce){.sheet-in.up{animation:none}.sheet-in{transition:none}}
 
+/* Missing Numbers: calendar option on the look-back switch, and the date row it opens */
+.seg button.segcal{display:inline-grid;place-items:center;padding:0 8px}
+.seg button.segcal svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.missdates{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;padding:12px;border-radius:12px;background:rgba(0,0,0,.18);border:1px solid var(--line)}
+.missdates input{min-width:0;width:100%}
+.missdates .btn{grid-column:1/-1;justify-self:start}
+
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}
