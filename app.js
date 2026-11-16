@@ -335,7 +335,28 @@ const SND=(()=>{
     // a ball landing in the Missing Numbers grid: quieter than the Last Draw knock, rising a little through the batch
     land(j){if(!ok())return;const f=Math.min(560,280+j*16);tone(f,.06,.05,'sine',f*.6);noise(.02,1600+j*60,4,.025)},
     ping(){if(!ok())return;tone(1760,.35,.045,'sine');tone(2637,.25,.02,'sine',null,.01)},
-    later(ms,fn){return setTimeout(fn,ms)}
+    later(ms,fn){return setTimeout(fn,ms)},
+    // the opening intro: sparkles, a rising shimmer that builds, and a mystical chime at the peak
+    intro(){if(!ok())return;const c=ctx,T=x=>c.currentTime+.03+x,rr=(a,b)=>a+Math.random()*(b-a);
+      const out=c.createGain();out.gain.value=.8;out.connect(master);
+      const dl=c.createDelay(1);dl.delayTime.value=.19;const fb=c.createGain();fb.gain.value=.38;const wet=c.createGain();wet.gain.value=.45;
+      dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(out);
+      const bell=(f,t,dur,vol)=>[[1,1],[2.76,.28],[5.4,.1]].forEach(([m,a])=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*m;
+        g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol*a,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur/m**.4);
+        o.connect(g);g.connect(out);g.connect(dl);o.start(t);o.stop(t+dur+.1)});
+      bell(2637,T(.02),.5,.05);
+      [3136,3520,3951,4186].forEach((f,k)=>bell(f,T(.18+k*.07),.35,.025));
+      {const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf;s.loop=true;f.type='bandpass';f.Q.value=2.5;
+        f.frequency.setValueAtTime(500,T(.55));f.frequency.exponentialRampToValueAtTime(5200,T(1.52));
+        g.gain.setValueAtTime(.0001,T(.55));g.gain.exponentialRampToValueAtTime(.16,T(1.48));g.gain.exponentialRampToValueAtTime(.0001,T(1.6));
+        s.connect(f);f.connect(g);g.connect(out);s.start(T(.55));s.stop(T(1.7))}
+      {const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(220,T(.8));o.frequency.exponentialRampToValueAtTime(660,T(1.52));
+        g.gain.setValueAtTime(.0001,T(.8));g.gain.exponentialRampToValueAtTime(.05,T(1.45));g.gain.exponentialRampToValueAtTime(.0001,T(1.58));o.connect(g);g.connect(out);o.start(T(.8));o.stop(T(1.7))}
+      for(let k=0;k<5;k++)bell(rr(2800,4600),T(.95+k*.025),.3,.03);
+      bell(1568,T(1.03),.6,.05);
+      [1318.5,1661.2,1975.5,2637].forEach((f,k)=>bell(f,T(1.55+k*.055),1.9,.13-k*.015));
+      {const o=c.createOscillator(),g=c.createGain();o.frequency.value=329.6;g.gain.setValueAtTime(.0001,T(1.55));g.gain.exponentialRampToValueAtTime(.09,T(1.6));g.gain.exponentialRampToValueAtTime(.0001,T(3.2));o.connect(g);g.connect(out);o.start(T(1.55));o.stop(T(3.3))}
+    }
   };
 })();
 const MUTE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
@@ -618,7 +639,7 @@ function tickCountdown(){
 function startCountdown(){clearInterval(cdTimer);tickCountdown();cdTimer=setInterval(tickCountdown,1000)}
 
 /* ---------- bottom tab bar (phones) ---------- */
-const TABS=[['tabGames','secGames'],['tabMiss','secMiss'],['tabHot','secHot'],['tabRes','secRes']];
+const TABS=[['tabGames','secGames'],['tabMiss','secMiss'],['tabHot','secHot'],['tabLucky','secMine'],['tabRes','secRes']];
 TABS.forEach(([b,sec])=>{const btn=$(b);if(!btn)return;btn.addEventListener('click',()=>{
   const el=$(sec);
   el.scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'});setTab(b)})});
@@ -1164,6 +1185,60 @@ $('addForm').addEventListener('submit',async e=>{e.preventDefault();
   catch(err){flash("That result didn't save. "+(err&&err.message?err.message:'Try again.'),false)}
 });
 
+
+/* ---------- opening intro: plays once when the app opens; tapping the title replays it with the chime ---------- */
+const INTRO=(()=>{
+  const sp=document.getElementById('izSplash'),tpl=document.getElementById('izBallTpl');
+  if(!sp||!tpl)return{play(){}};
+  sp.querySelectorAll('.iz-ball').forEach((b,n)=>{b.innerHTML=tpl.innerHTML.replace(/id="(\w+)"/g,'id="iz$1'+n+'"').replace(/url\(#(\w+)\)/g,'url(#iz$1'+n+')')});
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  const mk=(cls,vars)=>{const e=document.createElement('i');e.className=cls;for(const k in vars)e.style.setProperty('--'+k,vars[k]);return e};
+  const g=id=>document.getElementById(id);
+  function build(dx,dy,size){
+    const ring=g('izRing'),trail=g('izTrail'),pop=g('izPop'),shower=g('izShower');
+    ring.innerHTML=trail.innerHTML=pop.innerHTML=shower.innerHTML='';
+    const R=size/2+12;
+    for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=R+rnd(-3,4);
+      ring.appendChild(mk('iz-spark',{i,x:(Math.cos(a)*r).toFixed(1)+'px',y:(Math.sin(a)*r).toFixed(1)+'px',s:(i%3?rnd(9,12):rnd(13,17)).toFixed(1)+'px'}))}
+    for(let i=0;i<14;i++){const t=i/13;
+      trail.appendChild(mk('iz-dust',{d:Math.round(470+t*460)+'ms',x:(dx*(1-t)+rnd(-6,6)).toFixed(1)+'px',y:(dy*(1-t)+rnd(-size*.3,size*.3)).toFixed(1)+'px',vx:rnd(-14,14).toFixed(1)+'px',vy:rnd(-30,18).toFixed(1)+'px',s:rnd(3,6).toFixed(1)+'px'}))}
+    for(let i=0;i<10;i++){const a=rnd(0,Math.PI*2),r=rnd(size*.6,size*1.1);
+      pop.appendChild(mk('iz-spark',{d:Math.round(rnd(950,1010))+'ms',x:(Math.cos(a)*r).toFixed(1)+'px',y:(Math.sin(a)*r).toFixed(1)+'px',s:rnd(6,11).toFixed(1)+'px'}))}
+    const W=g('izLockup').offsetWidth;
+    for(let i=0;i<26;i++){const star=i%3===0;
+      shower.appendChild(mk(star?'iz-spark':'iz-dust',{d:Math.round(rnd(1500,1640))+'ms',x:rnd(-W*.55,W*.55).toFixed(1)+'px',y:rnd(-size*1.4,-size*.4).toFixed(1)+'px',vx:rnd(-12,12).toFixed(1)+'px',vy:rnd(60,120).toFixed(1)+'px',s:(star?rnd(7,11):rnd(3,5)).toFixed(1)+'px'}))}
+  }
+  function measure(){
+    const r=g('izBallslot').getBoundingClientRect();
+    const dx=innerWidth/2-(r.left+r.width/2),dy=innerHeight/2-(r.top+r.height/2);
+    sp.style.setProperty('--dx',dx.toFixed(1)+'px');sp.style.setProperty('--dy',dy.toFixed(1)+'px');sp.style.setProperty('--rot',(-(dx/(Math.PI*r.width))*360).toFixed(1)+'deg');
+    const w1=sp.querySelector('.iz-w1'),gaps=w1.querySelectorAll('.iz-gap'),r0=w1.getBoundingClientRect();
+    ['izG1','izG2'].forEach((id,k)=>{const q=gaps[k].getBoundingClientRect();g(id).style.left=(q.left-r0.left+q.width/2)+'px';g(id).style.top=(q.top-r0.top-2)+'px'});
+    build(dx,dy,r.width);
+  }
+  let timer=0,running=false;
+  function end(){clearTimeout(timer);sp.classList.remove('iz-play','iz-exit','iz-skip');sp.hidden=true;running=false}
+  function play(withSound){
+    if(reduceMotion()||running)return false;
+    running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip');void sp.offsetWidth;measure();
+    sp.classList.add('iz-play','iz-exit');
+    if(withSound)SND.intro();
+    timer=setTimeout(end,2050);return true;
+  }
+  // tap anywhere on the intro to skip it
+  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;clearTimeout(timer);sp.classList.add('iz-skip');timer=setTimeout(end,220)});
+  return{play};
+})();
+// tap the "Missing Numbers" title to watch the intro again, with sound
+(()=>{const h=document.querySelector('.brand h1');if(!h)return;
+  h.classList.add('iz-title-btn');h.tabIndex=0;h.title='Tap to play the intro';
+  const go=()=>{SND.init();setTimeout(()=>INTRO.play(true),30)};
+  h.addEventListener('click',go);
+  h.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});
+  // a small sparkle on the title hints that it can be tapped
+  setTimeout(()=>h.classList.add('iz-hint'),reduceMotion()?600:2300);
+})();
+INTRO.play(false);
 
 setup();render();
 adapter.subscribe(rows=>{state.draws=rows;state.loaded=true;render()});

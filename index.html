@@ -127,6 +127,7 @@
     <button type="button" id="tabGames" class="on" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/></svg>Games</button>
     <button type="button" id="tabMiss"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke-dasharray="3.2 3"/></svg>Missing</button>
     <button type="button" id="tabHot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 4 6 5 6 10a6 6 0 0 1-12 0c0-3 2-4 2-7 2 1 3 2 4-3z"/></svg>Hot</button>
+    <button type="button" id="tabLucky"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>Lucky</button>
     <button type="button" id="tabRes"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Results</button>
   </nav>
   <div class="mixbox" id="mixBox" hidden role="dialog" aria-modal="true" aria-labelledby="mixTitle">
@@ -179,6 +180,56 @@
     </div>
   </div>
   <footer><span>Every draw is random. A number that hasn't played for a while is not more likely to play next.</span><button type="button" class="more" data-label="About this tracker" data-more="footFine" aria-expanded="false" aria-controls="footFine">About this tracker</button><span class="disclaimer fine" id="footFine" hidden>Draw days &amp; times come from Belize Government Lotteries Ltd. &amp; Game Operators. This Independent tracker is not affiliated with Belize Government Lotteries Ltd. or Game Operators.</span></footer>
+<div class="iz-splash" id="izSplash" hidden aria-hidden="true">
+  <div class="iz-bloom"></div>
+  <div class="iz-lockup" id="izLockup">
+    <div class="iz-shower iz-fx" id="izShower"></div>
+    <div class="iz-ballslot" id="izBallslot">
+      <div class="iz-fx"><div class="iz-ring" id="izRing"></div></div>
+      <div class="iz-fx iz-trail" id="izTrail"></div>
+      <div class="iz-ghost iz-k1"><div class="iz-ballgrow"><div class="iz-ball"></div></div></div>
+      <div class="iz-ghost iz-k2"><div class="iz-ballgrow"><div class="iz-ball"></div></div></div>
+      <div class="iz-ghost iz-k3"><div class="iz-ballgrow"><div class="iz-ball"></div></div></div>
+      <div class="iz-ballmove"><div class="iz-floor"></div><div class="iz-halo"></div><div class="iz-ballgrow"><div class="iz-ball" id="izMainBall"></div></div></div>
+      <div class="iz-fx iz-pop" id="izPop"></div>
+    </div>
+    <div class="iz-title">
+      <div class="iz-w1" aria-label="Missing">
+        <span style="--i:0" aria-hidden="true">M</span><span class="iz-gap" style="--d:1100ms" aria-hidden="true">I</span><span style="--i:1" aria-hidden="true">S</span><span style="--i:2" aria-hidden="true">S</span><span class="iz-gap" style="--d:1180ms" aria-hidden="true">I</span><span style="--i:3" aria-hidden="true">N</span><span style="--i:4" aria-hidden="true">G</span>
+        <div class="iz-glint" id="izG1"><i style="--a:-60deg;--d:1290ms"></i><i style="--a:0deg;--d:1290ms"></i><i style="--a:60deg;--d:1290ms"></i></div>
+        <div class="iz-glint" id="izG2"><i style="--a:-60deg;--d:1370ms"></i><i style="--a:0deg;--d:1370ms"></i><i style="--a:60deg;--d:1370ms"></i></div>
+      </div>
+      <div class="iz-w2">Numbers<span class="iz-shine" aria-hidden="true">Numbers</span></div>
+    </div>
+    <p class="iz-tag">See which numbers haven't come out</p>
+  </div>
+</div>
+<template id="izBallTpl">
+  <svg viewBox="0 0 100 100" aria-hidden="true">
+    <defs>
+      <radialGradient id="body" cx="36%" cy="30%" r="78%">
+        <stop offset="0" stop-color="#fff7d1"/><stop offset=".16" stop-color="#ffe385"/><stop offset=".42" stop-color="#f6bd25"/>
+        <stop offset=".72" stop-color="#cf8d05"/><stop offset=".92" stop-color="#8a5600"/><stop offset="1" stop-color="#5c3800"/>
+      </radialGradient>
+      <radialGradient id="rim" cx="50%" cy="50%" r="50%"><stop offset=".78" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#2b1700" stop-opacity=".45"/></radialGradient>
+      <radialGradient id="disc" cx="44%" cy="38%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f7f3e8"/><stop offset="1" stop-color="#e2d9c2"/></radialGradient>
+      <linearGradient id="spec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <radialGradient id="bounce" cx="70%" cy="88%" r="40%"><stop offset="0" stop-color="#ffe9a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a0" stop-opacity="0"/></radialGradient>
+    </defs>
+    <circle cx="50" cy="50" r="48" fill="url(#body)"/>
+    <circle cx="50" cy="50" r="48" fill="url(#bounce)"/>
+    <g class="iz-spin">
+      <circle cx="50" cy="50" r="25.5" fill="#b07400" opacity=".35" transform="translate(.6 1.4)"/>
+      <circle cx="50" cy="50" r="25" fill="url(#disc)"/>
+      <circle cx="50" cy="50" r="25" fill="none" stroke="#c99a2e" stroke-opacity=".55" stroke-width="1"/>
+      <text x="50" y="58.5" text-anchor="middle" font-family="Outfit, Barlow, sans-serif" font-weight="800" font-size="24" fill="#0b2a5b" letter-spacing=".5">00</text>
+    </g>
+    <circle cx="50" cy="50" r="48" fill="url(#rim)"/>
+    <ellipse cx="35" cy="24" rx="20" ry="10" fill="url(#spec)" transform="rotate(-28 35 24)" opacity=".85"/>
+    <circle cx="29" cy="21" r="3.2" fill="#fff" opacity=".9"/>
+    <circle cx="50" cy="50" r="47.5" fill="none" stroke="#fff3c0" stroke-opacity=".35" stroke-width="1"/>
+  </svg>
+</template>
 </div>
 <div class="toast" id="toast" hidden></div>
 <script src="app.js"></script>
