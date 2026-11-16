@@ -249,68 +249,171 @@ function mixPatterns(){
   return groups;
 }
 let mixAnim=null,mixGroups=[];
+/* ---------- Mixer sounds: made on the fly with Web Audio, no sound files ---------- */
+const SND=(()=>{
+  let ctx=null,master=null,noiseBuf=null,hiss=null,hissGain=null,muted=false,hissAt=0;const last={};
+  try{muted=localStorage.getItem('bz-sound')==='off'}catch(e){}
+  function init(){if(muted)return;try{
+    if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();master=ctx.createGain();master.gain.value=.6;master.connect(ctx.destination);
+      noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+    if(ctx.state==='suspended')ctx.resume()}catch(e){}}
+  const ok=()=>!!ctx&&!muted&&ctx.state==='running';
+  const gap=(k,ms)=>{const n=performance.now();if(last[k]&&n-last[k]<ms)return false;last[k]=n;return true};
+  function env(g,t,vol,dur){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+Math.min(.008,dur/4));g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
+  function noise(dur,f,q,vol,type,f2){const t=ctx.currentTime,s=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain();
+    s.buffer=noiseBuf;s.loop=true;fl.type=type||'bandpass';fl.frequency.setValueAtTime(f,t);if(f2)fl.frequency.exponentialRampToValueAtTime(f2,t+dur);fl.Q.value=q;
+    env(g,t,vol,dur);s.connect(fl);fl.connect(g);g.connect(master);s.start(t,Math.random()*.5);s.stop(t+dur+.03)}
+  function tone(f,dur,vol,type,f2,delay){const t=ctx.currentTime+(delay||0),o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+    env(g,t,vol,dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.03)}
+  function stopHiss(){if(!hiss)return;const h=hiss,hg=hissGain;hiss=null;try{hg.gain.setTargetAtTime(0,ctx.currentTime,.06)}catch(e){}setTimeout(()=>{try{h.stop()}catch(e){}},400)}
+  return{
+    init,isMuted:()=>muted,
+    setMuted(m){muted=m;try{localStorage.setItem('bz-sound',m?'off':'on')}catch(e){}if(m)stopHiss();else init()},
+    // ball hits ball: a hard plastic clack
+    clack(v){if(!ok()||v<60||!gap('clack',24))return;const vol=Math.min(.42,.05+v/2600);
+      noise(.03,2400+Math.random()*2200,7,vol);tone(1500+Math.random()*1300,.035,vol*.45,'triangle')},
+    // ball hits the glass: a light, bright tink
+    glass(v){if(!ok()||v<110||!gap('glass',40))return;const vol=Math.min(.2,.025+v/6000);
+      tone(2900+Math.random()*1600,.08,vol);noise(.018,5500,4,vol*.5)},
+    jet(p){if(!ok()||!gap('jet',110))return;noise(.18+.12*Math.random(),700+Math.random()*500,1.3,.1+.08*p,'bandpass',3200+Math.random()*1500)},
+    gust(){if(!ok()||!gap('gust',220))return;noise(.5,320,.8,.3,'bandpass',2400)},
+    // the steady roar of the blower
+    hiss(level){if(!ok()){stopHiss();return}const n=performance.now();if(n-hissAt<90)return;hissAt=n;
+      if(!hiss&&level>0){hiss=ctx.createBufferSource();hiss.buffer=noiseBuf;hiss.loop=true;const fl=ctx.createBiquadFilter();fl.type='lowpass';fl.frequency.value=1300;
+        hissGain=ctx.createGain();hissGain.gain.value=0;hiss.connect(fl);fl.connect(hissGain);hissGain.connect(master);hiss.start()}
+      if(hiss)hissGain.gain.setTargetAtTime(level*.1,ctx.currentTime,.08)},
+    stopHiss,
+    tick(){if(!ok()||!gap('tick',60))return;tone(2300+Math.random()*200,.016,.06,'square')},
+    lock(){if(!ok())return;tone(190,.13,.38,'sine',65);noise(.03,3200,3,.22)},
+    ding(){if(!ok())return;[1318.5,1975.5,2637].forEach((f,i)=>tone(f,1.2-i*.25,.2/(i+1)))},
+    win(){if(!ok())return;[1046.5,1318.5,1568,2093].forEach((f,i)=>tone(f,.55,.11,'triangle',null,i*.09))}
+  };
+})();
+const MUTE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
+const MUTE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+function muteLabel(){const m=SND.isMuted(),b=$('mixMute');if(!b)return;b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',m?'Turn sound on':'Mute sound');b.title=m?'Sound off':'Sound on';b.innerHTML=m?MUTE_ON:MUTE_OFF}
+$('mixMute').addEventListener('click',e=>{e.stopPropagation();SND.setMuted(!SND.isMuted());muteLabel()});
+muteLabel();
+/* results land like slot-machine reels: every ball of the first group spins through numbers,
+   then they lock one by one, slowing down, with a pause of suspense before the last one */
+let reelTimers=[];
+function stopReels(){reelTimers.forEach(t=>{clearTimeout(t);clearInterval(t)});reelTimers=[]}
 function showMixResults(){
-  const out=$('mixOut');out.innerHTML='';let n=0;
-  mixGroups.forEach(gr=>{const sec=document.createElement('div');sec.className='mixgroup';
+  stopReels();
+  const out=$('mixOut');out.innerHTML='';out.onclick=null;
+  const pool=state.game==='pick3'?GAMES.pick3.board:GAMES[state.game].board;
+  const secs=[];
+  mixGroups.forEach(g=>{const seen=new Set();g.plays=g.plays.filter(p=>{const k=p.join(',');if(seen.has(k))return false;seen.add(k);return true})});
+  mixGroups.forEach((gr,gi)=>{const sec=document.createElement('div');sec.className='mixgroup';let n=0;
     const h=document.createElement('h3');h.textContent=gr.label;sec.appendChild(h);
     const single=gr.plays.every(p=>p.length===1);
     const rows=document.createElement('div');rows.className='mixplays'+(single?' single':'');
     gr.plays.forEach(p=>{const row=document.createElement('div');row.className='mixplay';
       p.forEach(x=>{const fill=String(x).startsWith('+');const b=ballEl(fill?x.slice(1):x,true);if(fill)b.classList.add('fill');b.style.setProperty('--n',n++);row.appendChild(b)});
       rows.appendChild(row)});
-    sec.appendChild(rows);out.appendChild(sec)});
-  $('mixNote').hidden=false;$('mixBtns').hidden=false;out.hidden=false;
-  const box=document.querySelector('.mixbox-in');box.classList.remove('swirl');box.classList.add('reveal');
+    sec.appendChild(rows);if(gi>0)sec.hidden=true;out.appendChild(sec);secs.push(sec)});
+  out.hidden=false;
+  const box=$('mixBox').querySelector('.mixbox-in');box.classList.remove('swirl');box.classList.add('reveal');
+  const reels=secs.length?[...secs[0].querySelectorAll('.tile')]:[];
+  let done=false;
+  const lock=(b,quiet,big)=>{clearInterval(b._iv);b.classList.remove('reel','tension');b.firstChild.textContent=b.dataset.final;
+    if(!quiet){if(big)SND.ding();else SND.lock();b.classList.remove('locked');void b.offsetWidth;b.classList.add('locked');box.classList.remove('thud');void box.offsetWidth;box.classList.add('thud')}};
+  const finish=()=>{if(done)return;done=true;stopReels();reels.forEach(b=>{if(b.classList.contains('reel'))lock(b,true)});
+    secs.forEach(x=>x.hidden=false);if(secs[0])secs[0].classList.add('win');box.classList.remove('tense');if(reels.length&&!reduceMotion())SND.win();
+    $('mixNote').hidden=false;$('mixBtns').hidden=false;out.onclick=null;out.removeAttribute('title')};
+  if(reduceMotion()||!reels.length){finish();return}
+  reels.forEach(b=>{b.dataset.final=b.firstChild.textContent;b.classList.add('reel');
+    b._iv=setInterval(()=>{b.firstChild.textContent=pool[Math.floor(Math.random()*pool.length)]},55);reelTimers.push(b._iv)});
+  reelTimers.push(setInterval(()=>{if(reels.some(b=>b.classList.contains('reel')))SND.tick()},reels.length>1?75:90));
+  // lock times: gaps grow so the reels slow down, and the last one waits longer
+  const N=reels.length,budget=Math.min(3600,700+N*300);let t=650;
+  const w=reels.map((_,i)=>1+1.6*i/Math.max(1,N-1)),ws=w.reduce((x,y)=>x+y,0);
+  reels.forEach((b,i)=>{
+    t+=(budget-650)*w[i]/ws;
+    if(i===N-1&&N>1){reelTimers.push(setTimeout(()=>{b.classList.add('tension');box.classList.add('tense')},t-60));t+=950}
+    const at=t,big=i===N-1;reelTimers.push(setTimeout(()=>lock(b,false,big),at))});
+  reelTimers.push(setTimeout(finish,t+500));
+  out.onclick=finish;out.title='Tap to show all now';
 }
 function runMixer(){
-  cancelAnimationFrame(mixAnim);
+  cancelAnimationFrame(mixAnim);stopReels();
   mixGroups=mixPatterns();
   const stage=$('mixStage'),out=$('mixOut');out.hidden=true;out.innerHTML='';$('mixNote').hidden=true;$('mixBtns').hidden=true;
-  stage.innerHTML='';stage.hidden=false;stage.classList.remove('flash');
-  const box=document.querySelector('.mixbox-in');box.classList.remove('reveal');
+  stage.innerHTML='';stage.hidden=false;stage.classList.remove('flash','blowing');stage.style.transform='';
+  const box=$('mixBox').querySelector('.mixbox-in');box.classList.remove('reveal','thud','tense');
   if(!reduceMotion())box.classList.add('swirl');
   const labels=mineList().map(k=>state.game==='pick3'?k.split(':')[1]:k);
   if(reduceMotion()){stage.hidden=true;showMixResults();return}
-  // A lottery air-mix drum: balls drop in through the top tube one by one, bounce to the
-  // bottom, then the air blower switches on and tumbles them around the glass globe.
-  stage.innerHTML='<div class="globe"><span class="globe-tube"></span><span class="globe-shine"></span><span class="globe-vent"></span></div>';
-  const copies=labels.length<6?2:1,balls=[];
-  for(let c=0;c<copies;c++)labels.forEach(l=>{const b=ballEl(l,true);b.classList.add('mixball');b.style.opacity='0';stage.appendChild(b);balls.push({el:b,x:0,y:0,vx:0,vy:0,rot:0,inAt:0,live:false})});
-  const N=balls.length,DROP=Math.min(1600,220*N),dur=3000+Math.random()*2000,t0=performance.now();
+  // A lottery air-mix drum: balls drop in through the top tube, then high-pressure jets blast
+  // them around the glass globe in chaos. The air dies, the balls fall, and the results roll in.
+  stage.innerHTML='<div class="globe"><span class="globe-tube"></span><span class="globe-shine"></span><span class="globe-vent"></span>'+
+    '<span class="globe-jet" style="--a:-28deg;--d:0s"></span><span class="globe-jet" style="--a:0deg;--d:-.12s"></span><span class="globe-jet" style="--a:28deg;--d:-.23s"></span>'+
+    '<span class="globe-jet" style="--a:-12deg;--d:-.3s"></span><span class="globe-jet" style="--a:14deg;--d:-.06s"></span></div>';
+  const copies=labels.length<4?3:labels.length<7?2:1,balls=[];
+  for(let c=0;c<copies;c++)labels.forEach(l=>{const b=ballEl(l,true);b.classList.add('mixball');b.style.opacity='0';stage.appendChild(b);
+    balls.push({el:b,x:0,y:0,vx:0,vy:0,rot:0,spin:0,inAt:0,live:false})});
+  const N=balls.length,DROP=Math.min(1500,170*N),RAMP=700,CHAOS=5200+Math.random()*1600,SETTLE=900;
+  const airOn=DROP+150,airFull=airOn+RAMP,airOff=airFull+CHAOS,dur=airOff+SETTLE,t0=performance.now();
   balls.forEach((b,i)=>b.inAt=i*(DROP/N));
-  const r=18;let last=t0;
+  const r=18;let last=t0,swirlDir=1,nextFlip=airOn+700,nextGust=airFull+300,shake=0;
   const step=now=>{
     const W=stage.clientWidth,H=stage.clientHeight,cx=W/2,cy=H/2,R=Math.min(W,H)/2-10-r;
-    const el=now-t0,dt=Math.min(.033,(now-last)/1000);last=now;
-    const blowing=el>DROP+250&&el<dur-350;
-    stage.classList.toggle('blowing',blowing);
+    const el=now-t0,dt=Math.min(.03,(now-last)/1000);last=now;
+    // air level: ramps up, roars, then cuts out
+    const air=el<airOn?0:el<airFull?(el-airOn)/RAMP:el<airOff?1:0;
+    stage.classList.toggle('blowing',air>0);stage.style.setProperty('--air',air.toFixed(2));
+    if(air>0&&el>nextFlip){swirlDir=-swirlDir;nextFlip=el+500+Math.random()*900}
+    let gust=null;
+    if(air>.6&&el>nextGust){const ang=-Math.PI/2+(Math.random()-.5)*2.2;gust={x:Math.cos(ang),y:Math.sin(ang),p:700+Math.random()*700};nextGust=el+380+Math.random()*700;shake=1}
+    // a jet fires from one of the nozzles at the bottom
+    const jet=air>.3&&Math.random()<.35?(Math.random()-.5)*1.1:null;if(jet!==null&&Math.random()<.4)SND.jet(air);
+    SND.hiss(air);
     for(const b of balls){
-      if(!b.live){if(el<b.inAt)continue;b.live=true;b.x=cx+(Math.random()-.5)*8;b.y=cy-R+2;b.vx=(Math.random()-.5)*90;b.vy=120;b.el.style.opacity='1'}
-      // gravity, plus the air blower pushing up from the bottom and swirling
-      let ax=0,ay=900;
-      if(blowing){const low=(b.y-cy)/R;ay-=low>.3?2600+2300*Math.random():low>-.2?550+950*Math.random():300*Math.random();ax+=(Math.random()-.5)*1500}
-      b.vx+=ax*dt;b.vy+=ay*dt;b.vx*=.995;b.vy*=.995;
-      const sp=Math.hypot(b.vx,b.vy),max=blowing?950:800;if(sp>max){b.vx*=max/sp;b.vy*=max/sp}
+      if(!b.live){if(el<b.inAt)continue;b.live=true;b.x=cx+(Math.random()-.5)*8;b.y=cy-R+2;b.vx=(Math.random()-.5)*90;b.vy=140;b.el.style.opacity='1'}
+      let ax=0,ay=1050;
+      if(air>0){
+        const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1,low=dy/R;
+        // the main up-draft from the vent, strongest at the bottom
+        ay-=air*(low>.3?3000+3400*Math.random():low>-.2?450+1100*Math.random():0);
+        // a swirl round the globe that flips direction now and then
+        ax+=air*swirlDir*1500*(-dy/d);ay+=air*swirlDir*1500*(dx/d);
+        // turbulence
+        ax+=air*(Math.random()-.5)*4200;ay+=air*(Math.random()-.5)*2600;
+        // a jet stream kicks balls near the bottom
+        if(jet!==null&&low>.35&&Math.abs(dx/R-jet*.6)<.35){b.vy-=air*(900+900*Math.random());b.vx+=air*jet*900;b.spin+=(Math.random()-.5)*2400}
+        if(gust){if(b===balls[0])SND.gust();b.vx+=gust.x*gust.p*air*(.6+.8*Math.random());b.vy+=gust.y*gust.p*air*(.6+.8*Math.random());b.spin+=(Math.random()-.5)*3000}
+      }
+      b.vx+=ax*dt;b.vy+=ay*dt;b.vx*=.993;b.vy*=.993;
+      const sp=Math.hypot(b.vx,b.vy),max=800+1100*air;if(sp>max){b.vx*=max/sp;b.vy*=max/sp}
       b.x+=b.vx*dt;b.y+=b.vy*dt;
-      // bounce off the glass
+      // bounce off the glass, with a kick of spin
       const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy);
-      if(d>R){const nx=dx/d,ny=dy/d;b.x=cx+nx*R;b.y=cy+ny*R;const vn=b.vx*nx+b.vy*ny;if(vn>0){b.vx-=1.65*vn*nx;b.vy-=1.65*vn*ny}}
-      b.rot+=b.vx*dt*2.2;
+      if(d>R){const nx=dx/d,ny=dy/d;b.x=cx+nx*R;b.y=cy+ny*R;const vn=b.vx*nx+b.vy*ny;
+        if(vn>0){SND.glass(vn);const e=air>0?1.82:1.55;b.vx-=e*vn*nx;b.vy-=e*vn*ny;b.spin+=(b.vx*ny-b.vy*nx)*1.2}}
+      b.spin*=air>0?.985:.94;
+      b.rot+=(b.spin+b.vx*1.4)*dt;
     }
     // balls knock into each other
     for(let i=0;i<N;i++)for(let k=i+1;k<N;k++){const a=balls[i],c=balls[k];if(!a.live||!c.live)continue;
       const dx=c.x-a.x,dy=c.y-a.y,d=Math.hypot(dx,dy)||.01,min=2*r;
       if(d<min){const nx=dx/d,ny=dy/d,o=(min-d)/2;a.x-=nx*o;a.y-=ny*o;c.x+=nx*o;c.y+=ny*o;
-        const rv=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny;if(rv<0){const j=-.9*rv;a.vx-=j*nx;a.vy-=j*ny;c.vx+=j*nx;c.vy+=j*ny}}}
-    for(const b of balls)if(b.live)b.el.style.transform='translate('+(b.x-r)+'px,'+(b.y-r)+'px) rotate('+(b.rot%360).toFixed(1)+'deg)';
+        const rv=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny;if(rv<0){SND.clack(-rv);const j=-.95*rv;a.vx-=j*nx;a.vy-=j*ny;c.vx+=j*nx;c.vy+=j*ny;
+          const tw=(Math.random()-.5)*600*air;a.spin+=tw;c.spin-=tw}}}
+    // fast balls stretch along their path
+    for(const b of balls)if(b.live){const sp=Math.hypot(b.vx,b.vy),st=Math.min(.22,sp/7000),dir=Math.atan2(b.vy,b.vx)*57.3;
+      b.el.style.transform='translate('+(b.x-r).toFixed(1)+'px,'+(b.y-r).toFixed(1)+'px) rotate('+dir.toFixed(1)+'deg) scale('+(1+st).toFixed(3)+','+(1-st*.6).toFixed(3)+') rotate('+((b.rot-dir)%360).toFixed(1)+'deg)'}
+    // the globe shakes with the roar of the air, harder on each gust
+    shake*=.9;const amp=air*(1.2+4.5*shake);
+    stage.style.transform=amp>.05?'translate('+((Math.random()-.5)*amp).toFixed(1)+'px,'+((Math.random()-.5)*amp).toFixed(1)+'px)':'';
     if(el<dur){mixAnim=requestAnimationFrame(step)}
-    else{stage.classList.remove('blowing');stage.classList.add('flash');setTimeout(()=>{stage.hidden=true;stage.innerHTML='';showMixResults()},380)}
+    else{SND.stopHiss();stage.style.transform='';stage.classList.remove('blowing');stage.classList.add('flash');setTimeout(()=>{stage.hidden=true;stage.innerHTML='';showMixResults()},380)}
   };
   mixAnim=requestAnimationFrame(step);
 }
-$('mixBtn').addEventListener('click',()=>{$('mixTitle').textContent='Mixer · '+GAMES[state.game].label;$('mixBox').hidden=false;runMixer();$('mixClose').focus({preventScroll:true})});
-$('mixAgain').addEventListener('click',runMixer);
-function closeMix(){cancelAnimationFrame(mixAnim);$('mixBox').hidden=true;$('mixBtn').focus()}
+$('mixBtn').addEventListener('click',()=>{SND.init();$('mixTitle').textContent='Mixer · '+GAMES[state.game].label;$('mixBox').hidden=false;runMixer();$('mixClose').focus({preventScroll:true})});
+$('mixAgain').addEventListener('click',()=>{SND.init();runMixer()});
+function closeMix(){cancelAnimationFrame(mixAnim);stopReels();SND.stopHiss();$('mixBox').hidden=true;$('mixBtn').focus()}
 $('mixClose').addEventListener('click',closeMix);
 $('mixBox').addEventListener('click',e=>{if(e.target.id==='mixBox')closeMix()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('mixBox').hidden)closeMix()});

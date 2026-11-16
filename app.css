@@ -657,6 +657,37 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .toast{z-index:70}
 @media (prefers-reduced-motion:reduce){.mine-item.armed,.pickball.pop .tile{animation:none}.mine-item{transition:none}}
 
+/* ---------- Mixer: high-pressure air jets and slot-machine reveal ---------- */
+.globe-jet{position:absolute;left:50%;bottom:6%;width:5px;height:52%;margin-left:-2.5px;border-radius:5px;opacity:0;transform-origin:50% 100%;
+  background:linear-gradient(to top,rgba(255,255,255,0),rgba(210,238,255,.75) 35%,rgba(255,255,255,.9) 60%,rgba(255,255,255,0));filter:blur(1px)}
+.mixstage.blowing .globe-jet{animation:jet .32s linear infinite;animation-delay:var(--d)}
+@keyframes jet{0%{transform:rotate(var(--a)) translateY(35%) scaleY(.2);opacity:0}
+  25%{opacity:calc(var(--air,1) * .85)}100%{transform:rotate(var(--a)) translateY(-35%) scaleY(1.1);opacity:0}}
+.mixstage.blowing .globe-vent{animation-duration:.08s}
+.mixstage.blowing .globe{box-shadow:inset 0 -18px 30px rgba(0,0,0,.25),inset 0 10px 24px rgba(255,255,255,.12),0 0 0 2px rgba(255,255,255,.35),0 0 calc(var(--air,0) * 26px) rgba(150,210,255,.55)}
+.mixplay .tile.reel{animation:reel .09s linear infinite}
+.mixplay .tile.reel span{filter:blur(.7px);opacity:.85}
+@keyframes reel{0%,100%{transform:translateY(-2px)}50%{transform:translateY(2px)}}
+.mixplay .tile.tension{animation:reel .05s linear infinite,tension .5s ease-in-out infinite alternate}
+@keyframes tension{from{box-shadow:0 0 0 2px rgba(254,194,7,.4),0 0 8px rgba(254,194,7,.4)}to{box-shadow:0 0 0 4px var(--gold),0 0 26px rgba(254,194,7,.9)}}
+.mixplay .tile.locked{animation:locked .55s cubic-bezier(.2,.8,.3,1.6) both}
+@keyframes locked{0%{transform:scale(1.45);box-shadow:0 0 0 4px #fff,0 0 30px rgba(255,255,255,.9)}60%{box-shadow:0 0 0 3px var(--gold),0 0 18px rgba(254,194,7,.7)}100%{transform:none;box-shadow:inset -4px -6px 10px rgba(0,0,0,.25),0 4px 8px rgba(0,0,0,.45)}}
+.mixbox-in.thud{animation:thud .14s ease-out}
+@keyframes thud{40%{transform:translateY(3px)}}
+.mixbox-in.tense{box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 0 2px rgba(254,194,7,.5),0 0 40px rgba(254,194,7,.35);transition:box-shadow .3s}
+.mixgroup.win h3{animation:wintxt 1.2s ease-out}
+@keyframes wintxt{0%{color:#fff;text-shadow:0 0 14px rgba(254,194,7,.95)}100%{color:var(--muted);text-shadow:none}}
+.mixgroup[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.mixstage.blowing .globe-jet,.mixplay .tile.reel,.mixplay .tile.tension,.mixplay .tile.locked,.mixbox-in.thud,.mixgroup.win h3{animation:none}}
+
+/* mixer mute button: top-right of the mixer screen */
+.mixmute{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:5;width:44px;height:44px;border-radius:50%;
+  display:grid;place-items:center;cursor:pointer;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;touch-action:manipulation}
+.mixmute svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mixmute svg path:first-child{fill:currentColor;fill-opacity:.25}
+.mixmute[aria-pressed="true"]{color:var(--muted);background:rgba(0,0,0,.3)}
+.mixmute:hover,.mixmute:focus-visible{background:rgba(255,255,255,.22);outline:none;box-shadow:0 0 0 2px var(--gold)}
+
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}
