@@ -709,6 +709,37 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .showless-btn:hover,.showless-btn:focus-visible{background:rgba(255,255,255,.12)}
 .showless-btn .chev{font-size:13px}
 
+/* ---------- ball card: slides up from the bottom when a ball is tapped ---------- */
+.sheet{position:fixed;inset:0;z-index:45;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,10,28,.55)}
+.sheet-in{width:min(100%,520px);max-height:82dvh;overflow:auto;display:flex;flex-direction:column;gap:12px;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  border-radius:22px 22px 0 0;border:1px solid var(--gold);border-bottom:0;background:linear-gradient(180deg,#1a64c0,#0b4590 60%,#073170);
+  box-shadow:0 -12px 40px rgba(0,0,0,.5);transition:transform .2s}
+.sheet-in.up{animation:sheetup .28s cubic-bezier(.2,.8,.3,1)}
+@keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
+.sheet-grab{align-self:center;width:42px;height:5px;border-radius:3px;background:rgba(255,255,255,.4)}
+.sheet-head{display:flex;align-items:center;gap:14px}
+.sheet-ball .tile{width:64px}
+.sheet-txt{flex:1;min-width:0}
+.sheet-txt h2{margin:0;font:700 20px/1.15 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.sheet-txt p{margin:3px 0 0;font-size:15px;color:var(--cream)}
+.sheet-txt p b{font-family:var(--f-label);font-size:17px}
+.sheet-x{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.1);color:var(--cream);font-size:24px;line-height:1;cursor:pointer}
+.sheet-x:hover,.sheet-x:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
+.sheet-facts{margin:0;font-size:15px;color:var(--cream);line-height:1.45}
+.sheet-facts b{color:var(--gold);font-family:var(--f-label);font-size:16px}
+.sheet-none{margin:0;padding:12px;border-radius:12px;background:rgba(0,0,0,.2);border:1px dashed var(--line);font-size:14px;color:var(--muted)}
+.sheet-star .starbtn{display:flex;width:max-content;max-width:100%}
+.sheet .trend{margin-top:0}
+.trend-bars{position:relative}
+.trend-avg{position:absolute;left:0;right:0;bottom:var(--a);border-top:1px dashed rgba(255,255,255,.55);pointer-events:none;z-index:1}
+.trend-avg span{position:absolute;left:0;top:-15px;padding:0 3px;border-radius:4px;background:rgba(4,30,70,.7);font:600 10px var(--f-body);font-style:normal;color:var(--muted)}
+.tb.now{outline:2px solid rgba(255,255,255,.7);outline-offset:1px}
+.tb.zero.now{outline-color:rgba(255,255,255,.35)}
+.trend-sum{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.trend-sum b{color:var(--cream)}
+@media (prefers-reduced-motion:reduce){.sheet-in.up{animation:none}.sheet-in{transition:none}}
+
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}

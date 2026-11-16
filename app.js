@@ -315,6 +315,8 @@ const SND=(()=>{
     close(){if(!ok()||!gap('close',150))return;noise(.14,1800,1,.04,'bandpass',500)},
     success(){if(!ok())return;[784,1046.5,1318.5].forEach((f,i)=>tone(f,.3,.06,'sine',null,i*.08))},
     shimmer(){if(!ok()||!gap('shim',600))return;[1568,1760,2093,2349].forEach((f,i)=>tone(f,.18,.018,'sine',null,i*.05))},
+    // a ball landing in the Missing Numbers grid: quieter than the Last Draw knock, rising a little through the batch
+    land(j){if(!ok())return;const f=Math.min(560,280+j*16);tone(f,.06,.05,'sine',f*.6);noise(.02,1600+j*60,4,.025)},
     ping(){if(!ok())return;tone(1760,.35,.045,'sine');tone(2637,.25,.02,'sine',null,.01)},
     later(ms,fn){return setTimeout(fn,ms)}
   };
@@ -502,11 +504,13 @@ function trendChart(key){
   all.forEach(d=>{const ms=Date.UTC(+d.date.slice(0,4),+d.date.slice(5,7)-1,+d.date.slice(8,10));
     const w=WEEKS-1-Math.floor((endMs-ms)/(7*864e5));if(w<0||w>=WEEKS)return;bins[w].draws++;if(keysOf(d).includes(k))bins[w].n++});
   const max=Math.max(1,...bins.map(b=>b.n)),tot=bins.reduce((a,b)=>a+b.n,0);
-  const box=document.createElement('div');box.className='trend';
+  const box=document.createElement('div');box.className='trend';box.dataset.tot=tot;
+  const avg=tot/WEEKS,best=bins.reduce((m,b,i)=>b.n>bins[m].n?i:m,0);
   const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  box.innerHTML='<div class="trend-h"><span>Times played per week</span><span>last 10 weeks · <b>'+tot+'</b></span></div>'+
-    '<div class="trend-bars">'+bins.map((b,i)=>'<span class="tb'+(b.n?'':' zero')+'" style="--h:'+(b.n?Math.max(12,Math.round(b.n/max*100)):4)+'%;--i:'+i+'" title="Week of '+mon[b.start.getUTCMonth()]+' '+b.start.getUTCDate()+': '+b.n+' of '+b.draws+' draws">'+(b.n?'<em>'+b.n+'</em>':'')+'</span>').join('')+'</div>'+
-    '<div class="trend-x">'+bins.map((b,i)=>'<span>'+(i%3===0||i===WEEKS-1?mon[b.start.getUTCMonth()]+' '+b.start.getUTCDate():'')+'</span>').join('')+'</div>';
+  box.innerHTML='<div class="trend-h"><span>Times played per week</span><span>last 10 weeks · <b>'+tot+'</b> time'+(tot===1?'':'s')+'</span></div>'+
+    '<div class="trend-bars">'+(tot?'<i class="trend-avg" style="--a:'+Math.round(avg/max*100)+'%"><span>avg '+(Math.round(avg*10)/10)+'/wk</span></i>':'')+bins.map((b,i)=>'<span class="tb'+(b.n?'':' zero')+(i===WEEKS-1?' now':'')+'" style="--h:'+(b.n?Math.max(12,Math.round(b.n/max*100)):4)+'%;--i:'+i+'" title="Week of '+mon[b.start.getUTCMonth()]+' '+b.start.getUTCDate()+': '+b.n+' of '+b.draws+' draws">'+(b.n?'<em>'+b.n+'</em>':'')+'</span>').join('')+'</div>'+
+    '<div class="trend-x">'+bins.map((b,i)=>'<span>'+(i%3===0||i===WEEKS-1?mon[b.start.getUTCMonth()]+' '+b.start.getUTCDate():'')+'</span>').join('')+'</div>'+
+    (tot?'<p class="trend-sum">Busiest week: <b>'+mon[bins[best].start.getUTCMonth()]+' '+bins[best].start.getUTCDate()+'</b> ('+bins[best].n+' of '+bins[best].draws+' draws). The last bar is the latest week.</p>':'');
   return box;
 }
 
@@ -626,7 +630,7 @@ const dramaState={tiles:{key:null,played:false},hot:{key:null,played:false}};
 let dramaIO=null;
 function countUp(el,ms,delay){
   const m=/^(\d+)(.*)$/.exec(el.textContent);if(!m)return;
-  const to=+m[1],rest=m[2];if(to<2){return}
+  const to=+m[1],rest=m[2];el.dataset.final=to;if(to<2){return}
   el.textContent='0'+rest;
   const t0=performance.now()+delay;
   const step=now=>{const p=Math.min(1,Math.max(0,(now-t0)/ms)),e=1-Math.pow(1-p,3);
@@ -686,7 +690,10 @@ function limitMissing(key,reveal){
     fresh.forEach((b,j)=>{b.classList.remove('reveal','reveal-star');void b.offsetWidth;
       b.style.setProperty('--r',(j*step).toFixed(3)+'s');b.classList.add('reveal');
       if(j===fresh.length-1)b.classList.add('reveal-star');
-      const num=b.querySelector('.tag b');if(num)countUp(num,650,j*step*1000+350)});
+      const num=b.querySelector('.tag b');if(num)countUp(num,650,j*step*1000+350);
+      // a soft knock as each ball lands, timed to its entrance; a ping on the last, gold-glowing one
+      const kind=document.body.dataset.enter,hit=kind==='drop'?450:kind==='flip'?620:600,at=j*step*1000+hit;
+      SND.later(at,()=>SND.land(j));if(j===fresh.length-1)SND.later(at+420,()=>SND.ping())});
     const first=fresh[0];setTimeout(()=>first.scrollIntoView({block:'center',behavior:'smooth'}),60);
   }
   const left=total-show,btn=mb.querySelector('.showmore-btn'),less=mb.querySelector('.showless-btn');
@@ -941,17 +948,45 @@ function shadeColumns(){
     [...g.children].forEach((t,i)=>t.classList.toggle('alt',(i%cols)%2===1))});
 }
 let lastAnim='';
+/* tapping a ball opens a card that slides up from the bottom of the screen, so it is always in view,
+   however long the list is. The weekly chart only shows for a ball that has played in those weeks. */
+let sheetFrom=null;
 function onBallTap(e){
   const b=e.target.closest('.bwrap');if(!b||!b.dataset.detail)return;
-  const was=b.classList.contains('sel');
-  document.querySelectorAll('.bwrap.sel').forEach(x=>{x.classList.remove('sel');x.setAttribute('aria-pressed','false')});
-  document.querySelectorAll('.balldetail').forEach(p=>p.hidden=true);
-  if(was)return;
-  b.classList.add('sel');b.setAttribute('aria-pressed','true');
-  const p=b.closest('.ballset').querySelector('.balldetail');p.innerHTML=b.dataset.detail;p.hidden=false;
-  if(b.dataset.key!==undefined){const tc=trendChart(b.dataset.key);if(tc)p.appendChild(tc);
-    const sb=document.createElement('button');sb.type='button';sb.className='starbtn';sb.dataset.key=b.dataset.key;starLabel(sb);p.appendChild(sb)}
+  openBallSheet(b);
 }
+function openBallSheet(b){
+  document.querySelectorAll('.bwrap.sel').forEach(x=>{x.classList.remove('sel');x.setAttribute('aria-pressed','false')});
+  b.classList.add('sel');b.setAttribute('aria-pressed','true');sheetFrom=b;
+  const key=b.dataset.key,label=(b.querySelector('.tile span')||{}).textContent||'';
+  const pick=state.game==='pick3'&&key&&key.includes(':');
+  const sb=$('sheetBall');sb.innerHTML='';const t=ballEl(label);if(b.classList.contains('alt'))t.classList.add('alt');sb.appendChild(t);
+  $('sheetTitle').textContent=pick?'Digit '+label+' · '+SPOTS[+key.split(':')[0]]+' spot':(GAMES[state.game].label+' '+label);
+  let tag=b.querySelector('.tag');if(tag){tag=tag.cloneNode(true);tag.querySelectorAll('[data-final]').forEach(x=>{x.textContent=x.dataset.final+x.textContent.replace(/^\d+/,'')})}
+  $('sheetSub').innerHTML=tag?tag.innerHTML+(b.closest('#hot')?' played':' since it last played'):'';
+  $('sheetFacts').innerHTML=b.dataset.detail;
+  const tr=$('sheetTrend');tr.innerHTML='';
+  if(key!==undefined){const tc=trendChart(key);
+    if(tc&&+tc.dataset.tot>0)tr.appendChild(tc);
+    else tr.innerHTML='<p class="sheet-none">No plays in the last 10 weeks, so there is no weekly chart for this '+(pick?'digit':'number')+' yet.</p>'}
+  const st=$('sheetStar');st.innerHTML='';
+  if(key!==undefined){const btn=document.createElement('button');btn.type='button';btn.className='starbtn';btn.dataset.key=key;starLabel(btn);st.appendChild(btn)}
+  const sh=$('ballSheet');const wasOpen=!sh.hidden;sh.hidden=false;
+  const inn=sh.querySelector('.sheet-in');inn.style.transform='';
+  if(!wasOpen){inn.classList.remove('up');void inn.offsetWidth;inn.classList.add('up')}
+  $('sheetClose').focus({preventScroll:true});
+}
+function closeBallSheet(){const sh=$('ballSheet');if(sh.hidden)return;sh.hidden=true;SND.close();
+  document.querySelectorAll('.bwrap.sel').forEach(x=>{x.classList.remove('sel');x.setAttribute('aria-pressed','false')});
+  if(sheetFrom&&document.contains(sheetFrom))sheetFrom.focus({preventScroll:true});sheetFrom=null}
+$('sheetClose').addEventListener('click',closeBallSheet);
+$('ballSheet').addEventListener('click',e=>{if(e.target.id==='ballSheet')closeBallSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('ballSheet').hidden)closeBallSheet()});
+// swipe the card down to close it
+(()=>{const inn=$('ballSheet').querySelector('.sheet-in');let y0=null,dy=0;
+  inn.addEventListener('touchstart',e=>{if(inn.scrollTop>0)return;y0=e.touches[0].clientY;dy=0;inn.style.transition='none'},{passive:true});
+  inn.addEventListener('touchmove',e=>{if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);inn.style.transform=dy?'translateY('+dy+'px)':''},{passive:true});
+  inn.addEventListener('touchend',()=>{if(y0==null)return;inn.style.transition='';if(dy>90)closeBallSheet();else inn.style.transform='';y0=null})})();
 function starLabel(sb){const on=isMine(sb.dataset.key);sb.classList.toggle('on',on);sb.setAttribute('aria-pressed',on);
   sb.innerHTML=on?'<span aria-hidden="true">★</span> In My Numbers · tap to remove':'<span aria-hidden="true">☆</span> Add to My Numbers'}
 document.addEventListener('click',e=>{
