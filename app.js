@@ -254,7 +254,7 @@ const SND=(()=>{
   let ctx=null,master=null,noiseBuf=null,hiss=null,hissGain=null,muted=false,hissAt=0,unlocked=false;const last={};
   try{muted=localStorage.getItem('bz-sound')==='off'}catch(e){}
   function init(){if(muted)return;try{
-    if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();master=ctx.createGain();master.gain.value=.6;master.connect(ctx.destination);
+    if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();master=ctx.createGain();master.gain.value=1;const lim=ctx.createDynamicsCompressor();lim.threshold.value=-10;lim.knee.value=6;lim.ratio.value=8;lim.attack.value=.003;lim.release.value=.15;master.connect(lim);lim.connect(ctx.destination);
       noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
     if(ctx.state!=='running'){const r=ctx.resume();if(r&&r.catch)r.catch(()=>{})}
     // iPhone: play one silent sample inside the tap, which unlocks sound for the page
@@ -263,7 +263,7 @@ const SND=(()=>{
   const ok=()=>!!ctx&&!muted&&ctx.state==='running';
   const gap=(k,ms)=>{const n=performance.now();if(last[k]&&n-last[k]<ms)return false;last[k]=n;return true};
   function env(g,t,vol,dur){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+Math.min(.008,dur/4));g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
-  function noise(dur,f,q,vol,type,f2){const t=ctx.currentTime,s=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain();
+  function noise(dur,f,q,vol,type,f2,delay){const t=ctx.currentTime+(delay||0),s=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain();
     s.buffer=noiseBuf;s.loop=true;fl.type=type||'bandpass';fl.frequency.setValueAtTime(f,t);if(f2)fl.frequency.exponentialRampToValueAtTime(f2,t+dur);fl.Q.value=q;
     env(g,t,vol,dur);s.connect(fl);fl.connect(g);g.connect(master);s.start(t,Math.random()*.5);s.stop(t+dur+.03)}
   function tone(f,dur,vol,type,f2,delay){const t=ctx.currentTime+(delay||0),o=ctx.createOscillator(),g=ctx.createGain();
@@ -297,13 +297,13 @@ const SND=(()=>{
     pop(){if(!ok()||!gap('pop',50))return;tone(520,.06,.06,'sine',900)},
     star(on){if(!ok())return;on?(tone(988,.08,.055,'sine'),tone(1480,.14,.05,'sine',null,.06)):tone(880,.12,.045,'sine',520)},
     roll(i){if(!ok())return;tone(260+i*35,.07,.07,'sine',150);noise(.025,1800+i*120,4,.04)},
-    // a ball rolling in: a low rumble that flutters slower as it rolls to a stop, then a soft settle
-    rollIn(i,dur){if(!ok())return;const t=ctx.currentTime,src=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),am=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
-      src.buffer=noiseBuf;src.loop=true;fl.type='bandpass';fl.frequency.setValueAtTime(420+i*25,t);fl.frequency.exponentialRampToValueAtTime(220,t+dur);fl.Q.value=2.2;
-      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.11,t+.08);g.gain.setValueAtTime(.11,t+dur*.7);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-      am.gain.value=.55;lfo.frequency.setValueAtTime(24,t);lfo.frequency.exponentialRampToValueAtTime(6,t+dur);depth.gain.value=.45;lfo.connect(depth);depth.connect(am.gain);
-      src.connect(fl);fl.connect(am);am.connect(g);g.connect(master);src.start(t,Math.random()*.5);lfo.start(t);src.stop(t+dur+.05);lfo.stop(t+dur+.05);
-      tone(330+i*30,.06,.045,'sine',220,dur*.95)},
+    // a ball rolling in: quick clicks across a hard surface that spread out as it slows, then a wooden tok
+    rollIn(i,dur){if(!ok())return;let t=0,gap=.035,k=0;const base=640+i*40;
+      while(t<dur*.92&&k<40){const v=.09*(1-.55*t/dur),dl=t;
+        tone(base*(1+(Math.random()-.5)*.08),.018,v,'triangle',null,dl);
+        if(k%2===0)tone(170,.03,v*.6,'sine',null,dl);
+        t+=gap;gap*=1.09;k++}
+      tone(210+i*12,.11,.14,'sine',120,dur);noise(.035,900,2,.07,'bandpass',null,dur)},
     // a ball spinning in: an airy whir that flutters faster then slows like a spinning coin, then a light ting
     spinIn(i,dur){if(!ok())return;const t=ctx.currentTime,src=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),am=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
       src.buffer=noiseBuf;src.loop=true;fl.type='bandpass';fl.frequency.setValueAtTime(2600,t);fl.frequency.exponentialRampToValueAtTime(1300,t+dur);fl.Q.value=3;
