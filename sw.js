@@ -1,10 +1,11 @@
 // Offline support. Bump VERSION whenever you change index.html, app.css or app.js.
-const VERSION = 'boledo-v64';
+const VERSION = 'boledo-v65';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'draws.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's own short-term cache, so a new version never stores old files
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

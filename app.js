@@ -251,12 +251,15 @@ function mixPatterns(){
 let mixAnim=null,mixGroups=[];
 /* ---------- Mixer sounds: made on the fly with Web Audio, no sound files ---------- */
 const SND=(()=>{
-  let ctx=null,master=null,noiseBuf=null,hiss=null,hissGain=null,muted=false,hissAt=0;const last={};
+  let ctx=null,master=null,noiseBuf=null,hiss=null,hissGain=null,muted=false,hissAt=0,unlocked=false;const last={};
   try{muted=localStorage.getItem('bz-sound')==='off'}catch(e){}
   function init(){if(muted)return;try{
     if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();master=ctx.createGain();master.gain.value=.6;master.connect(ctx.destination);
       noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
-    if(ctx.state==='suspended')ctx.resume()}catch(e){}}
+    if(ctx.state!=='running'){const r=ctx.resume();if(r&&r.catch)r.catch(()=>{})}
+    // iPhone: play one silent sample inside the tap, which unlocks sound for the page
+    if(!unlocked){unlocked=true;const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0)}
+  }catch(e){}}
   const ok=()=>!!ctx&&!muted&&ctx.state==='running';
   const gap=(k,ms)=>{const n=performance.now();if(last[k]&&n-last[k]<ms)return false;last[k]=n;return true};
   function env(g,t,vol,dur){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+Math.min(.008,dur/4));g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
@@ -307,7 +310,7 @@ const MUTE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v
 function muteLabel(){const m=SND.isMuted();['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(!b)return;b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',m?'Turn sound on':'Mute sound');b.title=m?'Sound off':'Sound on';b.innerHTML=m?MUTE_ON:MUTE_OFF})}
 ['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(b)b.addEventListener('click',e=>{e.stopPropagation();const m=!SND.isMuted();SND.setMuted(m);muteLabel();if(!m)setTimeout(()=>SND.select(),60)})});
 // the browser only allows sound after a tap, so wake the sound up on the first one
-['pointerdown','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true}));
+['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true}));
 // soft taps for buttons and switches across the page (the mixer and My Numbers make their own)
 document.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;
   if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#mixMute,#mixBtn'))return;
@@ -1118,7 +1121,13 @@ $('restoreFile').onchange=async e=>{
 };
 
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(reg=>{
+    // iPhones keep a home-screen app paused instead of reopening it, so look for a new version each time it comes back
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{})});
+  }).catch(()=>{}));
+  // when a new version takes over, reload once so the new screens show right away
+  const hadSW=!!navigator.serviceWorker.controller;let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadSW||reloaded)return;reloaded=true;location.reload()});
 }
 refreshShipped();
 })();
