@@ -1,0 +1,51 @@
+# Receives one result read from a BBN Belize Facebook post (sent by Make.com).
+# TEST MODE: saves to data/bbn-results.json only. It never changes draws.json.
+# Paste this file into GitHub at .github/workflows/bbn-receive.yml
+name: Receive BBN result (test)
+
+on:
+  repository_dispatch:
+    types: [bbn-result]
+  workflow_dispatch:
+    inputs:
+      answer:
+        description: 'Test: paste an answer, e.g. {"is_result":true,"game":"pick3","date":"2026-11-16","nums":["0","9","0"],"letter":null,"readable":true,"notes":""}'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bbn-receive
+  cancel-in-progress: false
+
+jobs:
+  receive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Get the site files
+        uses: actions/checkout@v4
+
+      - name: Check the result and compare it with the site
+        env:
+          PAYLOAD_JSON: ${{ toJson(github.event.client_payload) }}
+          TEST_ANSWER: ${{ github.event.inputs.answer }}
+        run: python3 scripts/receive_bbn.py
+
+      - name: Save the test file
+        run: |
+          git config user.name "results-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/bbn-results.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nothing new to save."
+            exit 0
+          fi
+          git commit -m "BBN test result"
+          for i in 1 2 3; do
+            git pull --rebase --quiet && git push && exit 0
+            sleep 5
+          done
+          echo "Could not save after 3 tries."
+          exit 1
