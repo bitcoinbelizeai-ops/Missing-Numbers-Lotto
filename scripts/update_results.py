@@ -289,6 +289,9 @@ def main():
             if entry and tries.get(did, 0) == 1 and now - draw_moment(game, date) < timedelta(hours=6):
                 wait[game] = max(int(ready_hours * 60), wait.get(game, int(ready_hours * 60)) - 5)
             if entry:
+                # when it arrived, so the Admin page can show how long magayo took after the draw
+                entry["source"] = "magayo"
+                entry["added"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
                 draws.append(entry)
                 tries.pop(did, None)
                 added.append(f"{label}: {' '.join(entry['nums'])}{' ' + entry['letter'] if entry.get('letter') else ''}")
@@ -301,7 +304,8 @@ def main():
             wait[game] = min(240, max(wait.get(game, 0), mins) + 20)
             skipped.append(f"{label} (not posted yet, will try again next run)")
         elif err == 401:  # magayo: no draw on that date
-            draws.append({"id": did, "game": game, "date": date, "nums": [], "nodraw": True})
+            draws.append({"id": did, "game": game, "date": date, "nums": [], "nodraw": True, "source": "magayo",
+                          "added": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
             tries.pop(did, None)
             nodraw.append(label)
         elif err in (100, 101, 102, 300):  # key missing, wrong or suspended: stop, nothing else will work
