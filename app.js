@@ -1239,6 +1239,14 @@ const INTRO=(()=>{
   setTimeout(()=>h.classList.add('iz-hint'),reduceMotion()?600:2300);
 })();
 INTRO.play(false);
+/* always open at the top: browsers otherwise jump back to where you were last time.
+   A phone app that comes back after 15+ minutes away also returns to the top. */
+try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
+const toTop=()=>{try{window.scrollTo({top:0,left:0,behavior:'instant'})}catch(e){window.scrollTo(0,0)}};
+toTop();addEventListener('load',toTop);addEventListener('pageshow',e=>{if(e.persisted)toTop()});
+(()=>{let hiddenAt=0;document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden')hiddenAt=Date.now();
+  else if(hiddenAt&&Date.now()-hiddenAt>15*60*1000){toTop();hiddenAt=0}})})();
 
 setup();render();
 adapter.subscribe(rows=>{state.draws=rows;state.loaded=true;render()});
