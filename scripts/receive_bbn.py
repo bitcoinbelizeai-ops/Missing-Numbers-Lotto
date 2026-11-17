@@ -43,7 +43,14 @@ def as_obj(v):
         v = v.strip()
         if not v:
             return {}
-        return json.loads(v)
+        try:
+            return json.loads(v)
+        except json.JSONDecodeError:
+            # the model sometimes wraps its answer in ```json fences or a few words: take the {...} part
+            m = re.search(r"\{.*\}", v, re.S)
+            if not m:
+                raise
+            return json.loads(m.group(0))
     return v or {}
 
 
