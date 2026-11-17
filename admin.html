@@ -265,7 +265,7 @@ function review(){
   if(!o){msg($('msg'),{boledo:'Type one number from 00 to 99.',lottery:'Type the 1st, 2nd and 3rd prize (4 digits each).',fantasy5:'Type 5 different numbers from 1 to 39 and the letter.',pick3:'Type 3 digits, like 390.'}[game],'err');return}
   const id=game+'-'+date;const exists=current&&current.data.draws.find(d=>d.id===id);
   const notDay=!SCHED[game].days.includes(dowOf(date));
-  pending=Object.assign({id,game,date},o,{source:'admin'});
+  pending=Object.assign({id,game,date},o,{source:'admin',added:new Date().toISOString().slice(0,19)+'Z'});
   $('confirmText').innerHTML='<b>'+LABEL[game]+'</b> · '+fmtDay(date)+'<br><span style="font-size:22px;font-weight:700;color:#fff">'+o.nums.join(' ')+(o.letter?' '+o.letter:'')+'</span>'+
     (exists&&!exists.nodraw?'<br><small style="color:#ffd27a">This replaces the result already on the site: '+exists.nums.join(' ')+(exists.letter?' '+exists.letter:'')+'</small>':'')+
     (notDay?'<br><small style="color:#ffd27a">'+LABEL[game]+' isn\'t normally drawn on that day.</small>':'');
@@ -301,6 +301,7 @@ function checkDraw(d){
   if(d.date>bz().iso)return null;
   const out={id:d.game+'-'+d.date,game:d.game,date:d.date};
   if(d.source)out.source=String(d.source).slice(0,20);
+  if(typeof d.added==='string'&&/^\d{4}-\d{2}-\d{2}T[\d:]{8}Z$/.test(d.added))out.added=d.added;
   if(d.nodraw)return Object.assign(out,{nodraw:true});
   const n=Array.isArray(d.nums)?d.nums.map(x=>String(x).trim()):[];
   if(d.game==='boledo'){if(n.length<1||!/^\d{1,2}$/.test(n[0]))return null;out.nums=[pad(n[0],2)]}
@@ -377,6 +378,12 @@ $('undoRestore').onclick=async()=>{
 };
 
 /* ---------- BBN test results (read-only unless "Add to site") ---------- */
+// when each draw is finished (Belize time, UTC-6, no daylight saving): the same times the magayo job uses
+const DRAW_END={boledo:[21,10],pick3:[20,30],fantasy5:[20,0],lottery:[10,30]};
+function drawEnd(game,date){const t=DRAW_END[game];if(!t||!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return null;const [y,m,d]=date.split('-').map(Number);return Date.UTC(y,m-1,d,t[0]+6,t[1])}
+function minsAfter(game,date,iso){const e=drawEnd(game,date),a=Date.parse(iso||'');if(e==null||isNaN(a))return null;return Math.round((a-e)/60000)}
+function dur(m){if(m==null)return'';if(m<0)return'before the draw time?';if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h<48?h+' h'+(r?' '+r+' min':''):Math.round(h/24)+' days'}
+const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
 const STATUS={'match':'Matches the site','differs':'Differs from the site','only-bbn':'Only BBN has it','unreadable':'Picture unclear','invalid':'Read wrongly'};
 async function loadBbn(){
   const box=$('bbnList');
@@ -395,19 +402,19 @@ async function loadBbn(){
       return Object.assign({},e,{now:same?'match':'differs',siteNow:s})});
     const count=k=>live.filter(e=>e.now===k).length,checked=count('match')+count('differs');
     $('bbnSum').innerHTML=['match','differs','only-bbn','unreadable','invalid'].map(k=>'<span class="chip '+k+'">'+STATUS[k]+': '+count(k)+'</span>').join('')+
-      (checked?'<span class="chip">Accuracy where both have it: '+Math.round(count('match')/checked*100)+'%</span>':'');
+      (checked?'<span class="chip">Accuracy where both have it: '+Math.round(count('match')/checked*100)+'%</span>':'')+speedChips(live,site);
     box.innerHTML='';
     live.slice(0,60).forEach(e=>{const it=document.createElement('div');it.className='item';
       const lbl=LABEL[e.game]||e.game,bbn=e.draw?e.draw.nums.join(' ')+(e.draw.letter?' '+e.draw.letter:''):(e.read_as&&e.read_as.nums?[].concat(e.read_as.nums).join(' '):'?');
       const siteTxt=e.siteNow?e.siteNow.nums.join(' ')+(e.siteNow.letter?' '+e.siteNow.letter:''):'';
       it.innerHTML='<div class="bbnrow"><span><b>'+esc(lbl)+'</b> · '+(/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')?fmtDay(e.date):esc(e.date||'no date'))+'</span>'+
         '<span>BBN: <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
-        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span></div>';
+        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
       if(e.now==='only-bbn'&&e.draw){const b=document.createElement('button');b.textContent='Add to site';
         b.onclick=async()=>{
           if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to add';setTimeout(()=>{b.dataset.sure='';b.textContent='Add to site'},5000);return}
           b.disabled=true;
-          try{await commit(d=>{if(d.draws.some(x=>x.id===e.draw.id))throw new Error('The site already has '+lbl+' '+e.date+'.');d.draws.push(Object.assign({},e.draw,{source:'bbn'}))},'Admin: add '+lbl+' '+e.date+' from BBN test');
+          try{await commit(d=>{if(d.draws.some(x=>x.id===e.draw.id))throw new Error('The site already has '+lbl+' '+e.date+'.');d.draws.push(Object.assign({},e.draw,{source:'bbn',added:new Date().toISOString().slice(0,19)+'Z'}))},'Admin: add '+lbl+' '+e.date+' from BBN test');
             await loadBbn();msg($('bbnMsg'),'Added '+lbl+' '+e.date+' to the site.','ok')}
           catch(err){msg($('bbnMsg'),err.message,'err');b.disabled=false}};
         it.appendChild(b)}
@@ -416,6 +423,24 @@ async function loadBbn(){
   }catch(err){msg($('bbnMsg'),err.message,'err')}
 }
 $('bbnRefresh').onclick=loadBbn;
+// speed: how long after the draw each source delivered (only draws recorded since timing was added)
+function timingLine(e){
+  if(!e.draw)return'';const g=e.draw.game,dt=e.draw.date,parts=[];
+  const b=minsAfter(g,dt,e.received);if(b!=null)parts.push('BBN arrived '+dur(b)+' after the draw');
+  const p=minsAfter(g,dt,e.post_time);if(p!=null&&p>=0)parts.push('posted on Facebook after '+dur(p));
+  if(e.siteNow&&e.siteNow.added){const m=minsAfter(g,dt,e.siteNow.added);if(m!=null)parts.push((e.siteNow.source||'site')+' after '+dur(m))}
+  return parts.length?'<small>'+esc(parts.join(' · '))+'</small>':'';
+}
+function speedChips(live,site){
+  // BBN's speed = when BBN posted it on Facebook (Make picks it up within its 15-minute check); manual tests left out
+  const bbnWhen=e=>{const p=minsAfter(e.draw.game,e.draw.date,e.post_time);return p!=null&&p>=0?p:minsAfter(e.draw.game,e.draw.date,e.received)};
+  const bbn=live.filter(e=>e.draw&&!String(e.post_id||'').startsWith('manual-test')).map(bbnWhen).filter(m=>m!=null&&m>=0&&m<72*60);
+  const mag=[...site.values()].filter(d=>d.source==='magayo'&&d.added&&!d.nodraw).map(d=>minsAfter(d.game,d.date,d.added)).filter(m=>m!=null&&m>=0&&m<72*60);
+  let first=0,both=0;live.forEach(e=>{if(!e.draw||!e.siteNow||e.siteNow.source!=='magayo'||!e.siteNow.added)return;if(String(e.post_id||'').startsWith('manual-test'))return;const b=bbnWhen(e),g=minsAfter(e.draw.game,e.draw.date,e.siteNow.added);if(b==null||g==null)return;both++;if(b<g)first++});
+  return (bbn.length?'<span class="chip">BBN posts on average '+dur(avg(bbn))+' after the draw ('+bbn.length+')</span>':'')+
+    (mag.length?'<span class="chip">magayo average: '+dur(avg(mag))+' after the draw ('+mag.length+')</span>':'<span class="chip">magayo timing: recorded from its next update</span>')+
+    (both?'<span class="chip">BBN first: '+first+' of '+both+'</span>':'');
+}
 
 async function start(){
   token=getTok();
