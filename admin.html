@@ -46,6 +46,22 @@ input:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px}
 .item b{color:#fff}.item small{color:var(--muted)}
 .item button{font:600 13px Barlow,sans-serif;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 10px;cursor:pointer}
 .help{font-size:14px;color:var(--muted);margin:0}
+.sep{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
+.filebtn{display:inline-flex;align-items:center}
+#restoreFile{position:absolute;width:1px;height:1px;opacity:0}
+.plan{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--yellow);background:rgba(254,194,7,.08)}
+.plan ul{margin:6px 0 0;padding-left:20px;font-size:14.5px}
+.opt{flex-direction:row;align-items:flex-start;gap:10px;color:var(--cream);font-size:14.5px}
+.opt input{width:auto;margin-top:4px}
+.warn{color:#ffd27a}
+.bbnsum{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line)}
+.chip.match{background:rgba(70,200,120,.18);border-color:rgba(70,200,120,.6)}
+.chip.differs{background:rgba(255,90,90,.18);border-color:rgba(255,90,90,.7)}
+.chip.only-bbn{background:rgba(254,194,7,.16);border-color:rgba(254,194,7,.6)}
+.chip.unreadable,.chip.invalid{background:rgba(255,255,255,.08)}
+.item .bbnrow{display:flex;flex-direction:column;gap:3px}
+.item small{color:var(--muted)}
 .list.all{max-height:420px;overflow:auto;padding-right:2px}
 .item.skip{opacity:.7}
 .item .auto{color:var(--muted)}
@@ -110,6 +126,36 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
     <h2>All past results · <span id="allGame">Boledo</span></h2>
     <p class="help">Every result on the site for the game picked above, newest first. Remove takes it off the site for everyone.</p>
     <div class="list all" id="all"></div>
+  </section>
+
+  <section class="panel" id="bbnBox" hidden>
+    <h2>BBN test (Facebook)</h2>
+    <p class="help">Results read from BBN Belize's Facebook posts, compared with the site. This is a test: nothing here changes the site unless you press "Add to site".</p>
+    <div class="bbnsum" id="bbnSum"></div>
+    <div class="row"><button class="btn ghost" id="bbnRefresh">Refresh</button></div>
+    <div class="list all" id="bbnList"></div>
+    <div class="msg" id="bbnMsg"></div>
+  </section>
+
+  <section class="panel" id="backupBox" hidden>
+    <h2>Backups &amp; data</h2>
+    <p class="help">Download everything that is on the site. Keep a backup somewhere safe (email it to yourself, or save it to a USB stick).</p>
+    <div class="row"><button class="btn" id="dlJson">Save a backup (.json)</button><button class="btn ghost" id="dlCsv">Download spreadsheet (.csv)</button></div>
+    <div class="msg" id="dlMsg"></div>
+    <hr class="sep">
+    <h2>Restore a backup</h2>
+    <p class="help">Choose a backup file. Nothing changes on the site until you check what it will do and press Restore.</p>
+    <div class="row"><label class="btn ghost filebtn" for="restoreFile">Choose a backup file</label><input type="file" id="restoreFile" accept="application/json,.json"></div>
+    <div class="plan" id="restorePlan" hidden>
+      <div id="planText"></div>
+      <label class="opt"><input type="radio" name="rmode" value="merge" checked> <span><b>Add only what is missing</b> (safe). Results already on the site are never changed or removed.</span></label>
+      <label class="opt"><input type="radio" name="rmode" value="replace"> <span><b>Replace everything on the site</b> with this backup. Results not in the backup are removed.</span></label>
+      <label id="replaceWrap" hidden>Type <b>REPLACE</b> to confirm<input id="replaceWord" autocomplete="off" spellcheck="false" placeholder="REPLACE"></label>
+      <p class="help">Before anything changes, a safety copy of what is on the site now is saved to this device, and you can press Undo right after.</p>
+      <div class="row"><button class="btn" id="restoreGo" disabled>Restore</button><button class="btn ghost" id="restoreCancel">Cancel</button></div>
+    </div>
+    <div class="msg" id="restoreMsg"></div>
+    <div class="row" id="undoRow" hidden><button class="btn ghost" id="undoRestore">Undo the restore</button></div>
   </section>
 
   <section class="panel" id="deviceBox" hidden>
@@ -235,10 +281,146 @@ async function doPublish(){
   finally{$('publish').disabled=false}
 }
 
+/* ---------- backups & data ---------- */
+const GAMES_OK=['boledo','lottery','fantasy5','pick3'];
+function saveFile(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+const stamp=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2)+'-'+pad(d.getHours(),2)+pad(d.getMinutes(),2)};
+const backupText=data=>JSON.stringify({app:'belize-missing-numbers',kind:'site-backup',saved:new Date().toISOString(),count:(data.draws||[]).length,draws:data.draws||[],updated:data.updated||null},null,1)+'\n';
+$('dlJson').onclick=async()=>{try{msg($('dlMsg'),'Getting the latest data…');const {data}=await load();
+  saveFile('missing-numbers-backup-'+stamp()+'.json',backupText(data),'application/json');msg($('dlMsg'),'Backup saved: '+data.draws.length+' results.','ok')}catch(e){msg($('dlMsg'),e.message,'err')}};
+$('dlCsv').onclick=async()=>{try{msg($('dlMsg'),'Getting the latest data…');const {data}=await load();
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['game','date','numbers','letter','no_draw','source']].concat([...data.draws].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.game<b.game?-1:1)
+    .map(d=>[LABEL[d.game]||d.game,d.date,d.nodraw?'':(d.nums||[]).join(' '),d.letter||'',d.nodraw?'yes':'',d.source||'']));
+  saveFile('missing-numbers-'+stamp()+'.csv','﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n')+'\r\n','text/csv');msg($('dlMsg'),'Spreadsheet saved: '+data.draws.length+' results.','ok')}catch(e){msg($('dlMsg'),e.message,'err')}};
+
+// every result in a backup is checked before it can reach the site
+function checkDraw(d){
+  if(!d||typeof d!=='object'||!GAMES_OK.includes(d.game)||!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))return null;
+  if(d.date>bz().iso)return null;
+  const out={id:d.game+'-'+d.date,game:d.game,date:d.date};
+  if(d.source)out.source=String(d.source).slice(0,20);
+  if(d.nodraw)return Object.assign(out,{nodraw:true});
+  const n=Array.isArray(d.nums)?d.nums.map(x=>String(x).trim()):[];
+  if(d.game==='boledo'){if(n.length<1||!/^\d{1,2}$/.test(n[0]))return null;out.nums=[pad(n[0],2)]}
+  else if(d.game==='lottery'){if(n.length<3||n.slice(0,3).some(x=>!/^\d{1,4}$/.test(x)))return null;out.nums=n.slice(0,3).map(x=>pad(x,4))}
+  else if(d.game==='fantasy5'){const v=[...new Set(n.map(Number))];if(v.length!==5||v.some(x=>!(x>=1&&x<=39)))return null;out.nums=v.sort((a,b)=>a-b).map(x=>pad(x,2));
+    if(d.letter){if(!/^[A-Za-z]$/.test(d.letter))return null;out.letter=d.letter.toUpperCase()}}
+  else{if(n.length<3||n.slice(0,3).some(x=>!/^\d$/.test(x)))return null;out.nums=n.slice(0,3)}
+  return out;
+}
+const same=(a,b)=>JSON.stringify([a.nums||null,a.letter||null,!!a.nodraw])===JSON.stringify([b.nums||null,b.letter||null,!!b.nodraw]);
+let restoreSet=null,undoData=null;
+function plan(site,backup){const byId=new Map(site.map(d=>[d.id,d])),inB=new Set(backup.map(d=>d.id));
+  const add=backup.filter(d=>!byId.has(d.id)),diff=backup.filter(d=>byId.has(d.id)&&!same(d,byId.get(d.id))),gone=site.filter(d=>!inB.has(d.id));
+  return{add,diff,gone}}
+function showPlan(){
+  if(!restoreSet||!current)return;const mode=document.querySelector('input[name="rmode"]:checked').value;
+  const p=plan(current.data.draws,restoreSet.ok);
+  const range=restoreSet.ok.length?restoreSet.ok.map(d=>d.date).sort():[];
+  let h='<b>'+esc(restoreSet.name)+'</b><ul><li>'+restoreSet.ok.length+' good results'+(range.length?' ('+fmtDay(range[0])+' to '+fmtDay(range[range.length-1])+')':'')+'</li>'+
+    (restoreSet.bad?'<li class="warn">'+restoreSet.bad+' results in the file were damaged or not valid and will be skipped</li>':'')+
+    '<li>The site has '+current.data.draws.length+' results now</li></ul>';
+  if(mode==='merge')h+='<p><b>This will:</b> add '+p.add.length+' result'+(p.add.length===1?'':'s')+' that the site is missing.'+(p.diff.length?' <span class="warn">'+p.diff.length+' result'+(p.diff.length===1?'':'s')+' differ from the site and will be left as they are on the site.</span>':'')+' Nothing is removed.</p>';
+  else h+='<p><b>This will:</b> add '+p.add.length+', change '+p.diff.length+' and <span class="warn">remove '+p.gone.length+'</span> result'+(p.gone.length===1?'':'s')+'.'+(p.gone.length>current.data.draws.length*.2?' <b class="warn">That is a big part of the site\'s results. Check this is the right file.</b>':'')+'</p>';
+  $('planText').innerHTML=h;$('replaceWrap').hidden=mode!=='replace';
+  const nothing=mode==='merge'?!p.add.length:!(p.add.length||p.diff.length||p.gone.length);
+  $('restoreGo').disabled=nothing||!restoreSet.ok.length||(mode==='replace'&&$('replaceWord').value.trim()!=='REPLACE');
+  $('restoreGo').textContent=nothing?'Nothing to restore':mode==='merge'?'Add '+p.add.length+' missing':'Replace site data';
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('restoreFile').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;$('restoreMsg').className='msg';$('undoRow').hidden=true;
+  try{
+    if(f.size>5e6)throw new Error('That file is too big to be a backup from this site.');
+    let j;try{j=JSON.parse(await f.text())}catch(_){throw new Error('That file is not a backup (it could not be read).')}
+    const list=Array.isArray(j)?j:Array.isArray(j.draws)?j.draws:null;if(!list)throw new Error('That file has no results in it.');
+    const seen=new Map();let bad=0;list.forEach(d=>{const c=checkDraw(d);if(!c){bad++;return}seen.set(c.id,c)});
+    if(!seen.size)throw new Error('None of the results in that file are valid, so nothing can be restored.');
+    msg($('restoreMsg'),'Checking against the site…');await load();$('restoreMsg').className='msg';
+    restoreSet={name:f.name,ok:[...seen.values()],bad};
+    document.querySelector('input[name="rmode"][value="merge"]').checked=true;$('replaceWord').value='';
+    $('restorePlan').hidden=false;showPlan();
+  }catch(err){restoreSet=null;$('restorePlan').hidden=true;msg($('restoreMsg'),err.message,'err')}
+};
+document.querySelectorAll('input[name="rmode"]').forEach(r=>r.onchange=()=>{$('replaceWord').value='';showPlan()});
+$('replaceWord').addEventListener('input',showPlan);
+$('restoreCancel').onclick=()=>{restoreSet=null;$('restorePlan').hidden=true;msg($('restoreMsg'),'Cancelled. Nothing was changed.','info')};
+$('restoreGo').onclick=async()=>{
+  if(!restoreSet)return;const mode=document.querySelector('input[name="rmode"]:checked').value;
+  if(mode==='replace'&&$('replaceWord').value.trim()!=='REPLACE')return;
+  $('restoreGo').disabled=true;
+  try{
+    msg($('restoreMsg'),'Saving a safety copy of the site first…');
+    const {data:before}=await load();
+    saveFile('safety-copy-before-restore-'+stamp()+'.json',backupText(before),'application/json');
+    let added=0,changed=0,removed=0,prev=null;
+    msg($('restoreMsg'),'Restoring…');
+    await commit(data=>{prev=JSON.parse(JSON.stringify(data.draws));const p=plan(data.draws,restoreSet.ok);
+      if(mode==='merge'){data.draws=data.draws.concat(p.add);added=p.add.length}
+      else{data.draws=restoreSet.ok.slice();added=p.add.length;changed=p.diff.length;removed=p.gone.length}},
+      'Admin: restore backup ('+mode+') from '+restoreSet.name);
+    undoData=prev;restoreSet=null;$('restorePlan').hidden=true;$('undoRow').hidden=false;
+    msg($('restoreMsg'),'Restored. Added '+added+(mode==='replace'?', changed '+changed+', removed '+removed:'')+'. A safety copy of the site before the restore was saved to this device. Phones get the change within about 1 to 10 minutes.','ok');
+  }catch(e){msg($('restoreMsg'),'Not restored: '+e.message+' Nothing was changed.','err')}
+  finally{showPlan()}
+};
+$('undoRestore').onclick=async()=>{
+  if(!undoData)return;
+  if($('undoRestore').dataset.sure!=='1'){$('undoRestore').dataset.sure='1';$('undoRestore').textContent='Tap again to put the site back';setTimeout(()=>{$('undoRestore').dataset.sure='';$('undoRestore').textContent='Undo the restore'},5000);return}
+  $('undoRestore').disabled=true;
+  try{msg($('restoreMsg'),'Putting the site back…');await commit(data=>{data.draws=undoData},'Admin: undo restore');
+    undoData=null;$('undoRow').hidden=true;msg($('restoreMsg'),'Done. The site is back to how it was before the restore.','ok')}
+  catch(e){msg($('restoreMsg'),'Undo failed: '+e.message+' The safety copy saved on this device can be restored instead.','err')}
+  finally{$('undoRestore').disabled=false;$('undoRestore').dataset.sure='';$('undoRestore').textContent='Undo the restore'}
+};
+
+/* ---------- BBN test results (read-only unless "Add to site") ---------- */
+const STATUS={'match':'Matches the site','differs':'Differs from the site','only-bbn':'Only BBN has it','unreadable':'Picture unclear','invalid':'Read wrongly'};
+async function loadBbn(){
+  const box=$('bbnList');
+  try{
+    msg($('bbnMsg'),'Loading…');
+    const r=await fetch(API.replace(/draws\.json$/,'data/bbn-results.json')+'?ref='+BRANCH+'&t='+Date.now(),{cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'}});
+    if(r.status===404){box.innerHTML='';$('bbnSum').innerHTML='';msg($('bbnMsg'),'No BBN results yet. They appear here once Make.com sends the first one.','info');return}
+    if(!r.ok)throw new Error('Could not load the BBN test results ('+r.status+').');
+    const j=await r.json(),data=JSON.parse(b64dec(j.content)),list=(data.results||[]).slice().reverse();
+    if(!current)await load();
+    const site=new Map((current.data.draws||[]).map(d=>[d.id,d]));
+    // status is worked out again now, since the site may have been updated since
+    const live=list.map(e=>{if(!e.draw)return Object.assign({},e,{now:e.status});
+      const s=site.get(e.draw.id);if(!s||s.nodraw)return Object.assign({},e,{now:'only-bbn',siteNow:null});
+      const same=JSON.stringify(s.nums)===JSON.stringify(e.draw.nums)&&(e.draw.game!=='fantasy5'||(s.letter||null)===(e.draw.letter||null));
+      return Object.assign({},e,{now:same?'match':'differs',siteNow:s})});
+    const count=k=>live.filter(e=>e.now===k).length,checked=count('match')+count('differs');
+    $('bbnSum').innerHTML=['match','differs','only-bbn','unreadable','invalid'].map(k=>'<span class="chip '+k+'">'+STATUS[k]+': '+count(k)+'</span>').join('')+
+      (checked?'<span class="chip">Accuracy where both have it: '+Math.round(count('match')/checked*100)+'%</span>':'');
+    box.innerHTML='';
+    live.slice(0,60).forEach(e=>{const it=document.createElement('div');it.className='item';
+      const lbl=LABEL[e.game]||e.game,bbn=e.draw?e.draw.nums.join(' ')+(e.draw.letter?' '+e.draw.letter:''):(e.read_as&&e.read_as.nums?[].concat(e.read_as.nums).join(' '):'?');
+      const siteTxt=e.siteNow?e.siteNow.nums.join(' ')+(e.siteNow.letter?' '+e.siteNow.letter:''):'';
+      it.innerHTML='<div class="bbnrow"><span><b>'+esc(lbl)+'</b> · '+(/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')?fmtDay(e.date):esc(e.date||'no date'))+'</span>'+
+        '<span>BBN: <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
+        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span></div>';
+      if(e.now==='only-bbn'&&e.draw){const b=document.createElement('button');b.textContent='Add to site';
+        b.onclick=async()=>{
+          if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to add';setTimeout(()=>{b.dataset.sure='';b.textContent='Add to site'},5000);return}
+          b.disabled=true;
+          try{await commit(d=>{if(d.draws.some(x=>x.id===e.draw.id))throw new Error('The site already has '+lbl+' '+e.date+'.');d.draws.push(Object.assign({},e.draw,{source:'bbn'}))},'Admin: add '+lbl+' '+e.date+' from BBN test');
+            await loadBbn();msg($('bbnMsg'),'Added '+lbl+' '+e.date+' to the site.','ok')}
+          catch(err){msg($('bbnMsg'),err.message,'err');b.disabled=false}};
+        it.appendChild(b)}
+      box.appendChild(it)});
+    msg($('bbnMsg'),list.length?'Showing the newest '+Math.min(60,list.length)+' of '+list.length+'.':'No BBN results yet.','info');
+  }catch(err){msg($('bbnMsg'),err.message,'err')}
+}
+$('bbnRefresh').onclick=loadBbn;
+
 async function start(){
   token=getTok();
-  if(!token){$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('deviceBox').hidden=true;return}
-  $('connect').hidden=true;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('deviceBox').hidden=false;setGame(game);
+  if(!token){$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=true;return}
+  $('connect').hidden=true;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=false;loadBbn();setGame(game);
   try{await load()}catch(e){msg($('msg'),e.message,'err')}
 }
 $('saveToken').onclick=async()=>{const t=$('token').value.trim();if(!/^(github_pat_|ghp_)/.test(t)){msg($('connMsg'),'That doesn\'t look like a GitHub access key.','err');return}
