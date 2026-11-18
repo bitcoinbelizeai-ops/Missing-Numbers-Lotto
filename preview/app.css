@@ -934,3 +934,19 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 @keyframes acct-spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}15%{opacity:1}
   100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1) rotate(160deg)}}
 @media (prefers-reduced-motion:reduce){.acct-strip.wow,.acct-strip.wow .acct-ico,.acct-strip.wow .acct-btns .btn,.btn.ac-danger.armed{animation:none}.acct-strip.wow .acct-btns .btn::after{display:none}}
+
+/* account button: top-left of the header, opposite the sound button */
+.acctbtn{position:absolute;top:0;left:0;z-index:2;height:38px;min-width:38px;padding:0 10px 0 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);font:700 12px var(--f-label);letter-spacing:.05em;text-transform:uppercase;touch-action:manipulation;transition:background-color .15s,box-shadow .15s}
+@media (max-width:374px){.acctbtn:not(.me){width:38px;padding:0;justify-content:center}.acctbtn:not(.me) #acctBtnTxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+.acctbtn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.acctbtn:hover,.acctbtn:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
+.acctbtn.me{width:38px;padding:0;justify-content:center;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-deep));border-color:var(--gold);color:#2a1d00;font:800 17px var(--f-brand);letter-spacing:0}
+.acctbtn.me svg{display:none}
+/* banner inside the number picker at the 3rd number */
+.ac-pickban{position:relative;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:10px 12px;border-radius:12px;
+  background:rgba(254,194,7,.14);border:1px solid var(--gold);box-shadow:0 0 18px rgba(254,194,7,.35)}
+.ac-pickban b{font:800 17px var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.ac-pickban span{font-size:14px;color:var(--cream)}
+.ac-pickban.wow{animation:acct-wow 2.4s cubic-bezier(.2,.8,.3,1)}
+@media (prefers-reduced-motion:reduce){.ac-pickban.wow{animation:none}}

@@ -1351,8 +1351,21 @@ let sb=null,user=null,profile=null,offline=false,glowOn=false;
 
 /* ---------- the strip in My Lucky Numbers ---------- */
 function luckyCount(){const m=(window.bzLucky&&window.bzLucky.get())||{};return Object.values(m).reduce((n,L)=>n+(Array.isArray(L)?L.length:0),0)}
+const hbtn=$('acctBtn');
+function drawHeader(){
+  if(!hbtn)return;hbtn.hidden=false;const t=$('acctBtnTxt');hbtn.classList.remove('me');
+  if(user&&profile){hbtn.classList.add('me');t.textContent=String(profile.nickname||'?').charAt(0).toUpperCase();hbtn.setAttribute('aria-label','Your account, '+profile.nickname);return}
+  if(user&&!profile){t.textContent='Finish';hbtn.setAttribute('aria-label','Finish creating your account');return}
+  t.textContent='Sign up';hbtn.setAttribute('aria-label','Sign up or sign in');
+}
+if(hbtn)hbtn.onclick=()=>{if(offline){window.bzToast&&window.bzToast('Accounts need an internet connection.');return}
+  window.bzSnd&&window.bzSnd.open&&window.bzSnd.open();openSheet(user&&profile?'me':user?'finish':'up')};
 function drawStrip(){
-  strip.hidden=false;const txt=$('acctTxt'),btns=$('acctBtns');btns.textContent='';
+  drawHeader();
+  // the box under My Lucky Numbers only shows for people who aren't signed in and have 3 or more numbers
+  const show=!offline&&((user&&!profile)||(!user&&luckyCount()>=3));
+  strip.hidden=!show;if(!show)return;
+  const txt=$('acctTxt'),btns=$('acctBtns');btns.textContent='';
   const btn=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small'+(cls?' '+cls:'');b.textContent=label;b.onclick=fn;btns.appendChild(b)};
   strip.classList.toggle('glow',glowOn&&!user);
   if(offline){txt.textContent='Accounts need an internet connection. Your Lucky Numbers are safe on this device.';return}
@@ -1360,8 +1373,6 @@ function drawStrip(){
   if(user&&!profile){txt.textContent='Your email is confirmed. Finish your details to save your Lucky Numbers.';btn('Finish','',()=>openSheet('finish'));return}
   txt.innerHTML='Saved on this device only. <b>Create a free account</b> to keep them on every device.';
   btn('Create account','',()=>openSheet('up'));btn('Sign in','ghost',()=>openSheet('in'));
-  // gentle nudge, once, when someone has started using Lucky Numbers
-  if(luckyCount()>=3&&!ls.get(NUDGED)){glowOn=true;strip.classList.add('glow');ls.set(NUDGED,1)}
 }
 
 /* ---------- the sheet ---------- */
@@ -1544,23 +1555,39 @@ const reduce=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
 function overlayOpen(){return ['pickBox','ballSheet','mixBox','shareBox'].some(id=>$(id)&&!$(id).hidden)||!sheet.hidden}
 function maybeDrama(){
   const n=luckyCount(),prev=lastCount;lastCount=n;
+  if(!user)drawStrip();
   if(user||offline||dramaDone||prev===null||!(prev<3&&n>=3))return;
   dramaDone=true;clearInterval(dramaWait);
-  dramaWait=setInterval(()=>{if(overlayOpen())return;clearInterval(dramaWait);setTimeout(drama,350)},250);
+  const inPicker=$('pickBox')&&!$('pickBox').hidden;
+  if(inPicker)pickerMoment();
+  dramaWait=setInterval(()=>{if(overlayOpen())return;clearInterval(dramaWait);setTimeout(()=>drama(inPicker),350)},250);
 }
-function drama(){
+/* inside the number picker: a banner with sparkles and the chime, right where the person is looking */
+function pickerMoment(){
+  const inn=$('pickBox').querySelector('.mixbox-in');if(!inn)return;
+  let ban=$('acPickBan');
+  if(!ban){ban=document.createElement('div');ban.id='acPickBan';ban.className='ac-pickban';ban.setAttribute('role','status');
+    ban.innerHTML='<b>★ 3 Lucky Numbers!</b><span>Keep them on every device with a free account.</span><button type="button" class="btn small" id="acPickGo">Create account</button>';
+    inn.insertBefore(ban,inn.children[1]||null);
+    ban.querySelector('#acPickGo').onclick=()=>{$('pickDone').click();setTimeout(()=>openSheet('up'),250)}}
+  ban.hidden=false;ban.classList.remove('wow');void ban.offsetWidth;ban.classList.add('wow');
+  const S=window.bzSnd;if(S){try{S.intro()}catch(e){}}
+  if(!reduce())burst(ban);
+}
+function drama(quiet){
   if(user)return;
+  const ban=$('acPickBan');if(ban)ban.hidden=true;
   glowOn=true;drawStrip();
   strip.scrollIntoView({block:'center',behavior:reduce()?'auto':'smooth'});
   $('acctTxt').innerHTML='<b>★ Nice picks!</b> Don\'t lose them. <b>Create a free account</b> and they\'ll be on every device you use.';
   setTimeout(()=>{
-    const S=window.bzSnd;if(S){try{S.intro()}catch(e){}}
+    const S=window.bzSnd;if(S){try{quiet?S.shimmer():S.intro()}catch(e){}}
     strip.classList.remove('wow');void strip.offsetWidth;strip.classList.add('wow');
-    if(!reduce())burst();
+    if(!reduce())burst(strip);
     setTimeout(()=>strip.classList.remove('wow'),2600);
   },reduce()?0:450);
 }
-function burst(){
+function burst(host){
   const box=document.createElement('div');box.className='acct-burst';box.setAttribute('aria-hidden','true');
   const COLORS=['#fff0b8','#e9c46a','#ffd77a','#ffffff','#fec207'];
   for(let i=0;i<34;i++){const sp=document.createElement('i');const a=Math.random()*Math.PI*2,d=70+Math.random()*130;
@@ -1568,7 +1595,7 @@ function burst(){
     sp.style.setProperty('--d',(.6+Math.random()*.7).toFixed(2)+'s');sp.style.setProperty('--w',(.05+Math.random()*.5).toFixed(2)+'s');
     sp.style.setProperty('--s',(6+Math.random()*12).toFixed(0)+'px');sp.style.color=COLORS[i%COLORS.length];
     sp.textContent=i%3?'✦':'★';box.appendChild(sp)}
-  strip.appendChild(box);setTimeout(()=>box.remove(),2200);
+  host.appendChild(box);setTimeout(()=>box.remove(),2200);
 }
 function onAnyChange(){onLocalChange();maybeDrama()}
 
