@@ -877,7 +877,7 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 .backup input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 
 /* ---- free accounts (phone app only) ---- */
-.acct-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)}
+.acct-strip{position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)}
 .acct-strip.glow{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 18px rgba(233,196,106,.35)}
 .acct-ico{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(233,196,106,.16);color:var(--gold);font-size:16px}
 .acct-txt{flex:1 1 180px;min-width:0;margin:0;font-size:14px;line-height:1.35;color:var(--cream)}
@@ -913,3 +913,24 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 .ac-confirm{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:1px solid #e86a5e;background:rgba(0,0,0,.25)}
 .ac-confirm p{margin:0;font-size:14px}
 .btn.ac-danger{background:#a32222;border-color:#a32222;color:#fff}
+
+.ac-end{justify-content:flex-end}
+.btn.ac-danger.armed{animation:ac-armed .5s ease-in-out infinite alternate}
+@keyframes ac-armed{from{box-shadow:0 0 0 0 rgba(232,106,94,.0)}to{box-shadow:0 0 0 4px rgba(232,106,94,.55)}}
+/* the sign-up moment */
+.acct-strip.wow{animation:acct-wow 2.4s cubic-bezier(.2,.8,.3,1)}
+@keyframes acct-wow{0%{transform:scale(1)}12%{transform:scale(1.045);box-shadow:0 0 0 2px var(--gold),0 0 40px rgba(254,194,7,.75)}
+  30%{transform:scale(.99)}45%{transform:scale(1.025);box-shadow:0 0 0 2px var(--gold),0 0 30px rgba(254,194,7,.6)}100%{transform:scale(1)}}
+.acct-strip.wow .acct-ico{animation:acct-spin 1.2s ease-out}
+@keyframes acct-spin{from{transform:rotate(-200deg) scale(.4)}to{transform:none}}
+.acct-strip.wow .acct-btns .btn:not(.ghost){position:relative;overflow:hidden;animation:acct-bump .6s .5s 3 ease-in-out}
+.acct-strip.wow .acct-btns .btn:not(.ghost)::after{content:"";position:absolute;inset:-2px auto -2px -60%;width:45%;transform:skewX(-20deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:acct-shine 1s .3s 2}
+@keyframes acct-shine{to{left:130%}}
+@keyframes acct-bump{50%{transform:scale(1.08)}}
+.acct-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:3}
+.acct-burst i{position:absolute;left:0;top:0;font-style:normal;font-size:var(--s);line-height:1;opacity:0;text-shadow:0 0 8px currentColor;
+  animation:acct-spark var(--d) var(--w) cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes acct-spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}15%{opacity:1}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1) rotate(160deg)}}
+@media (prefers-reduced-motion:reduce){.acct-strip.wow,.acct-strip.wow .acct-ico,.acct-strip.wow .acct-btns .btn,.btn.ac-danger.armed{animation:none}.acct-strip.wow .acct-btns .btn::after{display:none}}

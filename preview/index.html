@@ -222,12 +222,11 @@
           <dt>Member since</dt><dd id="acMeSince"></dd>
         </dl>
         <p class="ac-sync" id="acMeSync"></p>
-        <div class="ac-btns"><button type="button" class="btn ghost small" id="acOut">Sign out</button><button type="button" class="btn ghost small" id="acOutAll">Sign out everywhere</button></div>
-        <div class="ac-btns"><button type="button" class="linkbtn" id="acData">Download my data</button><button type="button" class="linkbtn" id="acDel">Delete my account</button></div>
+        <div class="ac-btns"><button type="button" class="btn ghost small" id="acOut">Sign out</button></div>
+        <div class="ac-btns ac-end"><button type="button" class="linkbtn" id="acDel">Delete my account</button></div>
         <div class="ac-confirm" id="acDelBox" hidden>
-          <p>Delete your account, profile and saved Lucky Numbers? This can't be undone. The numbers on this device stay. Type your nickname <b id="acDelNick"></b> to confirm.</p>
-          <input type="text" id="acDelWord" autocomplete="off">
-          <div class="ac-btns"><button type="button" class="btn small ac-danger" id="acDelGo">Delete my account</button><button type="button" class="btn ghost small" id="acDelNo">Cancel</button></div>
+          <p>Delete your account <b id="acDelNick"></b> and the Lucky Numbers saved to it? This can't be undone. The numbers on this device stay.</p>
+          <div class="ac-btns"><button type="button" class="btn small ac-danger" id="acDelGo">Double-tap to delete</button><button type="button" class="btn ghost small" id="acDelNo">Keep my account</button></div>
         </div>
         <p class="ac-msg" id="acMeMsg" aria-live="polite"></p>
       </div>

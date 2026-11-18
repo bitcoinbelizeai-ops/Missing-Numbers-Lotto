@@ -1080,6 +1080,7 @@ try{const ro=new ResizeObserver(shadeColumns);ro.observe($('tiles'));ro.observe(
 
 let toastTimer;
 window.bzToast=(t)=>toast(t,false,3600);
+window.bzSnd=SND;
 function toast(t,html,ms){const el=$('toast');if(!el)return;if(html)el.innerHTML=t;else el.textContent=t;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,ms||(html?4200:2400))}
 async function undoSkip(d){
   const id=d.id||(d.game+'-'+d.date);
@@ -1379,7 +1380,7 @@ function view(v){
 }
 function openSheet(v){opener=document.activeElement;sheet.hidden=false;const inn=sheet.querySelector('.sheet-in');inn.classList.remove('up');void inn.offsetWidth;inn.classList.add('up');view(v);
   setTimeout(()=>{const f={up:'acNick',finish:'acNick',in:'acInEmail',code:'acCodeIn',me:'acClose'}[v];$(f)&&$(f).focus({preventScroll:true})},60)}
-function closeSheet(){if(sheet.hidden)return;sheet.hidden=true;$('acDelBox').hidden=true;(opener&&opener.focus)?opener.focus({preventScroll:true}):0}
+function closeSheet(){if(sheet.hidden)return;sheet.hidden=true;$('acDelBox').hidden=true;delDisarm();(opener&&opener.focus)?opener.focus({preventScroll:true}):0}
 $('acClose').onclick=closeSheet;
 sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
@@ -1518,35 +1519,68 @@ function fillMe(note){
 }
 async function signOut(scope){
   await sb.auth.signOut({scope}).catch(()=>{});user=null;profile=null;lastSaved=null;ls.del(SYNCAT);closeSheet();drawStrip();
-  window.bzToast&&window.bzToast(scope==='global'?'Signed out on every device. Your Lucky Numbers stay on this one.':'Signed out. Your Lucky Numbers stay on this device.');
+  window.bzToast&&window.bzToast('Signed out. Your Lucky Numbers stay on this device.');
 }
 $('acOut').onclick=()=>signOut('local');
-$('acOutAll').onclick=()=>signOut('global');
-$('acData').onclick=async()=>{
-  const {data}=await sb.from('lucky_numbers').select('mine,updated_at').eq('user_id',user.id).maybeSingle();
-  const out={exported:new Date().toISOString(),email:user.email,profile,lucky_numbers:data||null};
-  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);a.download='my-missing-numbers-data.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
-  msg($('acMeMsg'),'✓ Your data was downloaded.','good');
-};
-$('acDel').onclick=()=>{$('acDelBox').hidden=false;$('acDelWord').value='';$('acDelWord').focus()};
-$('acDelNo').onclick=()=>{$('acDelBox').hidden=true};
+// delete needs two taps on the red button (the first tap arms it for 3 seconds), like removing a Lucky Number
+let delArmed=false,delTimer=0;
+function delDisarm(){delArmed=false;clearTimeout(delTimer);const b=$('acDelGo');b.textContent='Double-tap to delete';b.classList.remove('armed')}
+$('acDel').onclick=()=>{$('acDelBox').hidden=false;delDisarm();msg($('acMeMsg'),'');$('acDelBox').scrollIntoView({block:'nearest'})};
+$('acDelNo').onclick=()=>{$('acDelBox').hidden=true;delDisarm()};
 $('acDelGo').onclick=async()=>{
-  if($('acDelWord').value.trim().toLowerCase()!==String(profile.nickname).toLowerCase()){msg($('acMeMsg'),'The nickname typed doesn\'t match.','bad');return}
+  if(!delArmed){delArmed=true;const b=$('acDelGo');b.textContent='Tap again to delete';b.classList.add('armed');clearTimeout(delTimer);delTimer=setTimeout(delDisarm,3000);return}
+  delDisarm();
   $('acDelGo').disabled=true;const {error}=await sb.rpc('delete_my_account');$('acDelGo').disabled=false;
   if(error){msg($('acMeMsg'),explain(error),'bad');return}
   await sb.auth.signOut({scope:'local'}).catch(()=>{});user=null;profile=null;lastSaved=null;ls.del(SYNCAT);closeSheet();drawStrip();
   window.bzToast&&window.bzToast('Your account was deleted. Your Lucky Numbers stay on this device.');
 };
 
+/* ---------- the "sign up" moment: when a signed-out person reaches 3 Lucky Numbers ----------
+   Once per visit: the account box comes into view, sparkles burst around it, a magic chime plays,
+   the box pulses gold and the Create account button shines. Waits until the number picker is closed. */
+let lastCount=null,dramaDone=false,dramaWait=0;
+const reduce=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
+function overlayOpen(){return ['pickBox','ballSheet','mixBox','shareBox'].some(id=>$(id)&&!$(id).hidden)||!sheet.hidden}
+function maybeDrama(){
+  const n=luckyCount(),prev=lastCount;lastCount=n;
+  if(user||offline||dramaDone||prev===null||!(prev<3&&n>=3))return;
+  dramaDone=true;clearInterval(dramaWait);
+  dramaWait=setInterval(()=>{if(overlayOpen())return;clearInterval(dramaWait);setTimeout(drama,350)},250);
+}
+function drama(){
+  if(user)return;
+  glowOn=true;drawStrip();
+  strip.scrollIntoView({block:'center',behavior:reduce()?'auto':'smooth'});
+  $('acctTxt').innerHTML='<b>★ Nice picks!</b> Don\'t lose them. <b>Create a free account</b> and they\'ll be on every device you use.';
+  setTimeout(()=>{
+    const S=window.bzSnd;if(S){try{S.intro()}catch(e){}}
+    strip.classList.remove('wow');void strip.offsetWidth;strip.classList.add('wow');
+    if(!reduce())burst();
+    setTimeout(()=>strip.classList.remove('wow'),2600);
+  },reduce()?0:450);
+}
+function burst(){
+  const box=document.createElement('div');box.className='acct-burst';box.setAttribute('aria-hidden','true');
+  const COLORS=['#fff0b8','#e9c46a','#ffd77a','#ffffff','#fec207'];
+  for(let i=0;i<34;i++){const sp=document.createElement('i');const a=Math.random()*Math.PI*2,d=70+Math.random()*130;
+    sp.style.setProperty('--dx',Math.cos(a)*d*1.6+'px');sp.style.setProperty('--dy',Math.sin(a)*d+'px');
+    sp.style.setProperty('--d',(.6+Math.random()*.7).toFixed(2)+'s');sp.style.setProperty('--w',(.05+Math.random()*.5).toFixed(2)+'s');
+    sp.style.setProperty('--s',(6+Math.random()*12).toFixed(0)+'px');sp.style.color=COLORS[i%COLORS.length];
+    sp.textContent=i%3?'✦':'★';box.appendChild(sp)}
+  strip.appendChild(box);setTimeout(()=>box.remove(),2200);
+}
+function onAnyChange(){onLocalChange();maybeDrama()}
+
 /* ---------- start ---------- */
 function whenLibrary(cb){let n=0;(function wait(){if(window.supabase&&window.supabase.createClient)return cb(true);if(++n>100)return cb(false);setTimeout(wait,100)})()}
-drawStrip();
+drawStrip();lastCount=luckyCount();
+if(window.bzLucky)window.bzLucky.onChange=onAnyChange;
 whenLibrary(async ok=>{
   if(!ok){offline=true;drawStrip();return}
   let base;try{base=new URL(String(CFG.url).trim()).origin}catch(e){base=String(CFG.url).trim()}
   sb=window.supabase.createClient(base,String(CFG.key).trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'mn-auth'}});
-  if(window.bzLucky)window.bzLucky.onChange=onLocalChange;
+  if(window.bzLucky)window.bzLucky.onChange=onAnyChange;
   const {data:{session}}=await sb.auth.getSession();
   if(session&&session.user){user=session.user;await afterSignIn(false)}else drawStrip();
 });
