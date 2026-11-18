@@ -116,6 +116,15 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
   </section>
 
   <!-- recent -->
+  <section class="panel" id="bbnBox" hidden>
+    <h2>BBN test (Facebook)</h2>
+    <p class="help">Results read from BBN Belize's Facebook posts, compared with the site. This is a test: nothing here changes the site unless you press "Add to site".</p>
+    <div class="bbnsum" id="bbnSum"></div>
+    <div class="row"><button class="btn ghost" id="bbnRefresh">Refresh</button></div>
+    <div class="list all" id="bbnList"></div>
+    <div class="msg" id="bbnMsg"></div>
+  </section>
+
   <section class="panel" id="recentBox" hidden>
     <h2>Last 7 days on the site</h2>
     <div class="list" id="recent"></div>
@@ -126,15 +135,6 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
     <h2>All past results · <span id="allGame">Boledo</span></h2>
     <p class="help">Every result on the site for the game picked above, newest first. Remove takes it off the site for everyone.</p>
     <div class="list all" id="all"></div>
-  </section>
-
-  <section class="panel" id="bbnBox" hidden>
-    <h2>BBN test (Facebook)</h2>
-    <p class="help">Results read from BBN Belize's Facebook posts, compared with the site. This is a test: nothing here changes the site unless you press "Add to site".</p>
-    <div class="bbnsum" id="bbnSum"></div>
-    <div class="row"><button class="btn ghost" id="bbnRefresh">Refresh</button></div>
-    <div class="list all" id="bbnList"></div>
-    <div class="msg" id="bbnMsg"></div>
   </section>
 
   <section class="panel" id="backupBox" hidden>
