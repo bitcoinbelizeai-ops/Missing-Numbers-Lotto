@@ -6,6 +6,12 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#094692">
 <title>Results Admin</title>
+<style id="antiFrame">html{display:none}</style>
+<script>
+  // This page only works on its own, never inside another website's frame
+  if(window.self===window.top){document.getElementById('antiFrame').remove()}
+  else{try{window.top.location=window.self.location}catch(e){}}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&family=Outfit:wght@800&display=swap">
 <style>
@@ -396,7 +402,7 @@ async function loadBbn(){
     if(!current)await load();
     const site=new Map((current.data.draws||[]).map(d=>[d.id,d]));
     // status is worked out again now, since the site may have been updated since
-    const live=list.map(e=>{if(!e.draw)return Object.assign({},e,{now:e.status});
+    const live=list.map(e=>{if(!e.draw)return Object.assign({},e,{now:STATUS[e.status]?e.status:'invalid'});
       const s=site.get(e.draw.id);if(!s||s.nodraw)return Object.assign({},e,{now:'only-bbn',siteNow:null});
       const same=JSON.stringify(s.nums)===JSON.stringify(e.draw.nums)&&(e.draw.game!=='fantasy5'||(s.letter||null)===(e.draw.letter||null));
       return Object.assign({},e,{now:same?'match':'differs',siteNow:s})});
