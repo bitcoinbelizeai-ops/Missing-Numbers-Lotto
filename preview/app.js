@@ -44,7 +44,7 @@ const ORDER=['boledo','lottery','fantasy5','pick3'];
 /* Official draw days (0=Sun) and times, Belize time (UTC-6, no daylight saving).
    Boledo & Sunday Jackpot: Belize Government Lotteries Ltd. Fantasy 5 & Pick 3: the game operator. */
 const SCHEDULE={
-  boledo:{days:[1,2,3,4,5],at:'21:10',text:'Monday to Friday at 9:10 pm'},
+  boledo:{days:[1,2,3,4,5],at:'21:00',text:'Monday to Friday at 9:00 pm'},
   pick3:{days:[1,2,3,4,5],at:'20:30',text:'Monday to Friday at 8:30 pm'},
   fantasy5:{days:[2,4,6],at:'20:00',text:'Tuesday, Thursday and Saturday at 8:00 pm'},
   lottery:{days:[0],at:'10:00',text:'Sunday at 10:00 am',extra:'If a Sunday draw is postponed, it can be held on Monday instead.'}
