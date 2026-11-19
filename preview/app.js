@@ -737,7 +737,7 @@ function drama(key,ids){
 }
 
 /* ---------- Missing Numbers: show a few rows, "Continue" opens more ---------- */
-const MISS_FIRST_ROWS=0,MISS_STEP_ROWS=4; // the grid starts folded: the Longest-out top 5 is the summary
+const MISS_FIRST_ROWS=2,MISS_STEP_ROWS=4; // the first two rows show straight away (longest wait first), like Pick 3
 const missView={key:null,rows:MISS_FIRST_ROWS};
 function gridCols(g){return getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length||1}
 function limitMissing(key,reveal){
@@ -747,7 +747,6 @@ function limitMissing(key,reveal){
   const balls=[...g.children],cols=gridCols(g),total=balls.length;
   let show=Math.min(total,missView.rows*cols);
   if(show>0&&total-show<=cols){show=total}   // don't leave a lonely last row behind the button
-  if(total<=5)show=0;                        // all of them are already in the top 5
   g.closest('.ballset').hidden=show===0;
   const fresh=[];
   balls.forEach((b,i)=>{const hide=i>=show;if(!hide&&b.hidden&&reveal)fresh.push(b);b.hidden=hide});
@@ -764,11 +763,12 @@ function limitMissing(key,reveal){
     const first=fresh[0];setTimeout(()=>first.scrollIntoView({block:'center',behavior:'smooth'}),60);
   }
   const left=total-show,btn=mb.querySelector('.showmore-btn'),less=mb.querySelector('.showless-btn');
-  if(total<=5){mb.hidden=true;return}
-  mb.hidden=false;mb.classList.toggle('folded',show===0);mb.classList.toggle('open',show>0);
+  const firstView=Math.min(total,MISS_FIRST_ROWS*cols);
+  if(total-firstView<=cols){mb.hidden=true;return}   // everything fits in the first view: no button needed
+  mb.hidden=false;mb.classList.toggle('folded',missView.rows===MISS_FIRST_ROWS);mb.classList.toggle('open',missView.rows>MISS_FIRST_ROWS);
   // once opened, a Close button sits beside Continue and the bar follows you down the list
-  if(less){less.hidden=!(show>0&&left>0);less.setAttribute('aria-label','Close the list and go back to the top of Missing Numbers')}
-  if(show===0){btn.innerHTML='Show all <span class="cnt">'+total+' missing numbers</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
+  if(less){less.hidden=!(missView.rows>MISS_FIRST_ROWS&&left>0);less.setAttribute('aria-label','Close the list and go back to the top of Missing Numbers')}
+  if(missView.rows===MISS_FIRST_ROWS&&left>0){btn.innerHTML='Show all <span class="cnt">'+left+' more</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
   else if(left>0){btn.innerHTML='Continue <span class="cnt">'+left+' more</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
   else{btn.innerHTML='Close <span class="chev" aria-hidden="true">▴</span>';btn.dataset.act='less';btn.setAttribute('aria-expanded','true')}
 }
@@ -916,7 +916,7 @@ function render(){
         :missing.length?'<b>'+missing.length+'</b> numbers have <em>not</em> come out in '+span+'.'
         :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has come out at least once in '+span+'.')+jp+
         (missing.length?' The number under each ball shows how many draws it has been waiting. Tap a ball for details.':'');
-      if(missing.length){body.appendChild(topOut(missing,all.length));
+      if(missing.length){
         body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · '),k))));
         const mb=document.createElement('div');mb.className='showmore';mb.hidden=true;
         mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button><button type="button" class="btn showless-btn" aria-controls="tiles" hidden>Close <span class="chev" aria-hidden="true">▴</span></button>';body.appendChild(mb)}
