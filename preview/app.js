@@ -367,11 +367,36 @@ const MUTE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v1
 const MUTE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 function muteLabel(){const m=SND.isMuted();['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(!b)return;b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',m?'Turn sound on':'Mute sound');b.title=m?'Sound off':'Sound on';b.innerHTML=m?MUTE_ON:MUTE_OFF})}
 ['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(b)b.addEventListener('click',e=>{e.stopPropagation();const m=!SND.isMuted();SND.setMuted(m);muteLabel();if(!m)setTimeout(()=>SND.select(),60)})});
+/* ---------- Easy reading (glasses button): larger, clearer text for anyone who wants it ----------
+   Remembered on this device. On the very first visit it switches on by itself if the phone is set to
+   "increase contrast", and a one-time hint points at the glasses. */
+const EASY=(()=>{
+  const KEY='bz-easy',HINT='bz-easy-hint',root=document.documentElement,btn=$('eyeBtn');
+  const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}},put=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+  let saved=get(KEY);
+  let on=saved==='on'||(saved===null&&window.matchMedia&&matchMedia('(prefers-contrast: more)').matches);
+  function apply(){root.classList.toggle('easy',on);if(btn){btn.setAttribute('aria-pressed',String(on));btn.title=on?'Easy reading on':'Easy reading'}}
+  apply();
+  function hideHint(){const h=$('eyeHint');if(h)h.remove();put(HINT,'1')}
+  if(btn)btn.addEventListener('click',e=>{e.stopPropagation();on=!on;put(KEY,on?'on':'off');apply();hideHint();
+    try{SND.select()}catch(_){}
+    toast(on?'Easy reading on: larger, clearer text. Tap the glasses again to switch it off.':'Easy reading off.',false,3200)});
+  function maybeHint(){
+    if(!btn||get(HINT)||on)return;
+    if(document.querySelector('#intro:not([hidden]),.sheet:not([hidden]),.mixbox:not([hidden])')){setTimeout(maybeHint,1500);return}
+    const h=document.createElement('div');h.className='eyehint';h.id='eyeHint';h.setAttribute('role','status');
+    h.innerHTML='Easier to read? Tap the glasses for larger, clearer text.<button type="button" aria-label="Close tip">×</button>';
+    h.querySelector('button').onclick=ev=>{ev.stopPropagation();hideHint()};
+    btn.parentElement.appendChild(h);setTimeout(()=>{if($('eyeHint'))hideHint()},9000);
+  }
+  setTimeout(maybeHint,4200);
+  return {isOn:()=>on};
+})();
 // the browser only allows sound after a tap, so wake the sound up on the first one
 ['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true}));
 // soft taps for buttons and switches across the page (the mixer and My Lucky Numbers make their own)
 document.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;
-  if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#mixMute,#mixBtn'))return;
+  if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#eyeBtn,#eyeHint,#mixMute,#mixBtn'))return;
   if(t.closest('.games button')){SND.select();return}
   if(t.closest('.bwrap')){SND.pop();return}
   if(t.closest('.showless-btn'))return;
