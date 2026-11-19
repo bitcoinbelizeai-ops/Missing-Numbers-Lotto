@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-18",
+ "updated": "2026-11-19",
  "source": "magayo.com",
  "draws": [
   {
@@ -1625,6 +1625,16 @@
    ],
    "source": "magayo",
    "added": "2026-11-18T03:00:27Z"
+  },
+  {
+   "id": "boledo-2026-11-18",
+   "game": "boledo",
+   "date": "2026-11-18",
+   "nums": [
+    "63"
+   ],
+   "source": "bbn",
+   "added": "2026-11-19T11:48:12Z"
   },
   {
    "id": "pick3-2026-11-18",
