@@ -279,7 +279,7 @@ const SND=(()=>{
       noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
     if(ctx.state!=='running'){const r=ctx.resume();if(r&&r.catch)r.catch(()=>{})}
     // iPhone: play one silent sample inside the tap, which unlocks sound for the page
-    if(!unlocked){unlocked=true;const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0)}
+    if(!unlocked){const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);if(ctx.state==='running')unlocked=true}
   }catch(e){}}
   const ok=()=>!!ctx&&!muted&&ctx.state==='running';
   const gap=(k,ms)=>{const n=performance.now();if(last[k]&&n-last[k]<ms)return false;last[k]=n;return true};
@@ -293,6 +293,10 @@ const SND=(()=>{
   function stopHiss(){if(!hiss)return;const h=hiss,hg=hissGain;hiss=null;try{hg.gain.setTargetAtTime(0,ctx.currentTime,.06)}catch(e){}setTimeout(()=>{try{h.stop()}catch(e){}},400)}
   return{
     init,isMuted:()=>muted,
+    running:()=>!!ctx&&!muted&&ctx.state==='running',
+    // inside a tap: switch sound on, then run cb once it is really playing
+    unlock(cb){init();if(!ctx||muted)return;if(ctx.state==='running'){cb();return}
+      try{const r=ctx.resume();if(r&&r.then)r.then(()=>{if(ctx.state==='running')cb()},()=>{})}catch(e){}},
     setMuted(m){muted=m;try{localStorage.setItem('bz-sound',m?'off':'on')}catch(e){}if(m)stopHiss();else init()},
     // ball hits ball: a hard plastic clack
     clack(v){if(!ok()||v<60||!gap('clack',24))return;const vol=Math.min(.42,.05+v/2600);
@@ -341,23 +345,26 @@ const SND=(()=>{
     ping(){if(!ok())return;tone(1760,.35,.045,'sine');tone(2637,.25,.02,'sine',null,.01)},
     later(ms,fn){return setTimeout(fn,ms)},
     // the opening intro: sparkles, a rising shimmer that builds, and a mystical chime at the peak
-    intro(){if(!ok())return;const c=ctx,T=x=>c.currentTime+.03+x,rr=(a,b)=>a+Math.random()*(b-a);
+    intro(off){if(!ok())return;off=Math.max(0,off||0);if(off<.12)off=0;
+      // started late (first tap): parts already gone are skipped, the peak chord still lands with the picture
+      // (or straight away if the peak has passed)
+      const late=off>1.5,sh=late?1.55:off,c=ctx,T=x=>c.currentTime+.03+Math.max(0,x-sh),gone=x=>off>0&&x<sh+.001&&x<1.55,rr=(a,b)=>a+Math.random()*(b-a);
       const out=c.createGain();out.gain.value=.8;out.connect(master);
       const dl=c.createDelay(1);dl.delayTime.value=.19;const fb=c.createGain();fb.gain.value=.38;const wet=c.createGain();wet.gain.value=.45;
       dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(out);
       const bell=(f,t,dur,vol)=>[[1,1],[2.76,.28],[5.4,.1]].forEach(([m,a])=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*m;
         g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol*a,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur/m**.4);
         o.connect(g);g.connect(out);g.connect(dl);o.start(t);o.stop(t+dur+.1)});
-      bell(2637,T(.02),.5,.05);
-      [3136,3520,3951,4186].forEach((f,k)=>bell(f,T(.18+k*.07),.35,.025));
-      {const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf;s.loop=true;f.type='bandpass';f.Q.value=2.5;
+      if(!gone(.02))bell(2637,T(.02),.5,.05);
+      [3136,3520,3951,4186].forEach((f,k)=>{if(!gone(.18+k*.07))bell(f,T(.18+k*.07),.35,.025)});
+      if(!gone(.55)){const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf;s.loop=true;f.type='bandpass';f.Q.value=2.5;
         f.frequency.setValueAtTime(500,T(.55));f.frequency.exponentialRampToValueAtTime(5200,T(1.52));
         g.gain.setValueAtTime(.0001,T(.55));g.gain.exponentialRampToValueAtTime(.16,T(1.48));g.gain.exponentialRampToValueAtTime(.0001,T(1.6));
         s.connect(f);f.connect(g);g.connect(out);s.start(T(.55));s.stop(T(1.7))}
-      {const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(220,T(.8));o.frequency.exponentialRampToValueAtTime(660,T(1.52));
+      if(!gone(.8)){const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(220,T(.8));o.frequency.exponentialRampToValueAtTime(660,T(1.52));
         g.gain.setValueAtTime(.0001,T(.8));g.gain.exponentialRampToValueAtTime(.05,T(1.45));g.gain.exponentialRampToValueAtTime(.0001,T(1.58));o.connect(g);g.connect(out);o.start(T(.8));o.stop(T(1.7))}
-      for(let k=0;k<5;k++)bell(rr(2800,4600),T(.95+k*.025),.3,.03);
-      bell(1568,T(1.03),.6,.05);
+      for(let k=0;k<5;k++)if(!gone(.95+k*.025))bell(rr(2800,4600),T(.95+k*.025),.3,.03);
+      if(!gone(1.03))bell(1568,T(1.03),.6,.05);
       [1318.5,1661.2,1975.5,2637].forEach((f,k)=>bell(f,T(1.55+k*.055),1.9,.13-k*.015));
       {const o=c.createOscillator(),g=c.createGain();o.frequency.value=329.6;g.gain.setValueAtTime(.0001,T(1.55));g.gain.exponentialRampToValueAtTime(.09,T(1.6));g.gain.exponentialRampToValueAtTime(.0001,T(3.2));o.connect(g);g.connect(out);o.start(T(1.55));o.stop(T(3.3))}
     }
@@ -1318,19 +1325,27 @@ const INTRO=(()=>{
     ['izG1','izG2'].forEach((id,k)=>{const q=gaps[k].getBoundingClientRect();g(id).style.left=(q.left-r0.left+q.width/2)+'px';g(id).style.top=(q.top-r0.top-2)+'px'});
     build(dx,dy,r.width);
   }
-  let timer=0,running=false;
+  let timer=0,running=false,t0=0,soundOn=false;
+  const elapsed=()=>(performance.now()-t0)/1000;
   let fadeT=0;
   function end(){clearTimeout(timer);clearTimeout(fadeT);sp.classList.remove('iz-play','iz-exit','iz-skip');sp.hidden=true;running=false;introFading()}
   function play(withSound){
     if(reduceMotion()||running)return false;
     running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip');void sp.offsetWidth;measure();
     sp.classList.add('iz-play','iz-exit');
-    if(withSound)SND.intro();
+    t0=performance.now();soundOn=false;
+    // try the chime straight away: allowed for home-screen apps on Android and installed apps on computers.
+    // Elsewhere (iPhone, phone browsers) the first tap on the intro starts it.
+    if(withSound){SND.intro(0);soundOn=true}
+    else if(!SND.isMuted()){SND.init();const go=()=>{if(!soundOn&&running&&SND.running()&&elapsed()<.4){soundOn=true;SND.intro(elapsed())}};go();setTimeout(go,120)}
     introOn=true;fadeT=setTimeout(introFading,2550);
     timer=setTimeout(end,2900);return true;
   }
   // tap anywhere on the intro to skip it
-  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)});
+  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;
+    // first tap while silent: switch the sound on and let the intro finish; the next tap skips
+    if(!soundOn&&!SND.isMuted()){soundOn=true;SND.unlock(()=>{if(running||elapsed()<3.2)SND.intro(elapsed())});return}
+    clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)});
   return{play};
 })();
 // tap the "Missing Numbers" title to watch the intro again, with sound
