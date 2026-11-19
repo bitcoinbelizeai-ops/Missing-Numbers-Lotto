@@ -180,7 +180,7 @@ const KEY='bz-admin-token';
 const $=id=>document.getElementById(id);
 const pad=(n,w)=>String(n).padStart(w,'0');
 const LABEL={boledo:'Boledo',lottery:'Sunday Jackpot',fantasy5:'Fantasy 5',pick3:'Pick 3'};
-const SCHED={boledo:{days:[1,2,3,4,5],h:21,m:10,text:'Mon–Fri 9:10 pm'},pick3:{days:[1,2,3,4,5],h:20,m:30,text:'Mon–Fri 8:30 pm'},fantasy5:{days:[2,4,6],h:20,m:0,text:'Tue, Thu, Sat 8:00 pm'},lottery:{days:[0],h:10,m:0,text:'Sunday 10:00 am'}};
+const SCHED={boledo:{days:[1,2,3,4,5],h:21,m:0,text:'Mon–Fri 9:00 pm'},pick3:{days:[1,2,3,4,5],h:20,m:30,text:'Mon–Fri 8:30 pm'},fantasy5:{days:[2,4,6],h:20,m:0,text:'Tue, Thu, Sat 8:00 pm'},lottery:{days:[0],h:10,m:0,text:'Sunday 10:00 am'}};
 const PH={boledo:['Winning number','41'],lottery:['1st, 2nd and 3rd prize (12 digits in a row is fine)','165201887876'],fantasy5:['5 numbers and the letter','03 05 11 20 27 Q'],pick3:['3 digits','390']};
 let game='boledo',token='',current=null,pending=null;
 const getTok=()=>{try{return localStorage.getItem(KEY)||''}catch(e){return ''}};
@@ -387,7 +387,7 @@ $('undoRestore').onclick=async()=>{
 
 /* ---------- BBN test results (read-only unless "Add to site") ---------- */
 // when each draw is finished (Belize time, UTC-6, no daylight saving): the same times the magayo job uses
-const DRAW_END={boledo:[21,10],pick3:[20,30],fantasy5:[20,0],lottery:[10,30]};
+const DRAW_END={boledo:[21,0],pick3:[20,30],fantasy5:[20,0],lottery:[10,30]};
 function drawEnd(game,date){const t=DRAW_END[game];if(!t||!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return null;const [y,m,d]=date.split('-').map(Number);return Date.UTC(y,m-1,d,t[0]+6,t[1])}
 function minsAfter(game,date,iso){const e=drawEnd(game,date),a=Date.parse(iso||'');if(e==null||isNaN(a))return null;return Math.round((a-e)/60000)}
 function dur(m){if(m==null)return'';if(m<0)return'before the draw time?';if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h<48?h+' h'+(r?' '+r+' min':''):Math.round(h/24)+' days'}
