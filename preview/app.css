@@ -19,7 +19,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 
 /* header: centered wordmark */
 .top{display:flex;flex-direction:column;gap:14px}
-.brand{display:flex;align-items:center;justify-content:center;padding:14px 0 6px}
+.brand{display:flex;align-items:center;justify-content:center;padding:28px 0 6px}
 .brand-txt{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
 .brand .eyebrow{margin:0 0 2px;padding-left:.3em;font:700 12px var(--f-label);letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
 .brand h1{margin:2px 0 0;font:800 clamp(30px,8vw,38px)/1 var(--f-brand);letter-spacing:-.01em;color:#fff}
@@ -101,6 +101,33 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 .plaque strong u{text-decoration:none;color:#ffcf4a}
 .letter{width:44px;height:44px;border-radius:10px;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 24px var(--f-label);color:var(--gold)}
 .lastdraw .lnote{flex-basis:100%;margin:0;font-size:13px;color:var(--muted)}
+/* earlier results beside the winning ball (Boledo: Past X Draws, Pick 3: Yesterday) */
+.recent{flex:1 1 0;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:6px;padding-left:14px;border-left:1px dashed rgba(255,255,255,.3)}
+.recent.below{flex-basis:100%;padding:12px 0 0;border-left:0;border-top:1px dashed rgba(255,255,255,.3)}
+.recent-cap{margin:0;font:700 12px var(--f-label);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;text-shadow:0 1px 0 rgba(0,0,0,.85)}
+.recent-list{display:flex;align-items:flex-start;gap:10px;overflow:hidden;padding:3px 4px 6px;margin:-3px -4px -6px}
+.recent-item{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px}
+.recent-item.bwrap{padding:0 1px}
+.recent-item.off{display:none}
+.recent .tile{width:42px;filter:saturate(.78) brightness(.93)}
+.recent .tile span{font-size:15px}
+.recent-day{font:600 12px/1.1 var(--f-body);color:var(--muted);white-space:nowrap}
+.p3chips{display:flex;gap:3px}
+.recent .p3chips .tile{width:30px}
+.recent .p3chips .tile span{font-size:14px;width:66%}
+body[data-enter] .lastdraw.roll .recent .tile,.lastdraw.roll .recent .tile{animation:rollinr 1s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s)}
+body[data-enter] .lastdraw.roll .recent .p3chips .tile{animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .12s)}
+.lastdraw.roll .recent-cap{animation:topfade .45s both;animation-delay:var(--rs,1.3s)}
+.lastdraw.roll .recent-day{animation:topfade .4s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s + .45s)}
+.lastdraw.roll .recent{animation:topfade .3s both;animation-delay:calc(var(--rs,1.3s) - .3s)}
+/* roll in from the right, overshoot a little, settle */
+@keyframes rollinr{
+  0%{opacity:0;transform:translateX(90px) rotate(400deg);animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+  15%{opacity:1}
+  62%{transform:translateX(-10px) rotate(-28deg);animation-timing-function:cubic-bezier(.45,0,.4,1)}
+  85%{transform:translateX(3px) rotate(7deg);animation-timing-function:ease-in-out}
+  100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.lastdraw.roll *{animation:none!important}}
 
 /* folds and forms */
 .banner{border:1px dashed var(--gold);background:var(--panel);border-radius:12px;padding:10px 14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:14px}
@@ -173,6 +200,7 @@ body[data-game="boledo"] .say b{text-shadow:none}
 
 /* last draw: balls roll in one by one */
 .lastdraw.roll .tile,.lastdraw.roll .letter{animation:rollin 1.5s both;animation-delay:calc(.2s + var(--i,0) * .38s)}
+.lastdraw.hold .tile,.lastdraw.hold .letter,.lastdraw.hold .recent{opacity:0}
 .lastdraw.roll .prizerow .tile{animation-duration:1.25s;animation-delay:calc(.2s + var(--i,0) * .2s)}
 /* roll in from the left, overshoot past the spot, roll back and settle */
 @keyframes rollin{
@@ -691,7 +719,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 
 /* site sound on/off: small speaker at the top-right of the header */
 .top{position:relative}
-.sndbtn{position:absolute;top:0;right:0;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+.sndbtn{position:absolute;top:-12px;right:0;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
   background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);touch-action:manipulation;transition:background-color .15s,box-shadow .15s}
 .sndbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .sndbtn svg path:first-child{fill:currentColor;fill-opacity:.25}
@@ -872,13 +900,14 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .pick-title,h2,.brand-txt b{color:#ffd659}
 h1,h2,h3,.pick-title,.winbadge,.eyebrow,.when,.fresh,.cd-when{text-shadow:0 1px 2px rgba(0,10,40,.45)}
 
-/* ---------- Easy reading: glasses button (top-right, beside the sound button) ---------- */
-.eyebtn{position:absolute;top:0;right:46px;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+/* ---------- Easy reading: magnifier button (+ to enlarge, − when on) (top-right, beside the sound button) ---------- */
+.eyebtn{position:absolute;top:-12px;right:46px;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
   background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);touch-action:manipulation;transition:background-color .15s,box-shadow .15s,color .15s}
-.eyebtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.eyebtn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
 .eyebtn:hover,.eyebtn:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
+.eyebtn[aria-pressed="true"] .zv{display:none}
 .eyebtn[aria-pressed="true"]{background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-deep));border-color:var(--gold);color:#2a1d00}
-.eyehint{position:absolute;top:46px;right:30px;z-index:30;max-width:230px;padding:10px 34px 10px 12px;border-radius:12px;background:#fffdf5;color:#13233f;
+.eyehint{position:absolute;top:34px;right:30px;z-index:30;max-width:230px;padding:10px 34px 10px 12px;border-radius:12px;background:#fffdf5;color:#13233f;
   font:600 15px/1.35 var(--f-body);box-shadow:0 8px 22px rgba(0,0,0,.35);animation:eyehint-in .35s ease-out}
 .eyehint::before{content:"";position:absolute;top:-7px;right:22px;width:14px;height:14px;background:#fffdf5;transform:rotate(45deg)}
 .eyehint button{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;background:none;color:#13233f;font-size:20px;line-height:1;cursor:pointer}
@@ -917,6 +946,10 @@ html.easy .plaque small{font-size:14px}
 html.easy .plaque strong{font-size:30px}
 html.easy .letter{font-size:24px}
 html.easy .lastdraw .lnote{font-size:15px}
+html.easy .recent-cap{font-size:14px}
+html.easy .recent .tile span{font-size:16px}
+html.easy .recent-day{font-size:14px}
+html.easy .recent .p3chips .tile span{font-size:15.5px}
 html.easy .banner{font-size:15.5px}
 html.easy summary{font-size:17px}
 html.easy summary::after{font-size:15.5px}
@@ -1109,7 +1142,7 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 @media (prefers-reduced-motion:reduce){.acct-strip.wow,.acct-strip.wow .acct-ico,.acct-strip.wow .acct-btns .btn,.btn.ac-danger.armed{animation:none}.acct-strip.wow .acct-btns .btn::after{display:none}}
 
 /* account button: top-left of the header, opposite the sound button */
-.acctbtn{position:absolute;top:0;left:0;z-index:2;height:38px;min-width:38px;padding:0 10px 0 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+.acctbtn{position:absolute;top:-12px;left:0;z-index:2;height:38px;min-width:38px;padding:0 10px 0 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
   background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);font:700 12px var(--f-label);letter-spacing:.05em;text-transform:uppercase;touch-action:manipulation;transition:background-color .15s,box-shadow .15s}
 @media (max-width:399px){.acctbtn:not(.me){width:38px;padding:0;justify-content:center}.acctbtn:not(.me) #acctBtnTxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 .acctbtn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}

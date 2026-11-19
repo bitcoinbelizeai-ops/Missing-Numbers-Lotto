@@ -319,12 +319,12 @@ const SND=(()=>{
     star(on){if(!ok())return;on?(tone(988,.08,.055,'sine'),tone(1480,.14,.05,'sine',null,.06)):tone(880,.12,.045,'sine',520)},
     roll(i){if(!ok())return;tone(260+i*35,.07,.07,'sine',150);noise(.025,1800+i*120,4,.04)},
     // a ball rolling in: quick clicks across a hard surface that spread out as it slows, then a wooden tok
-    rollIn(i,dur){if(!ok())return;let t=0,gap=.035,k=0;const base=640+i*40;
-      while(t<dur*.92&&k<40){const v=.09*(1-.55*t/dur),dl=t;
+    rollIn(i,dur,vol){if(!ok())return;let t=0,gap=.035,k=0;const base=640+i*40,q=vol||1;
+      while(t<dur*.92&&k<40){const v=.09*q*(1-.55*t/dur),dl=t;
         tone(base*(1+(Math.random()-.5)*.08),.018,v,'triangle',null,dl);
         if(k%2===0)tone(170,.03,v*.6,'sine',null,dl);
         t+=gap;gap*=1.09;k++}
-      tone(210+i*12,.11,.14,'sine',120,dur);noise(.035,900,2,.07,'bandpass',null,dur)},
+      tone(210+i*12,.11,.14*q,'sine',120,dur);noise(.035,900,2,.07*q,'bandpass',null,dur)},
     // a ball spinning in: an airy whir that flutters faster then slows like a spinning coin, then a light ting
     spinIn(i,dur){if(!ok())return;const t=ctx.currentTime,src=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),am=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
       src.buffer=noiseBuf;src.loop=true;fl.type='bandpass';fl.frequency.setValueAtTime(2600,t);fl.frequency.exponentialRampToValueAtTime(1300,t+dur);fl.Q.value=3;
@@ -367,9 +367,9 @@ const MUTE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v1
 const MUTE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 function muteLabel(){const m=SND.isMuted();['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(!b)return;b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',m?'Turn sound on':'Mute sound');b.title=m?'Sound off':'Sound on';b.innerHTML=m?MUTE_ON:MUTE_OFF})}
 ['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(b)b.addEventListener('click',e=>{e.stopPropagation();const m=!SND.isMuted();SND.setMuted(m);muteLabel();if(!m)setTimeout(()=>SND.select(),60)})});
-/* ---------- Easy reading (glasses button): larger, clearer text for anyone who wants it ----------
+/* ---------- Easy reading (magnifier button, + / −): larger, clearer text for anyone who wants it ----------
    Remembered on this device. On the very first visit it switches on by itself if the phone is set to
-   "increase contrast", and a one-time hint points at the glasses. */
+   "increase contrast", and a one-time hint points at the magnifier. */
 const EASY=(()=>{
   const KEY='bz-easy',HINT='bz-easy-hint',root=document.documentElement,btn=$('eyeBtn');
   const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}},put=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -380,12 +380,12 @@ const EASY=(()=>{
   function hideHint(){const h=$('eyeHint');if(h)h.remove();put(HINT,'1')}
   if(btn)btn.addEventListener('click',e=>{e.stopPropagation();on=!on;put(KEY,on?'on':'off');apply();hideHint();
     try{SND.select()}catch(_){}
-    toast(on?'Easy reading on: larger, clearer text. Tap the glasses again to switch it off.':'Easy reading off.',false,3200)});
+    toast(on?'Easy reading on: larger, clearer text. Tap the magnifier again to switch it off.':'Easy reading off.',false,3200)});
   function maybeHint(){
     if(!btn||get(HINT)||on)return;
     if(document.querySelector('#intro:not([hidden]),.sheet:not([hidden]),.mixbox:not([hidden])')){setTimeout(maybeHint,1500);return}
     const h=document.createElement('div');h.className='eyehint';h.id='eyeHint';h.setAttribute('role','status');
-    h.innerHTML='Easier to read? Tap the glasses for larger, clearer text.<button type="button" aria-label="Close tip">×</button>';
+    h.innerHTML='Easier to read? Tap the magnifier for larger, clearer text.<button type="button" aria-label="Close tip">×</button>';
     h.querySelector('button').onclick=ev=>{ev.stopPropagation();hideHint()};
     btn.parentElement.appendChild(h);setTimeout(()=>{if($('eyeHint'))hideHint()},9000);
   }
@@ -860,21 +860,22 @@ function render(){
       ['missFrom','missTo'].forEach(id=>{$(id).min=mn;$(id).max=mx})} }
   const WK=RANGE?'d'+RANGE.from+'_'+RANGE.to:W;
   const body=$('tiles'),hot=$('hot'),last=$('lastDraw');
-  body.innerHTML='';hot.innerHTML='';last.innerHTML='';
+  body.innerHTML='';hot.innerHTML='';
   setNote('','');$('hotSay').textContent='';$('lastDate').textContent='';
 
-  /* last draw */
-  if(all.length){
+  /* last draw: rebuilt only when its results change, so a refresh with the same results
+     doesn't cut the roll-in short */
+  const ldNew=all.length?state.game+'|'+(state.sample?'s':'r')+'|'+all.slice(-8).map(x=>x.id+':'+(x.nums||[]).join('.')+(x.letter||'')+(x.nodraw?'x':'')).join(','):'empty|'+state.game;
+  if(all.length&&ldNew===ldSig){const d=all[all.length-1];$('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));$('shareBtn').hidden=!!d.nodraw}
+  else if(all.length){
+    ldSig=ldNew;last.innerHTML='';
     const d=all[all.length-1];
     const many=state.game!=='boledo';
     const badge=document.createElement('p');badge.className='winbadge';badge.textContent=many?'Winning Numbers':'Winning Number';last.appendChild(badge);
     const animKey=state.game+'|'+d.id+'|'+(state.sample?'s':'r');
     const roll=animKey!==lastAnim;lastAnim=animKey;if(roll)pickEnter();
-    last.classList.toggle('roll',roll);
-    if(roll&&!reduceMotion())requestAnimationFrame(()=>{const ts=[...last.querySelectorAll('.tile,.letter')];ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
-      if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
-      else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
-      else SND.later(st+D*.45,()=>SND.roll(j))})});
+    last.classList.remove('roll','hold');ldPending=false;
+    if(roll){if(introRunning()){last.classList.add('hold');ldPending=true}else requestAnimationFrame(()=>startLastRoll())}
     $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
     $('shareBtn').hidden=!!d.nodraw;
     let bi=0;
@@ -887,8 +888,9 @@ function render(){
     }else{
       (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach(k=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);last.appendChild(t)});
       if(d.letter){const l=document.createElement('div');l.className='letter';l.textContent=d.letter;l.title='Free letter';l.style.setProperty('--i',bi++);last.appendChild(l)}
+      if(!d.nodraw&&(state.game==='boledo'||state.game==='pick3'))addRecent(last,all,bi);
     }
-  }else{last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
+  }else{ldSig=ldNew;last.classList.remove('roll','hold');last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
     $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
       '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>';
@@ -899,7 +901,7 @@ function render(){
   if(!state.loaded&&!state.sample){say.innerHTML='<span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span>';say.setAttribute('aria-busy','true');
     body.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(12)+'</div>';
     hot.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(4)+'</div>';
-    last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
+    ldSig='skel';last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
   else if(!win.length&&RANGE){say.innerHTML='There were no '+esc(G.label)+' draws between <b>'+esc(fmtDate(RANGE.from))+'</b> and <b>'+esc(fmtDate(RANGE.to))+'</b>. Try other dates.'}
   else if(!win.length){say.textContent='There are no '+G.label+' results yet. Add one at the bottom of the page.'}
   else{
@@ -1053,7 +1055,76 @@ function shadeColumns(){
     const cols=getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length||1;
     [...g.children].forEach((t,i)=>t.classList.toggle('alt',(i%cols)%2===1))});
 }
-let lastAnim='';
+let lastAnim='',ldSig='',ldPending=false;
+/* start the Last Draw entrance: winning balls roll in, then the earlier results from the right, with sounds */
+function startLastRoll(){
+  const last=$('lastDraw');ldPending=false;
+  last.classList.remove('hold','roll');void last.offsetWidth;last.classList.add('roll');
+  if(reduceMotion())return;
+  const rec=last.querySelector('.recent'),rs=rec?parseFloat(rec.style.getPropertyValue('--rs'))*1000:0;
+  [...last.querySelectorAll('.recent .tile')].filter(t=>!t.closest('.off')).forEach((t,r)=>SND.later(rs+r*220,()=>SND.rollIn(4+r,.55,.45)));
+  const ts=[...last.querySelectorAll('.tile,.letter')].filter(t=>!t.closest('.recent'));ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
+    if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
+    else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
+    else SND.later(st+D*.45,()=>SND.roll(j))});
+}
+/* while the opening intro covers the screen, the Last Draw waits and rolls in as the intro fades */
+let introOn=false;const introRunning=()=>introOn;
+function introFading(){introOn=false;if(ldPending)startLastRoll()}
+
+/* Last Draw: earlier results beside the winning ball.
+   Boledo: up to 6 smaller balls, newest first, as many as fit ("Past 4 Draws"); tap one for its ball card.
+   Pick 3: the one draw before, as three mini balls ("Yesterday", or the weekday when it wasn't the day before). */
+const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WKD_LONG=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const isoDay=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
+function addRecent(last,all,nBig){
+  const d=all[all.length-1],prev=all.slice(0,-1).filter(x=>!x.nodraw).reverse();
+  if(!prev.length)return;
+  const box=document.createElement('div');box.className='recent';
+  box.style.setProperty('--rs',(.2+(nBig-1)*.38+1.05).toFixed(2)+'s');   // start after the winning balls land
+  const cap=document.createElement('p');cap.className='recent-cap';
+  const list=document.createElement('div');list.className='recent-list';
+  const dayLab=iso=>{const t=isoDay(iso);return WKD[t.getDay()]+' '+t.getDate()};
+  if(state.game==='pick3'){
+    const p=prev[0];
+    cap.textContent=p.date===isoAdd(d.date,-1)?'Yesterday':WKD_LONG[isoDay(p.date).getDay()];
+    const it=document.createElement('div');it.className='recent-item';
+    it.setAttribute('role','img');it.setAttribute('aria-label',cap.textContent+', '+fmtDay(p.date)+': '+p.nums.join(' '));
+    const chips=document.createElement('div');chips.className='p3chips';
+    p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);chips.appendChild(t)});
+    const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
+    it.append(chips,lab);list.appendChild(it);
+  }else{
+    const G=GAMES.boledo,L=all.length;
+    const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
+    prev.slice(0,6).forEach(p=>{const k=G.keys(p)[0];
+      const it=document.createElement('button');it.type='button';it.className='bwrap recent-item';
+      it.dataset.key=k;it.dataset.detail=facts(k,'<b>'+k+'</b> · ');
+      it.setAttribute('aria-label',k+', drawn '+fmtDay(p.date)+'. Tap for details.');
+      const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
+      it.append(t,lab);list.appendChild(it)});
+  }
+  box.append(cap,list);last.appendChild(box);
+  fitRecent(last);
+}
+/* show only as many small balls as fit on the line; Pick 3 drops below the big balls if there's no room */
+function fitRecent(last){
+  last=last||$('lastDraw');const box=last&&last.querySelector('.recent');if(!box)return;
+  const list=box.querySelector('.recent-list'),items=[...list.children];
+  box.classList.remove('below');items.forEach(x=>x.classList.remove('off'));
+  if(state.game==='pick3'){
+    const it=items[0],big=[...last.querySelectorAll(':scope>.tile')];
+    const used=big.reduce((s,t)=>s+t.offsetWidth+12,0),need=it.offsetWidth+parseFloat(getComputedStyle(box).paddingLeft)+2;
+    box.classList.toggle('below',last.clientWidth-used<need);return;
+  }
+  const W=list.clientWidth,vw=document.documentElement.clientWidth,cap=vw<360?3:vw<600?4:6;let n=0;
+  items.forEach(x=>{const fits=x.offsetLeft-list.offsetLeft+x.offsetWidth<=W+1;if(!fits||n>=cap)x.classList.add('off');else{x.style.setProperty('--r',n);n++}});
+  if(!n){items[0].classList.remove('off');n=1}
+  box.querySelector('.recent-cap').textContent=n===1?'Previous Draw':'Past '+n+' Draws';
+}
+if(window.ResizeObserver){let fr=0;const ro=new ResizeObserver(()=>{cancelAnimationFrame(fr);fr=requestAnimationFrame(()=>fitRecent())});
+  ro.observe($('lastDraw'));new MutationObserver(()=>fitRecent()).observe(document.documentElement,{attributes:true,attributeFilter:['class']})}
+else window.addEventListener('resize',()=>fitRecent());
 /* tapping a ball opens a card that slides up from the bottom of the screen, so it is always in view,
    however long the list is. The weekly chart only shows for a ball that has played in those weeks. */
 let sheetFrom=null;
@@ -1100,7 +1171,7 @@ document.addEventListener('click',e=>{
   const x=e.target.closest('.mine-x');if(x){toggleMine(x.dataset.key);return}
   const ts=e.target.closest('.top-star');if(ts){e.stopPropagation();toggleMine(ts.dataset.key);if(isMine(ts.dataset.key))toast('★ '+ts.dataset.key+' added to My Lucky Numbers')}
 },true);
-$('tiles').addEventListener('click',onBallTap);$('hot').addEventListener('click',onBallTap);
+$('tiles').addEventListener('click',onBallTap);$('hot').addEventListener('click',onBallTap);$('lastDraw').addEventListener('click',onBallTap);
 try{const ro=new ResizeObserver(shadeColumns);ro.observe($('tiles'));ro.observe($('hot'))}catch(e){window.addEventListener('resize',shadeColumns)}
 
 let toastTimer;
@@ -1248,16 +1319,18 @@ const INTRO=(()=>{
     build(dx,dy,r.width);
   }
   let timer=0,running=false;
-  function end(){clearTimeout(timer);sp.classList.remove('iz-play','iz-exit','iz-skip');sp.hidden=true;running=false}
+  let fadeT=0;
+  function end(){clearTimeout(timer);clearTimeout(fadeT);sp.classList.remove('iz-play','iz-exit','iz-skip');sp.hidden=true;running=false;introFading()}
   function play(withSound){
     if(reduceMotion()||running)return false;
     running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip');void sp.offsetWidth;measure();
     sp.classList.add('iz-play','iz-exit');
     if(withSound)SND.intro();
+    introOn=true;fadeT=setTimeout(introFading,2550);
     timer=setTimeout(end,2900);return true;
   }
   // tap anywhere on the intro to skip it
-  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;clearTimeout(timer);sp.classList.add('iz-skip');timer=setTimeout(end,220)});
+  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)});
   return{play};
 })();
 // tap the "Missing Numbers" title to watch the intro again, with sound
