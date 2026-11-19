@@ -1562,12 +1562,16 @@ $('acCode').addEventListener('submit',async e=>{
 $('acResend').onclick=async()=>{if(codeEmail)await sendCode(codeEmail,$('acResend'),$('acCodeMsg'))};
 $('acBack').onclick=()=>{clearInterval(resendTimer);view(ls.get(PENDING)?'up':'in')};
 
+/* record a visit (keeps the account from the 2-year clean-up); at most once every 20 hours */
+let seenAt=0;
+function touchSeen(){if(!user||!profile)return;const t=Date.now();if(t-seenAt<20*3600e3)return;seenAt=t;
+  sb.from('profiles').update({last_seen:new Date(t).toISOString()}).eq('id',user.id).then(()=>{},()=>{})}
 /* ---------- after sign-in ---------- */
 async function afterSignIn(fromSheet){
   if(!user){profile=null;drawStrip();return}
   const {data:prof,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
   if(error){if(fromSheet){view('up');msg($('acUpMsg'),explain(error),'bad')}return}
-  if(prof){profile=prof;ls.del(PENDING);sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',user.id).then(()=>{},()=>{});
+  if(prof){profile=prof;ls.del(PENDING);touchSeen();
     await firstSync();drawStrip();if(fromSheet){view('me');window.bzToast&&window.bzToast('Signed in. Your Lucky Numbers are saved to your account.')}return}
   const p=ls.get(PENDING);
   if(p&&p.email===(user.email||'').toLowerCase()){await makeProfile(fromSheet);return}
@@ -1616,7 +1620,7 @@ async function pull(){
   const at=ls.get(SYNCAT);
   if(!at||data.updated_at>at){if(!same(data.mine,window.bzLucky.get()))window.bzLucky.set(norm(data.mine));lastSaved=norm(data.mine);ls.set(SYNCAT,data.updated_at)}
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pull()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pull();touchSeen()}});
 
 /* ---------- account view ---------- */
 function fillMe(note){
