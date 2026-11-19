@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-17",
+ "updated": "2026-11-18",
  "source": "magayo.com",
  "draws": [
   {
@@ -1625,6 +1625,18 @@
    ],
    "source": "magayo",
    "added": "2026-11-18T03:00:27Z"
+  },
+  {
+   "id": "pick3-2026-11-18",
+   "game": "pick3",
+   "date": "2026-11-18",
+   "nums": [
+    "3",
+    "4",
+    "2"
+   ],
+   "source": "magayo",
+   "added": "2026-11-19T03:38:38Z"
   }
  ]
 }
