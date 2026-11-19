@@ -51,14 +51,14 @@ API_URL = "https://www.magayo.com/api/results.php"
 # Sources (checked Nov 14, 2026): Belize Government Lotteries (Boledo, Sunday Jackpot),
 # the game operator's site (Fantasy 5, Pick 3).
 SCHEDULE = {
-    "boledo": {0, 1, 2, 3, 4},   # Mon-Fri 9:10 pm
+    "boledo": {0, 1, 2, 3, 4},   # Mon-Fri 9:00 pm
     "pick3": {0, 1, 2, 3, 4},    # Mon-Fri 8:30 pm
     "fantasy5": {1, 3, 5},       # Tue, Thu, Sat 8:00 pm
     "lottery": {6},              # Sun 10:00 am, Sunday Jackpot (a postponed draw can move to Monday)
 }
 # When each draw is FINISHED (Belize time). The Sunday Jackpot starts at 10:00 am and takes
 # about half an hour, so it counts from 10:30 am.
-DRAW_TIME = {"boledo": (21, 10), "pick3": (20, 30), "fantasy5": (20, 0), "lottery": (10, 30)}
+DRAW_TIME = {"boledo": (21, 0), "pick3": (20, 30), "fantasy5": (20, 0), "lottery": (10, 30)}
 # A "no draw" answer for a draw younger than this is treated as "not posted yet" and retried next run.
 NODRAW_MIN_AGE_HOURS = 24
 FRESH_DAYS = 3        # draws newer than this are always fetched first (within the limits)
