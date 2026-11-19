@@ -12,7 +12,7 @@ on:
     - cron: "20 2 * * 0,3,5"
     # Pick 3 (Mon-Fri 8:30 pm): 8:50 pm Belize
     - cron: "50 2 * * 2-6"
-    # Boledo (Mon-Fri 9:10 pm): 9:30 pm Belize
+    # Boledo (Mon-Fri 9:00 pm): 9:30 pm Belize
     - cron: "30 3 * * 2-6"
     # Late sweep for anything not posted yet: 10:25 pm Belize (Mon-Sat)
     - cron: "25 4 * * 0,2-6"
