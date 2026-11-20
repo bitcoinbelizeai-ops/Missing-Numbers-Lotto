@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 """Fill in missing Belize lottery results in draws.json using the magayo API.
 
+Since Nov 20, 2026 magayo is the BACKUP: BBN Belize (via Make.com and receive_bbn.py)
+is the main source and adds results within minutes. magayo is only asked for draws
+BBN hasn't delivered, at fixed times (no more "learning"):
+- first try FIRST_TRY_MINUTES (45) after the draw, then again at least RETRY_GAP_MIN (40)
+  minutes after the previous try, at most EVENING_TRIES (3) times the same evening,
+  and one last try the next morning (6+ hours after the draw): MAX_TRIES = 4.
+- Overnight it also double-checks BBN's results (one call each, only with calls to
+  spare) and writes the answer to data/magayo-checks.json. It NEVER changes a result:
+  a disagreement shows as a red warning on the Admin page.
+
 Runs from GitHub Actions on a schedule matched to the draw times
 (see .github/workflows/update-results.yml).
 - Looks at the last LOOKBACK_DAYS of scheduled draws (Belize time), but only draws
-  whose draw time was at least READY_HOURS ago, so magayo has had time to post them.
+  whose draw time was at least FIRST_TRY_MINUTES ago.
 - Skips any draw already in draws.json (including "no draw" markers).
 - Calls the magayo API only for missing draws, newest first.
 
@@ -14,8 +24,6 @@ Safeguards against using too many calls (count kept in data/api-usage.json):
 - Older gaps (more than 3 days old) are only filled while enough calls are left to
   cover every draw still to come before the plan resets, so new draws always get fetched.
 - Each draw is asked for at most MAX_TRIES times; after that it's left for a person.
-- Learns how long magayo takes to post each game: asking too early makes it wait
-  20 minutes longer for that game next time; a quick success makes it 5 minutes shorter.
 - A second or third try (when magayo hadn't posted a draw yet) is only made while enough
   calls are left for the first try of every draw still to come before the plan resets.
 - Stops the run on magayo's "limit reached" answer, on a bad key, or after
@@ -31,7 +39,7 @@ Needs only the Python standard library. Settings come from environment variables
   MAX_CALLS_PER_RUN   (optional) default 10
   API_RESET_DAY       (optional) default 1: day of the month the magayo count resets
   LOOKBACK_DAYS       (optional) default 14
-  READY_HOURS         (optional) default 3: wait this long after a draw before asking for it
+  FIRST_TRY_MINUTES   (optional) default 45: first try this long after a draw
 """
 import calendar
 import json
@@ -45,6 +53,7 @@ from datetime import date as Date, datetime, timedelta, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DRAWS_FILE = os.path.join(ROOT, "draws.json")
 USAGE_FILE = os.path.join(ROOT, "data", "api-usage.json")
+CHECKS_FILE = os.path.join(ROOT, "data", "magayo-checks.json")
 API_URL = "https://www.magayo.com/api/results.php"
 
 # Draw days (Monday=0 ... Sunday=6) and draw times, Belize time.
@@ -62,7 +71,12 @@ DRAW_TIME = {"boledo": (21, 0), "pick3": (20, 30), "fantasy5": (20, 0), "lottery
 # A "no draw" answer for a draw younger than this is treated as "not posted yet" and retried next run.
 NODRAW_MIN_AGE_HOURS = 24
 FRESH_DAYS = 3        # draws newer than this are always fetched first (within the limits)
-MAX_TRIES = 3         # never ask magayo about the same draw more than this
+MAX_TRIES = 4         # never ask magayo about the same draw more than this (3 evening + 1 morning)
+EVENING_TRIES = 3     # tries before the morning one
+MORNING_AFTER_HOURS = 6  # the last try waits until this long after the draw
+RETRY_GAP_MIN = 40    # minutes between tries of the same draw (runs are 30 min apart; GitHub starts them late)
+CHECK_DAYS = 2        # double-check BBN results from the last 2 days
+CHECK_MAX_TRIES = 2   # magayo "not posted yet" for a check: try once more on a later run
 GAME_CODES = {"boledo": "bz_boledo", "lottery": "bz_jackpot", "fantasy5": "bz_fantasy", "pick3": "bz_pick3"}
 LABELS = {"boledo": "Boledo", "lottery": "Sunday Jackpot", "fantasy5": "Fantasy 5", "pick3": "Pick 3"}
 BELIZE = timezone(timedelta(hours=-6))  # Belize has no daylight saving time
@@ -127,11 +141,10 @@ def draw_moment(game, iso):
     return datetime(y, mo, d, h, m, tzinfo=BELIZE)
 
 
-def missing_draws(draws, now, lookback, ready_hours, wait=None):
-    """Scheduled draws from the last `lookback` days that are old enough to be posted
+def missing_draws(draws, now, lookback, first_try_min):
+    """Scheduled draws from the last `lookback` days that are old enough to be asked for
     and have no entry yet, newest first."""
     by_id = {d["id"]: d for d in draws}
-    wait = wait or {}
     out = []
     for i in range(0, lookback + 1):
         day = now.date() - timedelta(days=i)
@@ -142,7 +155,7 @@ def missing_draws(draws, now, lookback, ready_hours, wait=None):
                 # A Sunday Jackpot draw postponed to Monday: only look if Sunday had no draw.
                 sun = by_id.get(f"lottery-{(day - timedelta(days=1)).isoformat()}")
                 on_schedule = bool(sun and sun.get("nodraw"))
-            if on_schedule and f"{game}-{iso}" not in by_id and draw_moment(game, iso) <= now - timedelta(minutes=max(ready_hours * 60, wait.get(game, 0))):
+            if on_schedule and f"{game}-{iso}" not in by_id and draw_moment(game, iso) <= now - timedelta(minutes=first_try_min):
                 out.append((game, iso))
     return out
 
@@ -194,7 +207,7 @@ def main():
     per_run = env_int("MAX_CALLS_PER_RUN", 10, 0, 1000)
     reset_day = env_int("API_RESET_DAY", 1, 1, 31)
     lookback = env_int("LOOKBACK_DAYS", 14, 1, 60)
-    ready_hours = float(os.environ.get("READY_HOURS") or 3)
+    first_try_min = env_int("FIRST_TRY_MINUTES", 45, 0, 600)
     stop_at = limit - reserve
 
     now = datetime.now(BELIZE)
@@ -220,17 +233,18 @@ def main():
         # in its current period, so carry the count over instead of starting at 0.
         usage["period"] = period
     elif new_period:
-        usage = {"period": period, "calls": 0, "tries": {}, "wait": usage.get("wait", {})}
+        usage = {"period": period, "calls": 0, "tries": {}, "last_try": usage.get("last_try", {})}
     usage["reset_day"] = reset_day
+    usage.pop("wait", None)  # the old "learning" times are no longer used
     tries = usage["tries"]
+    last_try = usage.setdefault("last_try", {})
     oldest = (now.date() - timedelta(days=lookback + 1)).isoformat()
     for k in [k for k in tries if k.split("-", 1)[1] < oldest]:
         del tries[k]  # forget tries for draws outside the window
+    for k in [k for k in last_try if k not in tries]:
+        del last_try[k]
 
-    # How long magayo usually takes to post each game, learned from past tries (minutes).
-    # Too early (not posted yet) -> wait 20 min longer next time; posted on the first try -> 5 min less.
-    wait = usage.setdefault("wait", {})
-    todo = missing_draws(draws, now, lookback, ready_hours, wait)
+    todo = missing_draws(draws, now, lookback, first_try_min)
     calls_before = usage["calls"]
     to_come = draws_still_to_come(now, p_end)
     fresh_after = (now.date() - timedelta(days=FRESH_DAYS)).isoformat()
@@ -255,6 +269,19 @@ def main():
         if tries.get(did, 0) >= MAX_TRIES:
             skipped.append(f"{label} (asked {MAX_TRIES} times with no usable answer; add it by hand)")
             continue
+        n_tried = tries.get(did, 0)
+        prev = last_try.get(did)
+        if n_tried and prev:
+            try:
+                since = (now - datetime.fromisoformat(prev)).total_seconds() / 60
+            except ValueError:
+                since = 999
+            if since < RETRY_GAP_MIN:
+                skipped.append(f"{label} (asked {int(since)} min ago; next try on a later run)")
+                continue
+        if n_tried >= EVENING_TRIES and now - draw_moment(game, date) < timedelta(hours=MORNING_AFTER_HOURS):
+            skipped.append(f"{label} (asked {n_tried} times this evening; last try tomorrow morning)")
+            continue
         if date < fresh_after and left <= to_come:
             skipped.append(f"{label} (older gap: saving calls for the {to_come} draws still to come)")
             continue
@@ -266,6 +293,7 @@ def main():
         usage["calls"] += 1  # every call counts, even failed ones
         run_calls += 1
         tries[did] = tries.get(did, 0) + 1
+        last_try[did] = now.isoformat(timespec="minutes")
         try:
             reply = call_api(key, game, date)
             conn_fail = 0
@@ -286,27 +314,24 @@ def main():
                 skipped.append(f"{label} (API returned a different date: {reply.get('draw')})")
                 continue
             entry = parse_result(game, date, reply.get("results", ""))
-            if entry and tries.get(did, 0) == 1 and now - draw_moment(game, date) < timedelta(hours=6):
-                wait[game] = max(int(ready_hours * 60), wait.get(game, int(ready_hours * 60)) - 5)
             if entry:
                 # when it arrived, so the Admin page can show how long magayo took after the draw
                 entry["source"] = "magayo"
                 entry["added"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
                 draws.append(entry)
                 tries.pop(did, None)
+                last_try.pop(did, None)
                 added.append(f"{label}: {' '.join(entry['nums'])}{' ' + entry['letter'] if entry.get('letter') else ''}")
             else:
                 skipped.append(f"{label} (couldn't read result: {reply.get('results')!r})")
         elif err == 401 and now - draw_moment(game, date) < timedelta(hours=NODRAW_MIN_AGE_HOURS):
-            # Probably just not posted yet: don't mark it, ask again on the next run,
-            # and wait longer for this game from now on.
-            mins = int((now - draw_moment(game, date)).total_seconds() // 60)
-            wait[game] = min(240, max(wait.get(game, 0), mins) + 20)
-            skipped.append(f"{label} (not posted yet, will try again next run)")
+            # Probably just not posted yet: don't mark it, ask again on a later run.
+            skipped.append(f"{label} (not posted yet, will try again later)")
         elif err == 401:  # magayo: no draw on that date
             draws.append({"id": did, "game": game, "date": date, "nums": [], "nodraw": True, "source": "magayo",
                           "added": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
             tries.pop(did, None)
+            last_try.pop(did, None)
             nodraw.append(label)
         elif err in (100, 101, 102, 300):  # key missing, wrong or suspended: stop, nothing else will work
             usage["calls"] -= 1  # magayo can't charge an unrecognised key, so don't count it
@@ -327,6 +352,70 @@ def main():
         else:
             skipped.append(f"{label} (magayo error {err})")
 
+    # ---- Overnight double-check of BBN's results (never changes a result) ----
+    checks_data = None
+    checked = []
+    if not fatal:
+        try:
+            checks_data = load_json(CHECKS_FILE, {"note": "magayo's answer for results that came from BBN. Never used to change the site.", "checks": {}})
+        except DamagedFile as e:
+            report.append(f"Double-check skipped: {e}")
+        if checks_data is not None:
+            chk = checks_data.setdefault("checks", {})
+            oldest_chk = (now.date() - timedelta(days=lookback + 1)).isoformat()
+            for k in [k for k in chk if k.split("-", 1)[1] < oldest_chk]:
+                del chk[k]
+            first_chk = (now.date() - timedelta(days=CHECK_DAYS)).isoformat()
+            for d in sorted(draws, key=lambda x: x["date"], reverse=True):
+                if d.get("source") != "bbn" or d.get("nodraw") or d["date"] < first_chk:
+                    continue
+                c = chk.get(d["id"], {})
+                if c.get("status") in ("match", "differs") or c.get("tries", 0) >= CHECK_MAX_TRIES:
+                    continue
+                if now - draw_moment(d["game"], d["date"]) < timedelta(hours=MORNING_AFTER_HOURS):
+                    continue  # give magayo the night to post it
+                left = stop_at - usage["calls"]
+                if left <= to_come or run_calls >= per_run:
+                    break  # calls are for new draws first
+                usage["calls"] += 1
+                run_calls += 1
+                c = {"tries": c.get("tries", 0) + 1, "checked": now.isoformat(timespec="minutes")}
+                lbl = f"{LABELS[d['game']]} {d['date']}"
+                try:
+                    reply = call_api(key, d["game"], d["date"])
+                    err = int(reply.get("error", -1))
+                except Exception as e:
+                    c["status"] = "error"
+                    chk[d["id"]] = c
+                    checked.append(f"{lbl}: couldn't ask magayo ({type(e).__name__})")
+                    break
+                if err == 0 and reply.get("draw") == d["date"]:
+                    m = parse_result(d["game"], d["date"], reply.get("results", ""))
+                    if m:
+                        same = m["nums"] == d["nums"] and (d["game"] != "fantasy5" or (m.get("letter") or None) == (d.get("letter") or None))
+                        c.update(status="match" if same else "differs", magayo={"nums": m["nums"], "letter": m.get("letter")},
+                                 bbn={"nums": d["nums"], "letter": d.get("letter")})
+                        checked.append(f"{lbl}: {'matches' if same else 'DIFFERS: magayo has ' + ' '.join(m['nums']) + (' ' + m['letter'] if m.get('letter') else '')}")
+                    else:
+                        c["status"] = "unreadable"
+                        checked.append(f"{lbl}: magayo's answer couldn't be read")
+                elif err == 401:
+                    c["status"] = "notyet"
+                    checked.append(f"{lbl}: magayo hasn't posted it yet")
+                elif err == 303:
+                    usage["calls"] = max(usage["calls"], limit)
+                    c["status"] = "error"
+                    chk[d["id"]] = c
+                    checked.append(f"{lbl}: magayo says the monthly limit is reached")
+                    break
+                else:
+                    c["status"] = "error"
+                    checked.append(f"{lbl}: magayo error {err}")
+                chk[d["id"]] = c
+            if checked:
+                checks_data["updated"] = now.isoformat(timespec="minutes")
+                save_json(CHECKS_FILE, checks_data)
+
     if added or nodraw:
         draws.sort(key=lambda d: (d["date"], d["game"]))
         data["updated"] = now.date().isoformat()
@@ -340,6 +429,8 @@ def main():
     if usage["calls"] >= 0.8 * limit:
         report.append(f"WARNING: {usage['calls']} of {limit} calls used. The count resets on {p_end + timedelta(days=1)}.")
     report += ["", "Added:"] + [f"- {a}" for a in added or ["nothing new"]]
+    if checked:
+        report += ["", "Double-checked BBN results:"] + [f"- {c}" for c in checked]
     if nodraw:
         report += ["", "No draw (confirmed by magayo):"] + [f"- {n}" for n in nodraw]
     if skipped:

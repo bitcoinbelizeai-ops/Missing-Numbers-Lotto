@@ -1,8 +1,15 @@
 """Receive one lottery result read from a BBN Belize Facebook post (sent by Make.com).
 
-TEST MODE: results are saved to data/bbn-results.json and compared with draws.json.
-Nothing here changes draws.json. A result reaches the site only when the admin
-adds it from the Admin page.
+MAIN SOURCE since Nov 20, 2026: every result is saved to data/bbn-results.json, and a
+good result for a draw the site doesn't have yet is ADDED to draws.json at once
+(source "bbn"). Safety rules, all must pass:
+- the numbers pass the same checks as the Admin page;
+- the date is a scheduled draw day for that game and no more than PUBLISH_DAYS old;
+- the Facebook post was made after that draw started (no old pictures or promo graphics);
+- the site has nothing for that draw yet: an existing result (or a "no draw" marker)
+  is NEVER changed; a disagreement is only recorded (red warning on the Admin page);
+- manual test runs (Run workflow button) are never published.
+magayo (update_results.py) is the backup and double-checks BBN's results overnight.
 
 Input (from the GitHub job):
   PAYLOAD_JSON  the repository_dispatch client_payload:
@@ -18,8 +25,12 @@ import sys
 RESULTS = "data/bbn-results.json"
 DRAWS = "draws.json"
 LABELS = {"boledo": "Boledo", "lottery": "Sunday Jackpot", "fantasy5": "Fantasy 5", "pick3": "Pick 3"}
-KEEP = 400  # newest entries kept in the test file
+KEEP = 400  # newest entries kept in data/bbn-results.json
 BELIZE = dt.timezone(dt.timedelta(hours=-6))
+PUBLISH_DAYS = 3  # only publish results for draws from today and the last 3 days
+# Draw days (Monday=0 ... Sunday=6) and draw START times, Belize time (same as the app)
+SCHEDULE = {"boledo": ({0, 1, 2, 3, 4}, (21, 0)), "pick3": ({0, 1, 2, 3, 4}, (20, 30)),
+            "fantasy5": ({1, 3, 5}, (20, 0)), "lottery": ({6}, (10, 0))}
 
 
 def load(path, default):
@@ -43,14 +54,7 @@ def as_obj(v):
         v = v.strip()
         if not v:
             return {}
-        try:
-            return json.loads(v)
-        except json.JSONDecodeError:
-            # the model sometimes wraps its answer in ```json fences or a few words: take the {...} part
-            m = re.search(r"\{.*\}", v, re.S)
-            if not m:
-                raise
-            return json.loads(m.group(0))
+        return json.loads(v)
     return v or {}
 
 
@@ -113,6 +117,34 @@ def compare(draw, site):
     return ("match" if same else "differs"), {"nums": have.get("nums"), "letter": have.get("letter")}
 
 
+def publish_problem(draw, post_time, manual, site):
+    """Why this result must NOT be added to the site automatically, or None if it may be."""
+    if manual:
+        return "manual test: not published"
+    day = dt.date.fromisoformat(draw["date"])
+    days, (h, m) = SCHEDULE[draw["game"]]
+    if day.weekday() not in days:
+        return f"{LABELS[draw['game']]} isn't drawn on a {day.strftime('%A')}: not published, check it"
+    today = dt.datetime.now(BELIZE).date()
+    if (today - day).days > PUBLISH_DAYS:
+        return f"older than {PUBLISH_DAYS} days: not published"
+    try:
+        posted = dt.datetime.fromisoformat(post_time.replace("Z", "+00:00"))
+        if posted.tzinfo is None:
+            raise ValueError
+    except (ValueError, AttributeError):
+        return "Facebook post time missing: not published"
+    start = dt.datetime(day.year, day.month, day.day, h, m, tzinfo=BELIZE)
+    if posted < start:
+        return "posted before the draw started (old picture or promo?): not published"
+    have = next((d for d in site if d.get("id") == draw["id"]), None)
+    if have and have.get("nodraw"):
+        return "the site says there was no draw that day: not published, check it"
+    if have:
+        return "the site already has this draw"
+    return None
+
+
 def main():
     payload = as_obj(os.environ.get("PAYLOAD_JSON") or "{}")
     test = os.environ.get("TEST_ANSWER", "").strip()
@@ -126,11 +158,14 @@ def main():
     post_id = str(payload.get("post_id") or "")[:80]
     post_time = str(payload.get("post_time") or "")[:40]
 
+    manual = post_id.startswith("manual-test")
+
     if not ans.get("is_result", True) or ans.get("game") == "none":
         print("Not a result picture. Nothing saved.")
         return 0
 
-    store = load(RESULTS, {"note": "TEST: results read from BBN Belize Facebook posts. Not used by the site.", "results": []})
+    store = load(RESULTS, {"results": []})
+    store["note"] = "Results read from BBN Belize Facebook posts. Good new results are added to the site automatically (main source since Nov 20, 2026)."
     results = store.setdefault("results", [])
     if post_id and any(r.get("post_id") == post_id for r in results):
         print(f"Post {post_id} was already received. Nothing saved.")
@@ -154,21 +189,31 @@ def main():
             entry["detail"] = problem
         else:
             entry["draw"] = draw
-            site = load(DRAWS, {"draws": []}).get("draws", [])
+            site_data = load(DRAWS, {"updated": None, "draws": []})
+            site = site_data.setdefault("draws", [])
             entry["status"], entry["site"] = compare(draw, site)
             if entry["site"] is None:
                 entry.pop("site")
+            why = publish_problem(draw, post_time, manual, site)
+            if why is None:
+                site.append(dict(draw, source="bbn", added=entry["received"]))
+                site.sort(key=lambda d: (d["date"], d["game"]))
+                site_data["updated"] = dt.datetime.now(BELIZE).date().isoformat()
+                save(DRAWS, site_data)
+                entry["published"] = True
+            elif entry["status"] != "match":
+                entry["detail"] = why
 
     results.append(entry)
     store["results"] = results[-KEEP:]
     store["updated"] = entry["received"]
     save(RESULTS, store)
     label = LABELS.get(entry["game"], entry["game"])
-    print(f"Saved: {label} {entry['date']} -> {entry['status']}" + (f" ({entry.get('detail')})" if entry.get("detail") else ""))
+    print(f"Saved: {label} {entry['date']} -> {entry['status']}" + (" -> ADDED TO THE SITE" if entry.get("published") else "") + (f" ({entry.get('detail')})" if entry.get("detail") else ""))
     out = os.environ.get("GITHUB_STEP_SUMMARY")
     if out:
         with open(out, "a", encoding="utf-8") as f:
-            f.write(f"### BBN test result\n\n**{label} {entry['date']}**: {entry['status']}\n\n")
+            f.write(f"### BBN result\n\n**{label} {entry['date']}**: {entry['status']}{' (added to the site)' if entry.get('published') else ''}\n\n")
             if entry.get("draw"):
                 f.write(f"- BBN: {' '.join(entry['draw']['nums'])} {entry['draw'].get('letter', '')}\n")
             if entry.get("site"):
