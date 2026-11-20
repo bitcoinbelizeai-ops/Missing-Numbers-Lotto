@@ -1116,7 +1116,7 @@ function addRecent(last,all,nBig){
     const chips=document.createElement('div');chips.className='p3chips';
     p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);chips.appendChild(t)});
     const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
-    it.append(chips,lab);list.appendChild(it);
+    it.append(cap,chips,lab);list.appendChild(it);   // Pick 3: day name centred over the three balls
   }else{
     const G=GAMES.boledo,L=all.length;
     const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
@@ -1127,7 +1127,7 @@ function addRecent(last,all,nBig){
       const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
       it.append(t,lab);list.appendChild(it)});
   }
-  box.append(cap,list);last.appendChild(box);
+  if(!cap.parentNode)box.append(cap);box.append(list);last.appendChild(box);
   fitRecent(last);
 }
 /* show only as many small balls as fit on the line; Pick 3 drops below the big balls if there's no room */
