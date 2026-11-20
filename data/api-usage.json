@@ -1,21 +1,21 @@
 {
- "calls": 30,
+ "calls": 32,
  "limit_note": "Calls to the magayo API this month (the 2 browser tests on Nov 12 included). The job resets this each month.",
- "updated": "2026-11-19T20:57-06:00",
+ "updated": "2026-11-19T21:36-06:00",
  "period": "2026-11-14",
  "tries": {
   "lottery-2026-11-15": 1,
   "boledo-2026-11-16": 3,
   "boledo-2026-11-17": 2,
   "boledo-2026-11-18": 1,
-  "fantasy5-2026-11-19": 1,
-  "pick3-2026-11-19": 1
+  "fantasy5-2026-11-19": 2,
+  "pick3-2026-11-19": 2
  },
  "reset_day": 14,
  "limit": 100,
  "wait": {
-  "fantasy5": 77,
-  "pick3": 47,
+  "fantasy5": 116,
+  "pick3": 86,
   "boledo": 156
  }
 }
