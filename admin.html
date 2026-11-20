@@ -155,8 +155,8 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
 
   <!-- recent -->
   <section class="panel" id="bbnBox" hidden>
-    <h2>BBN test (Facebook)</h2>
-    <p class="help">Results read from BBN Belize's Facebook posts, compared with the site. This is a test: nothing here changes the site unless you press "Add to site".</p>
+    <h2>BBN (Facebook) · main source</h2>
+    <p class="help">Results read from BBN Belize's Facebook posts. A good result for a draw the site doesn't have yet is <b>added to the site automatically</b> within about a minute. It never replaces a result already on the site: anything that doesn't fit stays here with "Add to site", and disagreements show in red at the top. magayo is the backup and double-checks BBN overnight.</p>
     <div class="bbnsum" id="bbnSum"></div>
     <div class="row"><button class="btn ghost" id="bbnRefresh">Refresh</button></div>
     <div class="list all" id="bbnList"></div>
@@ -452,7 +452,7 @@ async function loadBbn(){
       const siteTxt=e.siteNow?e.siteNow.nums.join(' ')+(e.siteNow.letter?' '+e.siteNow.letter:''):'';
       it.innerHTML='<div class="bbnrow"><span><b>'+esc(lbl)+'</b> · '+(/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')?fmtDay(e.date):esc(e.date||'no date'))+'</span>'+
         '<span>BBN: <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
-        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
+        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.published?' <small>added to the site automatically</small>':'')+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
       if(e.now==='only-bbn'&&e.draw){const b=document.createElement('button');b.textContent='Add to site';
         b.onclick=async()=>{
           if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to add';setTimeout(()=>{b.dataset.sure='';b.textContent='Add to site'},5000);return}
@@ -490,14 +490,17 @@ function speedChips(live,site){
    Waiting rule = the app's rule: a scheduled draw in the last 14 days, 30 min after its draw time, with nothing on the site. */
 const BASE_TITLE='Results Admin';
 const WAIT_DAYS=14,RESULT_LAG=30,LATE_MIN=60;         // red once a result is more than 1 hour late
-const MAGAYO_MAX_TRIES=3,MAGAYO_READY=15,CALLS_LOW=10; // same as scripts/update_results.py; red at 10 calls left or fewer
-const BBN_LATE_MIN=180,BBN_TEST_FROM='2026-11-17';     // "BBN sent nothing" after 3 hours, only for draws since the test began
+// magayo is the BACKUP since Nov 20, 2026 (BBN adds results automatically). Same rules as scripts/update_results.py:
+const MAGAYO_FIRST=45,MAGAYO_GAP=40,MAGAYO_EVENING=3,MAGAYO_MAX_TRIES=4,MAGAYO_MORNING_H=6,CALLS_LOW=10; // red at 10 calls left or fewer
+const BBN_USUAL_MIN=45; // BBN normally posts within minutes; before this, a waiting draw just says "waiting for BBN"
+const BBN_LATE_MIN=180,BBN_TEST_FROM='2026-11-17';     // "BBN sent nothing" after 3 hours, only for draws since the BBN feed began (Nov 17, 2026)
 const KEY_RED_DAYS=14,KEY_GOLD_DAYS=30;
 const OTHER_KEYS=[{name:'Make.com GitHub key "Make BBN test"',exp:'2027-02-15',fix:'make a new one and paste it into Make\'s HTTP module (Authorization header)'}];
 // when the magayo job runs (UTC minute, hour, weekdays): copied from .github/workflows/update-results.yml
-const CRONS=[[20,2,[0,3,5]],[50,2,[2,3,4,5,6]],[30,3,[2,3,4,5,6]],[25,4,[0,2,3,4,5,6]],[0,17,[0]],[45,17,[0,1]],[23,20,[0,1]],[23,12,[0,2,3,4,5,6]]];
+const EVE=[0,2,3,4,5,6],ALL=[0,1,2,3,4,5,6];
+const CRONS=[[45,2,EVE],[15,3,EVE],[45,3,EVE],[15,4,EVE],[45,4,EVE],[15,5,EVE],[45,5,EVE],[15,17,[0]],[15,18,[0]],[45,17,[1]],[23,20,[0,1]],[23,12,ALL]];
 const EXP_KEY='bz-admin-key-exp';
-let usageFailed=false,usage=null,bbnData=null,runs=null,runsAt=0,loadErr='',attnTimer=0,headerExp='',sideErr='';
+let checks=null,usageFailed=false,usage=null,bbnData=null,runs=null,runsAt=0,loadErr='',attnTimer=0,headerExp='',sideErr='';
 
 const getExp=()=>{try{return localStorage.getItem(EXP_KEY)||''}catch(e){return ''}};
 const setExp=v=>{try{v?localStorage.setItem(EXP_KEY,v):localStorage.removeItem(EXP_KEY)}catch(e){}};
@@ -520,14 +523,17 @@ function waitingDraws(){
       out.push(Object.assign({id,game:g,date:iso,mins},magayoInfo(g,iso,id,start,now),{bbn:bbnFor(id)}))})}
   return out.sort((a,b)=>b.mins-a.mins)}
 function magayoInfo(g,iso,id,start,now){
-  const tries=(usage&&usage.tries&&usage.tries[id])||0,wait=Math.max(MAGAYO_READY,(usage&&usage.wait&&usage.wait[g])||0);
-  if(!usage)return{tries,mag:usageFailed?'magayo status unknown (couldn\'t read data/api-usage.json)':'Checking magayo…'};
+  const tries=(usage&&usage.tries&&usage.tries[id])||0,last=usage&&usage.last_try&&Date.parse(usage.last_try[id]||'');
+  const bbnTxt=now-start<BBN_USUAL_MIN*60000?'Waiting for BBN (usually posts within minutes). ':'BBN hasn\'t sent it. ';
+  if(!usage)return{tries,mag:bbnTxt+(usageFailed?'magayo status unknown (couldn\'t read data/api-usage.json)':'Checking magayo…')};
   if(iso<addDays(bz().iso,-13))return{tries,mag:'Too old for the automatic job: add it by hand.',gaveUp:true};
-  if(tries>=MAGAYO_MAX_TRIES)return{tries,gaveUp:true,mag:'magayo asked '+tries+' times with no answer. The job has stopped trying: add it by hand.'};
-  const ready=start+wait*60000,next=nextCron(Math.max(now,ready));
-  const nextTxt=next?'next automatic check about '+bzClock(next):'no automatic check scheduled';
-  if(now<ready)return{tries,mag:'magayo is asked from about '+bzClock(ready)+' (it usually needs '+ago(wait)+') · '+nextTxt};
-  return{tries,mag:(tries?'magayo asked '+tries+' time'+(tries===1?'':'s')+', not posted yet':'magayo not asked yet')+' · '+nextTxt};
+  if(tries>=MAGAYO_MAX_TRIES)return{tries,gaveUp:true,mag:bbnTxt+'magayo (backup) asked '+tries+' times with no answer. The job has stopped trying: add it by hand.'};
+  let ready=start+MAGAYO_FIRST*60000;
+  if(tries>=MAGAYO_EVENING)ready=start+MAGAYO_MORNING_H*3600e3;
+  else if(tries&&last)ready=last+MAGAYO_GAP*60000;
+  const next=nextCron(Math.max(now,ready)-1);
+  const nextTxt=next?'magayo (backup) next try about '+bzClock(next):'no automatic magayo try scheduled';
+  return{tries,mag:bbnTxt+(tries?'magayo asked '+tries+' time'+(tries===1?'':'s')+', not posted yet · ':'')+nextTxt};
 }
 function bbnFor(id){if(!bbnData)return null;const r=(bbnData.results||[]).filter(e=>e.draw&&e.draw.id===id);return r.length?r[r.length-1]:null}
 const numTxt=d=>d.nums.join(' ')+(d.letter?' '+d.letter:'');
@@ -565,7 +571,7 @@ function otherWarnings(){
   // GitHub jobs: the newest run of each job
   if(runs){const seen={};runs.forEach(r=>{if(seen[r.name]||r.status!=='completed')return;seen[r.name]=1;
     if(['failure','timed_out','startup_failure'].includes(r.conclusion)){
-      const nice={'Update Belize results':'magayo results job','pages build and deployment':'Website update (GitHub Pages)','Receive BBN result (test)':'BBN receiving job'}[r.name]||r.name;
+      const nice={'Update Belize results':'magayo backup job','pages build and deployment':'Website update (GitHub Pages)','Receive BBN result (test)':'BBN receiving job','Receive BBN result':'BBN receiving job (main source)'}[r.name]||r.name;
       out.push([true,nice+' failed',bzClock(Date.parse(r.created_at))+'. Open GitHub → Actions to see why'+(r.name==='pages build and deployment'?'. Until it works, phones don\'t get new results.':'.')])}})}
   // magayo calls left this month
   if(usage&&usage.limit){const left=usage.limit-(usage.calls||0);
@@ -574,7 +580,13 @@ function otherWarnings(){
   const keys=[];const mine=headerExp||getExp();if(mine)keys.push({name:'This page\'s GitHub key ("Results admin")',exp:mine,fix:'make a new one on GitHub (same steps as when you connected), then Disconnect and connect with the new key'});
   keys.concat(OTHER_KEYS).forEach(k=>{const days=Math.round((Date.parse(k.exp+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);
     if(days<=KEY_GOLD_DAYS)out.push([days<=KEY_RED_DAYS,k.name+(days<0?' has EXPIRED':days===0?' expires TODAY':' expires in '+days+' day'+(days===1?'':'s')),'Expiry '+fmtDay(k.exp)+': '+k.fix+'.'])});
-  // BBN test: disagreements, bad reads, and draws BBN never sent
+  // magayo's overnight double-check of BBN results (never changes the site)
+  if(checks&&checks.checks&&current){const site=new Map((current.data.draws||[]).map(d=>[d.id,d])),from=addDays(today,-WAIT_DAYS);
+    Object.entries(checks.checks).forEach(([id,c])=>{if(c.status!=='differs')return;const [g,...r]=id.split('-'),iso=r.join('-');if(iso<from)return;
+      const s=site.get(id);const m=c.magayo||{};const mt=(m.nums||[]).join(' ')+(m.letter?' '+m.letter:'');
+      if(s&&!s.nodraw&&mt&&numTxt(s)===mt)return; // already fixed on the site
+      out.push([true,'magayo disagrees with BBN: '+(LABEL[g]||g)+' '+fmtDay(iso),'The site shows '+(s&&!s.nodraw?numTxt(s):'?')+' (from BBN), magayo has '+mt+'. Check which is right; fix it with "Post a result" if the site is wrong.'])})}
+  // BBN: disagreements, bad reads, and draws BBN never sent
   if(bbnData&&current){const site=new Map((current.data.draws||[]).map(d=>[d.id,d])),from=addDays(today,-WAIT_DAYS),recent=addDays(today,-3);
     (bbnData.results||[]).forEach(e=>{
       if(e.draw&&e.draw.date>=from){const s=site.get(e.draw.id);if(s&&!s.nodraw&&numTxt(s)!==numTxt(e.draw))
@@ -617,6 +629,7 @@ async function refreshAttention(first){
     first?null:load().then(()=>{loadErr=''}).catch(e=>{loadErr=e.message}),
     ghJson('data/api-usage.json').then(j=>{usage=j;usageFailed=!j}).catch(e=>{usageFailed=true;errs.push(e.message)}),
     ghJson('data/bbn-results.json').then(j=>{bbnData=j}).catch(e=>errs.push(e.message)),
+    ghJson('data/magayo-checks.json').then(j=>{checks=j}).catch(e=>errs.push(e.message)),
     Date.now()-runsAt>10*60000?loadRuns().catch(e=>errs.push(e.message)):null]);
   sideErr=errs.length?'Couldn\'t read: '+errs.join(', ')+'.':'';
   if(first&&current)loadErr='';
