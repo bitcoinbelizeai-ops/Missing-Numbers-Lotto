@@ -101,6 +101,11 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
 .item .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}
 .item .btns button.go{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#2a1d00;border:0;font-weight:700}
 .item.red .btns button.go{background:#ff7a7a;color:#2a0505}
+.hol-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hol-form label{font-size:14.5px}
+.hol-form .wide{grid-column:1/-1}
+.item.hol .stack span:first-child b{color:var(--gold)}
+.item.past{opacity:.6}
 .attn .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 @media (max-width:420px){.attn .item.red,.attn .item.gold{flex-direction:column;align-items:stretch}.attn .item .btns{justify-content:flex-start}}
 
@@ -167,6 +172,21 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
     <h2>Last 7 days on the site</h2>
     <div class="list" id="recent"></div>
     <p class="help">Results posted here reach phones within about 1 to 10 minutes (GitHub keeps the file cached for up to 10 minutes). The automatic job skips any draw already posted, so it saves a magayo call.</p>
+  </section>
+
+  <section class="panel" id="holBox" hidden>
+    <h2>Public holidays</h2>
+    <p class="help">No Boledo, Pick 3 or Fantasy 5 draw on these days. Members see the greeting in the app ("No draw today · Happy Independence Day! 🇧🇿"), and the results jobs save "no draw" automatically. Use the dates the government <b>observes</b> (some holidays move to a Monday). The yearly list is on <a href="https://www.pressoffice.gov.bz/" target="_blank" rel="noopener">pressoffice.gov.bz</a>.</p>
+    <div class="list" id="holList"></div>
+    <hr class="sep">
+    <h2 id="holFormTitle">Add a holiday</h2>
+    <div class="hol-form">
+      <label>Date<input type="date" id="holDate"></label>
+      <label>Name<input id="holName" maxlength="60" placeholder="Garifuna Settlement Day"></label>
+      <label class="wide">Greeting members see<input id="holGreet" maxlength="80" placeholder="Happy Garifuna Settlement Day! 🪘"></label>
+    </div>
+    <div class="row"><button class="btn" id="holSave">Add holiday</button><button class="btn ghost" id="holCancel" hidden>Cancel</button></div>
+    <div class="msg" id="holMsg"></div>
   </section>
 
   <section class="panel" id="allBox" hidden>
@@ -272,7 +292,7 @@ function showAll(){
   if(!rows.length){box.innerHTML='<p class="help">No '+LABEL[game]+' results on the site yet.</p>';return}
   rows.forEach(d=>{const it=document.createElement('div');it.className='item'+(d.nodraw?' skip':'');
     const yr=d.date.slice(0,4)!==bz().iso.slice(0,4)?' '+d.date.slice(0,4):'';
-    const nums=d.nodraw?'no draw (skipped)':d.nums.join(' ')+(d.letter?' '+d.letter:'');
+    const nums=d.nodraw?'no draw'+(d.holiday?' · '+esc(d.holiday):' (skipped)'):d.nums.join(' ')+(d.letter?' '+d.letter:'');
     it.innerHTML='<span>'+fmtDay(d.date)+yr+' · <b>'+nums+'</b>'+(d.source==='admin'?' <small>(you)</small>':'')+'</span>';
     const b=document.createElement('button');b.textContent='Remove';b.setAttribute('aria-label','Remove '+LABEL[d.game]+' '+d.date);b.onclick=()=>removeEntry(d);it.appendChild(b);
     box.appendChild(it)});
@@ -286,7 +306,7 @@ function showRecent(){
   waits.forEach(w=>box.appendChild(waitRow(w,true)));
   if(!rows.length&&!waits.length){box.innerHTML='<p class="help">Nothing in the last 7 days.</p>';return}
   rows.forEach(d=>{const it=document.createElement('div');it.className='item';
-    const nums=d.nodraw?'no draw':d.nums.join(' ')+(d.letter?' '+d.letter:'');
+    const nums=d.nodraw?'no draw'+(d.holiday?' · '+esc(d.holiday):''):d.nums.join(' ')+(d.letter?' '+d.letter:'');
     it.innerHTML='<span><b>'+LABEL[d.game]+'</b> · '+fmtDay(d.date)+' · '+nums+(d.source==='admin'?' <small>(you)</small>':'')+'</span>';
     if(d.source==='admin'){const b=document.createElement('button');b.textContent='Remove';b.onclick=()=>removeEntry(d);it.appendChild(b)}
     box.appendChild(it)});
@@ -311,7 +331,8 @@ function review(){
   pending=Object.assign({id,game,date},o,{source:'admin',added:new Date().toISOString().slice(0,19)+'Z'});
   $('confirmText').innerHTML='<b>'+LABEL[game]+'</b> · '+fmtDay(date)+'<br><span style="font-size:22px;font-weight:700;color:#fff">'+o.nums.join(' ')+(o.letter?' '+o.letter:'')+'</span>'+
     (exists&&!exists.nodraw?'<br><small style="color:#ffd27a">This replaces the result already on the site: '+exists.nums.join(' ')+(exists.letter?' '+exists.letter:'')+'</small>':'')+
-    (notDay?'<br><small style="color:#ffd27a">'+LABEL[game]+' isn\'t normally drawn on that day.</small>':'');
+    (notDay?'<br><small style="color:#ffd27a">'+LABEL[game]+' isn\'t normally drawn on that day.</small>':'')+
+    (holidayOn(game,date)?'<br><small style="color:#ffd27a">That day is a public holiday ('+esc(holidayOn(game,date).name)+'): normally no draw.</small>':'');
   $('publish').textContent='Publish to everyone';$('publish').onclick=doPublish;$('cancel').onclick=()=>$('confirm').classList.remove('show');
   $('confirm').classList.add('show');
 }
@@ -500,8 +521,10 @@ const OTHER_KEYS=[{name:'Make.com GitHub key "Make BBN test"',exp:'2027-02-15',f
 const EVE=[0,2,3,4,5,6],ALL=[0,1,2,3,4,5,6];
 const CRONS=[[45,2,EVE],[15,3,EVE],[45,3,EVE],[15,4,EVE],[45,4,EVE],[15,5,EVE],[45,5,EVE],[15,17,[0]],[15,18,[0]],[45,17,[1]],[23,20,[0,1]],[23,12,ALL]];
 const EXP_KEY='bz-admin-key-exp';
-let checks=null,usageFailed=false,usage=null,bbnData=null,runs=null,runsAt=0,loadErr='',attnTimer=0,headerExp='',sideErr='';
+let holidays=null,checks=null,usageFailed=false,usage=null,bbnData=null,runs=null,runsAt=0,loadErr='',attnTimer=0,headerExp='',sideErr='';
 
+const HOLIDAY_GAMES=['boledo','pick3','fantasy5'];
+const holidayOn=(g,iso)=>(HOLIDAY_GAMES.includes(g)&&holidays&&holidays.days&&holidays.days[iso])||null;
 const getExp=()=>{try{return localStorage.getItem(EXP_KEY)||''}catch(e){return ''}};
 const setExp=v=>{try{v?localStorage.setItem(EXP_KEY,v):localStorage.removeItem(EXP_KEY)}catch(e){}};
 function noteExpiry(r){try{const h=r.headers.get('github-authentication-token-expiration');if(h){const d=new Date(h.replace(' ','T').replace(/ ([+-]\d\d)(\d\d)$/,'$1:$2'));if(!isNaN(d))headerExp=d.toISOString().slice(0,10)}}catch(e){}}
@@ -518,7 +541,7 @@ function nextCron(after){let best=null;const base=new Date(after);
 function waitingDraws(){
   if(!current)return[];const have=new Set((current.data.draws||[]).map(d=>d.id)),now=Date.now(),today=bz().iso,out=[];
   for(let i=0;i<WAIT_DAYS;i++){const iso=addDays(today,-i);
-    Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso)))return;const id=g+'-'+iso;if(have.has(id))return;
+    Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;if(have.has(id))return;
       const start=drawStart(g,iso),mins=Math.floor((now-start)/60000);if(mins<RESULT_LAG)return;
       out.push(Object.assign({id,game:g,date:iso,mins},magayoInfo(g,iso,id,start,now),{bbn:bbnFor(id)}))})}
   return out.sort((a,b)=>b.mins-a.mins)}
@@ -580,6 +603,10 @@ function otherWarnings(){
   const keys=[];const mine=headerExp||getExp();if(mine)keys.push({name:'This page\'s GitHub key ("Results admin")',exp:mine,fix:'make a new one on GitHub (same steps as when you connected), then Disconnect and connect with the new key'});
   keys.concat(OTHER_KEYS).forEach(k=>{const days=Math.round((Date.parse(k.exp+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);
     if(days<=KEY_GOLD_DAYS)out.push([days<=KEY_RED_DAYS,k.name+(days<0?' has EXPIRED':days===0?' expires TODAY':' expires in '+days+' day'+(days===1?'':'s')),'Expiry '+fmtDay(k.exp)+': '+k.fix+'.'])});
+  // next year's public holidays (the government publishes them around October/November)
+  if(holidays&&holidays.days){const y=Number(today.slice(0,4)),m=Number(today.slice(5,7));
+    if(m>=10&&!Object.keys(holidays.days).some(k=>k.startsWith((y+1)+'-')))
+      out.push([false,'Add the '+(y+1)+' public holidays','No '+(y+1)+' holidays are in the list yet. When the government publishes them (Belize Press Office, usually October or November), add them in the "Public holidays" box, or ask Claude to load them.'])}
   // magayo's overnight double-check of BBN results (never changes the site)
   if(checks&&checks.checks&&current){const site=new Map((current.data.draws||[]).map(d=>[d.id,d])),from=addDays(today,-WAIT_DAYS);
     Object.entries(checks.checks).forEach(([id,c])=>{if(c.status!=='differs')return;const [g,...r]=id.split('-'),iso=r.join('-');if(iso<from)return;
@@ -594,7 +621,7 @@ function otherWarnings(){
       else if(!e.draw&&(e.status==='unreadable'||e.status==='invalid')&&(e.received||'').slice(0,10)>=recent)
         out.push([false,'BBN picture '+(e.status==='unreadable'?'unclear':'read wrongly')+(e.date?': '+(LABEL[e.game]||e.game||'')+' '+e.date:''),'See the BBN test box below.'])});
     const missing=[];for(let i=0;i<3;i++){const iso=addDays(today,-i);if(iso<BBN_TEST_FROM)continue;
-      Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso)))return;const id=g+'-'+iso;const s=site.get(id);if(s&&s.nodraw)return;
+      Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;const s=site.get(id);if(s&&s.nodraw)return;
         if(now-drawStart(g,iso)>=BBN_LATE_MIN*60000&&!(bbnData.results||[]).some(e=>e.draw&&e.draw.id===id))missing.push(LABEL[g]+' '+fmtDay(iso))})}
     if(missing.length)out.push([false,'BBN sent nothing for '+missing.length+' draw'+(missing.length===1?'':'s'),missing.join(', ')+'. Check Make.com → "BBN results test" → History (and whether BBN posted them on Facebook).'])}
   return out}
@@ -630,6 +657,7 @@ async function refreshAttention(first){
     ghJson('data/api-usage.json').then(j=>{usage=j;usageFailed=!j}).catch(e=>{usageFailed=true;errs.push(e.message)}),
     ghJson('data/bbn-results.json').then(j=>{bbnData=j}).catch(e=>errs.push(e.message)),
     ghJson('data/magayo-checks.json').then(j=>{checks=j}).catch(e=>errs.push(e.message)),
+    ghJson('data/holidays.json').then(j=>{holidays=j||{days:{}};showHolidays()}).catch(e=>errs.push(e.message)),
     Date.now()-runsAt>10*60000?loadRuns().catch(e=>errs.push(e.message)):null]);
   sideErr=errs.length?'Couldn\'t read: '+errs.join(', ')+'.':'';
   if(first&&current)loadErr='';
@@ -641,10 +669,59 @@ $('attnRefresh').onclick=()=>{runsAt=0;$('attnWhen').textContent='Checking…';r
 $('keyExp').onchange=()=>{setExp($('keyExp').value);renderAttention()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&token)refreshAttention(false)});
 
+/* ---------- Public holidays box: data/holidays.json ---------- */
+const HOL_PATH='data/holidays.json';let holEdit=null;
+function showHolidays(){
+  const box=$('holList');if(!box||!holidays)return;box.innerHTML='';
+  const today=bz().iso,from=addDays(today,-30);
+  const keys=Object.keys(holidays.days||{}).filter(k=>k>=from).sort();
+  if(!keys.length){box.innerHTML='<p class="help">No holidays in the list from the last 30 days on.</p>';return}
+  keys.forEach(k=>{const h=holidays.days[k]||{};const it=document.createElement('div');it.className='item hol'+(k<today?' past':'');
+    const games=HOLIDAY_GAMES.filter(g=>SCHED[g].days.includes(dowOf(k))).map(g=>LABEL[g]);
+    it.innerHTML='<div class="stack"><span><b>'+fmtDay(k)+(k.slice(0,4)!==today.slice(0,4)?' '+k.slice(0,4):'')+'</b> · '+esc(h.name||'')+'</span>'+
+      '<span class="why">'+esc(h.greeting||'')+'</span><small>'+(games.length?'No '+games.join(', ')+' draw':'No weekday game is drawn that day anyway')+'</small></div>';
+    const btns=document.createElement('div');btns.className='btns';
+    const ed=document.createElement('button');ed.textContent='Edit';ed.onclick=()=>{holEdit=k;$('holDate').value=k;$('holName').value=h.name||'';$('holGreet').value=h.greeting||'';
+      $('holFormTitle').textContent='Edit holiday';$('holSave').textContent='Save changes';$('holCancel').hidden=false;$('holDate').scrollIntoView({behavior:'smooth',block:'center'})};
+    btns.appendChild(ed);
+    btns.appendChild(tapTwice('Remove','Tap again to remove',async()=>{await holCommit(d=>{delete d.days[k]},'Admin: remove holiday '+k);msg($('holMsg'),'Removed '+fmtDay(k)+'.','ok')}));
+    it.appendChild(btns);box.appendChild(it)});
+}
+async function holCommit(change,message){
+  for(let attempt=0;attempt<3;attempt++){
+    const url=API.replace(/draws\.json$/,HOL_PATH);
+    const r=await fetch(url+'?ref='+BRANCH+'&t='+Date.now(),{cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'}});
+    let sha,data;
+    if(r.status===404){data={note:'Belize public and bank holidays (observed dates). No Boledo, Pick 3 or Fantasy 5 draw on these days.',games:HOLIDAY_GAMES.slice(),days:{}}}
+    else if(!r.ok)throw new Error('Could not read '+HOL_PATH+' ('+r.status+')');
+    else{const j=await r.json();sha=j.sha;data=JSON.parse(b64dec(j.content));data.days=data.days||{}}
+    change(data);const sorted={};Object.keys(data.days).sort().forEach(k=>sorted[k]=data.days[k]);data.days=sorted;data.updated=bz().iso;
+    const w=await fetch(url,{method:'PUT',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},
+      body:JSON.stringify(Object.assign({message,content:b64enc(JSON.stringify(data,null,1)+'\n'),branch:BRANCH},sha?{sha}:{}))});
+    if(w.ok){holidays=data;showHolidays();renderAttention();return}
+    if(w.status!==409&&w.status!==422||attempt===2)throw new Error(w.status===403||w.status===404?'The key can\'t save '+HOL_PATH+'. Check it has Contents: Read and write.':'GitHub error '+w.status);
+  }
+}
+function holReset(){holEdit=null;$('holDate').value='';$('holName').value='';$('holGreet').value='';$('holFormTitle').textContent='Add a holiday';$('holSave').textContent='Add holiday';$('holCancel').hidden=true}
+$('holName').addEventListener('input',()=>{if(!holEdit&&!$('holGreet').dataset.touched)$('holGreet').value=$('holName').value.trim()?'Happy '+$('holName').value.trim()+'! 🎉':''});
+$('holGreet').addEventListener('input',()=>{$('holGreet').dataset.touched='1'});
+$('holCancel').onclick=()=>{holReset();$('holMsg').className='msg'};
+$('holSave').onclick=async()=>{
+  const k=$('holDate').value,name=$('holName').value.trim(),greet=$('holGreet').value.trim()||('Happy '+name+'!');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(k)){msg($('holMsg'),'Pick the date.','err');return}
+  if(!name){msg($('holMsg'),'Type the holiday name.','err');return}
+  $('holSave').disabled=true;
+  try{msg($('holMsg'),'Saving…');const old=holEdit;
+    await holCommit(d=>{if(old&&old!==k)delete d.days[old];d.days[k]={name,greeting:greet}},(old?'Admin: edit holiday ':'Admin: add holiday ')+k+' '+name);
+    msg($('holMsg'),(old?'Saved ':'Added ')+fmtDay(k)+': '+name+'. Phones pick it up within about 10 minutes.','ok');holReset();delete $('holGreet').dataset.touched}
+  catch(e){msg($('holMsg'),'Not saved: '+e.message,'err')}
+  finally{$('holSave').disabled=false}
+};
+
 async function start(){
   token=getTok();
-  if(!token){$('attnBox').hidden=true;document.title=BASE_TITLE;$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=true;return}
-  $('connect').hidden=true;$('attnBox').hidden=$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=false;loadBbn();setGame(game);
+  if(!token){$('attnBox').hidden=true;$('holBox').hidden=true;document.title=BASE_TITLE;$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=true;return}
+  $('connect').hidden=true;$('holBox').hidden=$('attnBox').hidden=$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=false;loadBbn();setGame(game);
   $('keyExp').value=getExp();
   try{await load();loadErr=''}catch(e){loadErr=e.message;renderAttention();msg($('msg'),e.message,'err')}
   refreshAttention(true);
