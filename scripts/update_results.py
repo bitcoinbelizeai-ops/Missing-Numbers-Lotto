@@ -54,6 +54,16 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DRAWS_FILE = os.path.join(ROOT, "draws.json")
 USAGE_FILE = os.path.join(ROOT, "data", "api-usage.json")
 CHECKS_FILE = os.path.join(ROOT, "data", "magayo-checks.json")
+HOLIDAYS_FILE = os.path.join(ROOT, "data", "holidays.json")
+# Public holidays: no Boledo, Pick 3 or Fantasy 5 draw (Lotteries Control Regulations; the game operator).
+# magayo is never asked about them, and once the draw time has passed a "no draw" marker is saved
+# (source "holiday") so the app and the Admin page stop waiting for a result.
+HOLIDAY_GAMES = ("boledo", "pick3", "fantasy5")
+HOLIDAYS = {}  # filled from data/holidays.json in main(): {"2026-11-19": {"name": ..., "greeting": ...}}
+
+
+def holiday(game, iso):
+    return HOLIDAYS.get(iso) if game in HOLIDAY_GAMES else None
 API_URL = "https://www.magayo.com/api/results.php"
 
 # Draw days (Monday=0 ... Sunday=6) and draw times, Belize time.
@@ -129,7 +139,7 @@ def draws_still_to_come(now, period_end):
     n, day = 0, now.date()
     while day <= period_end:
         for game, days in SCHEDULE.items():
-            if day.weekday() in days and draw_moment(game, day.isoformat()) > now:
+            if day.weekday() in days and draw_moment(game, day.isoformat()) > now and not holiday(game, day.isoformat()):
                 n += 1
         day += timedelta(days=1)
     return n
@@ -155,8 +165,22 @@ def missing_draws(draws, now, lookback, first_try_min):
                 # A Sunday Jackpot draw postponed to Monday: only look if Sunday had no draw.
                 sun = by_id.get(f"lottery-{(day - timedelta(days=1)).isoformat()}")
                 on_schedule = bool(sun and sun.get("nodraw"))
-            if on_schedule and f"{game}-{iso}" not in by_id and draw_moment(game, iso) <= now - timedelta(minutes=first_try_min):
+            if on_schedule and not holiday(game, iso) and f"{game}-{iso}" not in by_id and draw_moment(game, iso) <= now - timedelta(minutes=first_try_min):
                 out.append((game, iso))
+    return out
+
+
+def holiday_markers(draws, now, lookback):
+    """Scheduled draws on a public holiday, draw time passed, nothing saved yet: (game, iso, name)."""
+    by_id = {d["id"] for d in draws}
+    out = []
+    for i in range(0, lookback + 1):
+        day = now.date() - timedelta(days=i)
+        iso = day.isoformat()
+        for game in HOLIDAY_GAMES:
+            h = holiday(game, iso)
+            if h and day.weekday() in SCHEDULE[game] and f"{game}-{iso}" not in by_id and draw_moment(game, iso) <= now:
+                out.append((game, iso, str(h.get("name") or "public holiday")[:60]))
     return out
 
 
@@ -221,6 +245,11 @@ def main():
         print(f"STOPPED before any API call: {e}. Fix or restore the file, then run again.")
         return 2
     draws = data.setdefault("draws", [])
+    try:
+        hol = load_json(HOLIDAYS_FILE, {}) or {}
+        HOLIDAYS.update({k: v for k, v in (hol.get("days") or {}).items() if isinstance(v, dict)})
+    except DamagedFile as e:
+        print(f"Note: {e}. Public holidays are ignored this run.")
     if usage is None:
         usage = {"period": period, "calls": 0}
     if "period" not in usage and "month" in usage:  # older file format: calendar months
@@ -243,6 +272,15 @@ def main():
         del tries[k]  # forget tries for draws outside the window
     for k in [k for k in last_try if k not in tries]:
         del last_try[k]
+
+    # Public holidays first: save "no draw" markers (no magayo call needed)
+    holidays_marked = []
+    for game, iso, name in holiday_markers(draws, now, lookback):
+        draws.append({"id": f"{game}-{iso}", "game": game, "date": iso, "nums": [], "nodraw": True, "source": "holiday",
+                      "holiday": name, "added": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
+        tries.pop(f"{game}-{iso}", None)
+        last_try.pop(f"{game}-{iso}", None)
+        holidays_marked.append(f"{LABELS[game]} {iso} ({name})")
 
     todo = missing_draws(draws, now, lookback, first_try_min)
     calls_before = usage["calls"]
@@ -416,7 +454,7 @@ def main():
                 checks_data["updated"] = now.isoformat(timespec="minutes")
                 save_json(CHECKS_FILE, checks_data)
 
-    if added or nodraw:
+    if added or nodraw or holidays_marked:
         draws.sort(key=lambda d: (d["date"], d["game"]))
         data["updated"] = now.date().isoformat()
         save_json(DRAWS_FILE, data)
@@ -429,6 +467,8 @@ def main():
     if usage["calls"] >= 0.8 * limit:
         report.append(f"WARNING: {usage['calls']} of {limit} calls used. The count resets on {p_end + timedelta(days=1)}.")
     report += ["", "Added:"] + [f"- {a}" for a in added or ["nothing new"]]
+    if holidays_marked:
+        report += ["", "No draw (public holiday):"] + [f"- {h}" for h in holidays_marked]
     if checked:
         report += ["", "Double-checked BBN results:"] + [f"- {c}" for c in checked]
     if nodraw:

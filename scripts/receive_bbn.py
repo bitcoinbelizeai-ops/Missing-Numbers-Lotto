@@ -28,6 +28,8 @@ LABELS = {"boledo": "Boledo", "lottery": "Sunday Jackpot", "fantasy5": "Fantasy 
 KEEP = 400  # newest entries kept in data/bbn-results.json
 BELIZE = dt.timezone(dt.timedelta(hours=-6))
 PUBLISH_DAYS = 3  # only publish results for draws from today and the last 3 days
+HOLIDAYS_FILE = "data/holidays.json"
+HOLIDAY_GAMES = ("boledo", "pick3", "fantasy5")  # no draw on public holidays
 # Draw days (Monday=0 ... Sunday=6) and draw START times, Belize time (same as the app)
 SCHEDULE = {"boledo": ({0, 1, 2, 3, 4}, (21, 0)), "pick3": ({0, 1, 2, 3, 4}, (20, 30)),
             "fantasy5": ({1, 3, 5}, (20, 0)), "lottery": ({6}, (10, 0))}
@@ -134,6 +136,10 @@ def publish_problem(draw, post_time, manual, site):
             raise ValueError
     except (ValueError, AttributeError):
         return "Facebook post time missing: not published"
+    hol = (load(HOLIDAYS_FILE, {}) or {}).get("days") or {}
+    if draw["game"] in HOLIDAY_GAMES and draw["date"] in hol:
+        name = (hol[draw["date"]] or {}).get("name", "public holiday")
+        return f"that day was a public holiday ({name}), so there's normally no draw: not published, check it"
     start = dt.datetime(day.year, day.month, day.day, h, m, tzinfo=BELIZE)
     if posted < start:
         return "posted before the draw started (old picture or promo?): not published"
