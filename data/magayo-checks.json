@@ -1,0 +1,23 @@
+{
+ "note": "magayo's answer for results that came from BBN. Never used to change the site.",
+ "checks": {
+  "boledo-2026-11-18": {
+   "tries": 1,
+   "checked": "2026-11-20T06:31-06:00",
+   "status": "match",
+   "magayo": {
+    "nums": [
+     "63"
+    ],
+    "letter": null
+   },
+   "bbn": {
+    "nums": [
+     "63"
+    ],
+    "letter": null
+   }
+  }
+ },
+ "updated": "2026-11-20T06:31-06:00"
+}

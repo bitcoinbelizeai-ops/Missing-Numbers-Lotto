@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-19",
+ "updated": "2026-11-20",
  "source": "magayo.com",
  "draws": [
   {
@@ -1647,6 +1647,36 @@
    ],
    "source": "magayo",
    "added": "2026-11-19T03:38:38Z"
+  },
+  {
+   "id": "boledo-2026-11-19",
+   "game": "boledo",
+   "date": "2026-11-19",
+   "nums": [],
+   "nodraw": true,
+   "source": "holiday",
+   "holiday": "Garifuna Settlement Day",
+   "added": "2026-11-20T12:31:09Z"
+  },
+  {
+   "id": "fantasy5-2026-11-19",
+   "game": "fantasy5",
+   "date": "2026-11-19",
+   "nums": [],
+   "nodraw": true,
+   "source": "holiday",
+   "holiday": "Garifuna Settlement Day",
+   "added": "2026-11-20T12:31:09Z"
+  },
+  {
+   "id": "pick3-2026-11-19",
+   "game": "pick3",
+   "date": "2026-11-19",
+   "nums": [],
+   "nodraw": true,
+   "source": "holiday",
+   "holiday": "Garifuna Settlement Day",
+   "added": "2026-11-20T12:31:09Z"
   }
  ]
 }
