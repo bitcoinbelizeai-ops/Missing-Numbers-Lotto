@@ -59,7 +59,16 @@ const isoDow=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(Date
 const isoAdd=(iso,n)=>{const [y,m,d]=iso.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1,2)+'-'+pad(t.getUTCDate(),2)};
 const atMin=g=>{const [h,m]=SCHEDULE[g].at.split(':').map(Number);return h*60+m};
 const fmtTime=g=>{const [h,m]=SCHEDULE[g].at.split(':').map(Number);return ((h%12)||12)+':'+pad(m,2)+' '+(h<12?'am':'pm')};
-const isDrawDay=(g,iso)=>SCHED[g].includes(isoDow(iso));
+/* Public holidays: no Boledo, Pick 3 or Fantasy 5 draw (Lotteries Control Regulations; the game operator).
+   The list lives in data/holidays.json on the site (editable from the Admin page); this copy is the fallback. */
+const HOLIDAY_GAMES=['boledo','pick3','fantasy5'];
+let HOLIDAYS={"2026-01-01":{"name":"New Year's Day","greeting":"Happy New Year! 🎆"},"2026-01-15":{"name":"George Price Day","greeting":"Happy George Price Day! 🇧🇿"},"2026-03-09":{"name":"National Heroes and Benefactors Day","greeting":"Happy National Heroes and Benefactors Day! 🇧🇿"},"2026-04-03":{"name":"Good Friday","greeting":"Blessed Good Friday"},"2026-04-04":{"name":"Holy Saturday","greeting":"Blessed Holy Saturday"},"2026-04-06":{"name":"Easter Monday","greeting":"Happy Easter! 🐣"},"2026-05-01":{"name":"Labour Day","greeting":"Happy Labour Day! 💪"},"2026-08-01":{"name":"Emancipation Day","greeting":"Happy Emancipation Day! 🕊️"},"2026-09-10":{"name":"St. George's Caye Day","greeting":"Happy St. George's Caye Day! 🇧🇿"},"2026-09-21":{"name":"Independence Day","greeting":"Happy Independence Day! 🇧🇿"},"2026-10-12":{"name":"Indigenous Peoples' Resistance Day","greeting":"Happy Indigenous Peoples' Resistance Day!"},"2026-11-19":{"name":"Garifuna Settlement Day","greeting":"Happy Garifuna Settlement Day! 🪘"},"2026-12-25":{"name":"Christmas Day","greeting":"Merry Christmas! 🎄"},"2026-12-26":{"name":"Boxing Day","greeting":"Happy Boxing Day! 🎁"}};
+try{const c=JSON.parse(localStorage.getItem('bz-holidays-v1')||'null');if(c&&typeof c==='object')HOLIDAYS=c}catch(e){}
+const holidayOn=(g,iso)=>(HOLIDAY_GAMES.includes(g)&&HOLIDAYS[iso])||null;
+const holidayGreeting=h=>h?(h.greeting||('Happy '+h.name+'!')):'';
+window.bzSetHolidays=days=>{if(!days||typeof days!=='object')return;HOLIDAYS=days;try{localStorage.setItem('bz-holidays-v1',JSON.stringify(days))}catch(e){}
+  if(typeof render==='function'&&state.loaded)render()};
+const isDrawDay=(g,iso)=>SCHED[g].includes(isoDow(iso))&&!holidayOn(g,iso);
 /* has this game's draw on this date happened (plus the 30-minute allowance)? */
 function drawDone(g,iso){const n=bzNow();if(iso<n.iso)return true;if(iso>n.iso)return false;return n.min>=atMin(g)+RESULT_LAG_MIN}
 /* most recent scheduled draw date that has already happened */
@@ -672,6 +681,12 @@ function tickCountdown(){
   $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
   chip.classList.toggle('soon',left<3600e3);
 }
+/* "No draw today · Happy Garifuna Settlement Day! 🪘" on a holiday, "No draw tomorrow · …" the day before */
+function holidayLine(g){
+  const td=bzNow().iso,tm=isoAdd(td,1),h1=SCHED[g].includes(isoDow(td))&&holidayOn(g,td),h2=!h1&&SCHED[g].includes(isoDow(tm))&&holidayOn(g,tm);
+  const h=h1||h2;if(!h)return'';
+  return '<span class="cd-holiday">'+(h1?'No draw today':'No draw tomorrow')+' · '+esc(holidayGreeting(h))+'</span>';
+}
 function startCountdown(){clearInterval(cdTimer);tickCountdown();cdTimer=setInterval(tickCountdown,1000)}
 
 /* ---------- bottom tab bar (phones) ---------- */
@@ -900,7 +915,7 @@ function render(){
   }else{ldSig=ldNew;last.classList.remove('roll','hold');last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
     $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
-      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>';
+      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>'+holidayLine(state.game);
     startCountdown();
     $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:''); }
 
@@ -978,7 +993,8 @@ function resRow(d){
   const dt=document.createElement('div');dt.className='resdate';
   dt.innerHTML='<b>'+esc(sd.wd)+'</b><span>'+esc(sd.dm)+(sd.yr!==new Date().getFullYear()?' '+sd.yr:'')+'</span>';
   const bx=document.createElement('div');bx.className='resballs';
-  if(d.nodraw){bx.innerHTML='<span class="resnone">No draw</span>'}
+  if(d.nodraw){const h=holidayOn(state.game,d.date)||(d.holiday?{name:d.holiday}:null);
+    bx.innerHTML='<span class="resnone'+(h?' resholiday':'')+'">No draw'+(h?' · '+esc(holidayGreeting(h)):'')+'</span>'}
   else if(state.game==='lottery'){
     const first=document.createElement('div');first.className='resprize';
     pad(d.nums[0],4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('rb');if(j>=2)t.classList.add('counted');first.appendChild(t)});
@@ -1272,6 +1288,8 @@ function checkDate(){
   el.className='hint';el.textContent='';
   if(!date)return;
   if(!drawDone(g,date)&&date>=bzNow().iso){el.className='hint warn';el.textContent=isDrawDay(g,date)?'This '+G.label+' draw is at '+fmtTime(g)+' Belize time and hasn\'t happened yet.':'That date is in the future.';return}
+  const hol=holidayOn(g,date);
+  if(hol&&SCHED[g].includes(isoDow(date))){el.className='hint warn';el.textContent='No '+G.label+' draw that day: it was a public holiday ('+hol.name+'). Check the date.';return}
   if(!isDrawDay(g,date)){el.className='hint warn';el.textContent=G.label+' isn\'t normally drawn on '+['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][isoDow(date)]+'s. It\'s drawn '+SCHEDULE[g].text+'. Check the date.'}
 }
 $('dDate').addEventListener('input',()=>{pendingOdd=null;checkDate()});
@@ -1281,7 +1299,8 @@ $('addForm').addEventListener('submit',async e=>{e.preventDefault();
   const date=$('dDate').value;
   if(date&&!drawDone(state.game,date)&&date>=bzNow().iso){flash(isDrawDay(state.game,date)?'That draw hasn\'t happened yet. Results come in after '+fmtTime(state.game)+' Belize time.':'That date is in the future. Pick the date of the draw.',false);return}
   if(date&&!isDrawDay(state.game,date)&&pendingOdd!==state.game+date){pendingOdd=state.game+date;
-    flash(GAMES[state.game].label+' is normally drawn '+SCHEDULE[state.game].text+'. If this was a moved or special draw, tap Add again to save it.',false);return}
+    const hol=holidayOn(state.game,date);
+    flash(hol?'That day was a public holiday ('+hol.name+'), so there\'s normally no '+GAMES[state.game].label+' draw. If there really was one, tap Add again to save it.':GAMES[state.game].label+' is normally drawn '+SCHEDULE[state.game].text+'. If this was a moved or special draw, tap Add again to save it.',false);return}
   const tokens=$('quickNums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
   const d=date&&makeDraw(state.game,date,tokens);
   if(!d){flash(ERR[state.game],false);return}
@@ -1414,8 +1433,13 @@ async function refreshShipped(fast){
   push();
 }
 
+/* public holidays (no Boledo, Pick 3 or Fantasy 5 draw), edited from the Admin page */
+const HOL_URL='../data/holidays.json';
+async function refreshHolidays(){try{const r=await fetch(HOL_URL,{cache:'no-cache'});if(!r.ok)return;const j=await r.json();
+  if(j&&j.days&&typeof j.days==='object'&&typeof window.bzSetHolidays==='function')window.bzSetHolidays(j.days)}catch(e){}}
+
 window.bzRefresh=()=>refreshShipped(true);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshShipped(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){refreshShipped(true);refreshHolidays()}});
 
 
 if(false){
@@ -1428,6 +1452,7 @@ if(false){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadSW||reloaded)return;reloaded=true;location.reload()});
 }
 refreshShipped();
+refreshHolidays();
 })();
 
 
