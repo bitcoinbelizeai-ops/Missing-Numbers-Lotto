@@ -3,26 +3,24 @@ name: Update Belize results
 on:
   schedule:
     # Times are UTC. Belize is UTC-6 all year (no daylight saving).
-    # Each game is asked for about 20 minutes after its draw (READY_HOURS below is 15 minutes).
-    # If magayo hasn't posted it yet, a later run tries again, but only while there are enough
-    # calls left for every draw still to come this period. Runs with nothing missing make no calls.
+    # Since Nov 20, 2026 BBN (receive_bbn.py) is the main source and adds results within minutes.
+    # magayo is the BACKUP: a run only calls magayo for draws BBN hasn't delivered, first
+    # 45 minutes after the draw (FIRST_TRY_MINUTES), then about every hour, 3 times in the
+    # evening, plus one last try in the morning. Runs with nothing missing make no calls.
     # GitHub can start scheduled runs 5-20 minutes late.
     #
-    # Fantasy 5 (Tue/Thu/Sat 8:00 pm): 8:20 pm Belize
-    - cron: "20 2 * * 0,3,5"
-    # Pick 3 (Mon-Fri 8:30 pm): 8:50 pm Belize
-    - cron: "50 2 * * 2-6"
-    # Boledo (Mon-Fri 9:00 pm): 9:30 pm Belize
-    - cron: "30 3 * * 2-6"
-    # Late sweep for anything not posted yet: 10:25 pm Belize (Mon-Sat)
-    - cron: "25 4 * * 0,2-6"
-    # Sunday Jackpot (Sun 10:00 am, finished about 10:30 am): 11:00 am Belize,
-    # then 11:45 am and 2:23 pm Sun and Mon (Monday in case it was postponed)
-    - cron: "0 17 * * 0"
-    - cron: "45 17 * * 0,1"
+    # Evenings Mon-Sat, every 30 minutes, 8:45 pm to 11:45 pm Belize
+    # (Fantasy 5 8:00 pm -> first try 8:45; Pick 3 8:30 pm -> 9:15; Boledo 9:00 pm -> 9:45)
+    - cron: "45 2 * * 0,2-6"
+    - cron: "15,45 3-5 * * 0,2-6"
+    # Sunday Jackpot (Sun 10:00 am, finished about 10:30 am): 11:15 am, 12:15 pm and 2:23 pm Sun,
+    # and 11:45 am + 2:23 pm Mon in case it was postponed
+    - cron: "15 17,18 * * 0"
+    - cron: "45 17 * * 1"
     - cron: "23 20 * * 0,1"
-    # Morning safety net: 6:23 am Belize (Tue-Sun)
-    - cron: "23 12 * * 0,2-6"
+    # Morning, every day 6:23 am Belize: last try for anything still missing, and the
+    # double-check of last night's BBN results (data/magayo-checks.json)
+    - cron: "23 12 * * *"
   workflow_dispatch:      # adds a "Run workflow" button on the Actions tab
     inputs:
       lookback_days:
@@ -34,7 +32,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: update-results
+  group: results-write   # shared with the BBN job, so the two never write draws.json at the same time
   cancel-in-progress: false
 
 jobs:
@@ -53,7 +51,7 @@ jobs:
           MAX_CALLS_PER_RUN: ${{ vars.MAX_CALLS_PER_RUN }}   # optional, default 10
           API_RESET_DAY: ${{ vars.API_RESET_DAY }}           # optional, default 1
           LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '14' }}
-          READY_HOURS: '0.25'                                # ask magayo 15 minutes after each draw
+          FIRST_TRY_MINUTES: '45'                            # magayo is the backup: give BBN 45 minutes first
         run: python3 scripts/update_results.py
 
       - name: Save the new results
@@ -61,6 +59,7 @@ jobs:
           git config user.name "results-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add draws.json data/api-usage.json
+          git add data/magayo-checks.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nothing changed."
           else

@@ -1,7 +1,9 @@
 # Receives one result read from a BBN Belize Facebook post (sent by Make.com).
-# TEST MODE: saves to data/bbn-results.json only. It never changes draws.json.
+# MAIN SOURCE since Nov 20, 2026: saves it to data/bbn-results.json and, if it passes the
+# safety rules in scripts/receive_bbn.py, adds it to draws.json (the site) at once.
+# Manual "Run workflow" tests are saved but never added to the site.
 # Paste this file into GitHub at .github/workflows/bbn-receive.yml
-name: Receive BBN result (test)
+name: Receive BBN result
 
 on:
   repository_dispatch:
@@ -16,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: bbn-receive
+  group: results-write   # shared with the magayo job, so the two never write draws.json at the same time
   cancel-in-progress: false
 
 jobs:
@@ -27,25 +29,27 @@ jobs:
       - name: Get the site files
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned to its exact version
 
-      - name: Check the result and compare it with the site
+      - name: Check the result, add it to the site if it passes, and save
         env:
           PAYLOAD_JSON: ${{ toJson(github.event.client_payload) }}
           TEST_ANSWER: ${{ github.event.inputs.answer }}
-        run: python3 scripts/receive_bbn.py
-
-      - name: Save the test file
         run: |
           git config user.name "results-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/bbn-results.json 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "Nothing new to save."
-            exit 0
-          fi
-          git commit -m "BBN test result"
           for i in 1 2 3; do
-            git pull --rebase --quiet && git push && exit 0
+            python3 scripts/receive_bbn.py
+            git add data/bbn-results.json draws.json 2>/dev/null || true
+            if git diff --cached --quiet; then
+              echo "Nothing new to save."
+              exit 0
+            fi
+            if git diff --cached --quiet -- draws.json; then msg="BBN result (saved, not added)"; else msg="BBN result added to the site"; fi
+            git commit -q -m "$msg"
+            git push -q && exit 0
+            # Someone else saved first (e.g. the Admin page): start again from the newest files
+            echo "Push refused, trying again with the newest files ($i)"
             sleep 5
+            git fetch -q origin main && git reset -q --hard origin/main
           done
           echo "Could not save after 3 tries."
           exit 1
