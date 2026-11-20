@@ -1097,7 +1097,7 @@ function introFading(){introOn=false;if(ldPending)startLastRoll()}
 
 /* Last Draw: earlier results beside the winning ball.
    Boledo: up to 6 smaller balls, newest first, as many as fit ("Past 4 Draws"); tap one for its ball card.
-   Pick 3: the one draw before, as three mini balls ("Yesterday", or the weekday when it wasn't the day before). */
+   Pick 3: the one draw before, as three mini balls ("Yesterday" only when it really was yesterday, counted from today; otherwise its weekday). */
 const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WKD_LONG=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const isoDay=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
 function addRecent(last,all,nBig){
@@ -1110,7 +1110,7 @@ function addRecent(last,all,nBig){
   const dayLab=iso=>{const t=isoDay(iso);return WKD[t.getDay()]+' '+t.getDate()};
   if(state.game==='pick3'){
     const p=prev[0];
-    cap.textContent=p.date===isoAdd(d.date,-1)?'Yesterday':WKD_LONG[isoDay(p.date).getDay()];
+    cap.textContent=p.date===isoAdd(bzNow().iso,-1)?'Yesterday':WKD_LONG[isoDay(p.date).getDay()];
     const it=document.createElement('div');it.className='recent-item';
     it.setAttribute('role','img');it.setAttribute('aria-label',cap.textContent+', '+fmtDay(p.date)+': '+p.nums.join(' '));
     const chips=document.createElement('div');chips.className='p3chips';
