@@ -781,7 +781,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 /* keep "My Lucky Numbers" on one line on phones */
 #mineTitle{white-space:nowrap;font-size:clamp(18px,5.4vw,24px)}
 
-/* ---------- opening intro: the gold 00 ball and the title, about 5 seconds (tap skips) ---------- */
+/* ---------- opening intro: the gold 00 ball and the title, about 6.5 seconds (tap skips) ---------- */
 /* ---------- the intro ---------- */
 .iz-splash{position:fixed;inset:0;z-index:200;cursor:pointer;display:grid;place-items:center;overflow:hidden;
   background:radial-gradient(120% 80% at 50% 42%,#1866cc 0%,#0b3f8f 55%,#06275c 100%)}
@@ -852,7 +852,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .iz-play .iz-bloom{animation:iz-bloom 640ms cubic-bezier(.4,0,.2,1) 1000ms both}
 .iz-play .iz-w2 .iz-shine{animation:iz-shine 300ms ease-in-out 1560ms both}
 .iz-play .iz-tag{animation:iz-tag 260ms ease-out 1460ms both}
-.iz-play.iz-exit{animation:iz-vanish 300ms ease-in 5000ms both}   /* holds until 5 s so the words can be read */
+.iz-play.iz-exit{animation:iz-vanish 300ms ease-in 6500ms both}   /* holds until 6.5 s so the words can be read */
 
 @keyframes iz-grow{0%{transform:scale(.04);filter:brightness(2.2)}70%{transform:scale(1.08);filter:brightness(1.15)}100%{transform:scale(1);filter:none}}
 @keyframes iz-floor{from{opacity:0;transform:scaleX(.2)}to{opacity:1;transform:none}}

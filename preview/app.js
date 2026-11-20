@@ -1357,14 +1357,14 @@ const INTRO=(()=>{
     // Elsewhere (iPhone, phone browsers) the first tap on the intro starts it.
     if(withSound){SND.intro(0);soundOn=true}
     else if(!SND.isMuted()){SND.init();const go=()=>{if(!soundOn&&running&&SND.running()&&elapsed()<.4){soundOn=true;SND.intro(elapsed())}};go();setTimeout(go,120)}
-    // the words stay on screen until about 5 seconds so they can be read (Nov 20, 2026; was 2.6 s)
-    introOn=true;fadeT=setTimeout(introFading,4950);
-    timer=setTimeout(end,5300);return true;
+    // the words stay on screen until about 6.5 seconds so they can be read without rushing (Nov 20, 2026; was 2.6 s)
+    introOn=true;fadeT=setTimeout(introFading,6450);
+    timer=setTimeout(end,6800);return true;
   }
   // tap anywhere on the intro to skip it
   sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;
     // first tap while silent: switch the sound on and let the intro finish; the next tap skips
-    if(!soundOn&&!SND.isMuted()){soundOn=true;SND.unlock(()=>{if(running||elapsed()<5.6)SND.intro(elapsed())});return}
+    if(!soundOn&&!SND.isMuted()){soundOn=true;SND.unlock(()=>{if(running||elapsed()<7.1)SND.intro(elapsed())});return}
     clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)});
   return{play};
 })();
