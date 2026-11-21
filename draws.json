@@ -1677,6 +1677,18 @@
    "source": "holiday",
    "holiday": "Garifuna Settlement Day",
    "added": "2026-11-20T12:31:09Z"
+  },
+  {
+   "id": "pick3-2026-11-20",
+   "game": "pick3",
+   "date": "2026-11-20",
+   "nums": [
+    "8",
+    "5",
+    "4"
+   ],
+   "source": "bbn",
+   "added": "2026-11-21T02:45:31Z"
   }
  ]
 }

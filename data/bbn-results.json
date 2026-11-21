@@ -1,5 +1,5 @@
 {
- "note": "TEST: results read from BBN Belize Facebook posts. Not used by the site.",
+ "note": "Results read from BBN Belize Facebook posts. Good new results are added to the site automatically (main source since Nov 20, 2026).",
  "results": [
   {
    "received": "2026-11-17T13:32:52Z",
@@ -183,7 +183,34 @@
     ]
    },
    "status": "only-bbn"
+  },
+  {
+   "received": "2026-11-21T02:45:31Z",
+   "post_id": "300184130690312_2105746610378127",
+   "post_time": "2026-11-21T02:31:58.000Z",
+   "game": "pick3",
+   "date": "2026-11-20",
+   "read_as": {
+    "nums": [
+     "8",
+     "5",
+     "4"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "pick3-2026-11-20",
+    "game": "pick3",
+    "date": "2026-11-20",
+    "nums": [
+     "8",
+     "5",
+     "4"
+    ]
+   },
+   "status": "only-bbn",
+   "published": true
   }
  ],
- "updated": "2026-11-19T03:15:46Z"
+ "updated": "2026-11-21T02:45:31Z"
 }
