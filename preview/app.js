@@ -671,8 +671,8 @@ function tickCountdown(){
     $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Waiting for results';
     el.textContent=mins<1?'just drawn':mins<60?mins+' min ago':Math.floor(mins/60)+' h '+pad(mins%60,2)+' m ago';
     if(when)when.textContent=(held===bzNow().iso?'Today':fmtDay(held).replace(/,? \d{4}$/,''))+' · '+fmtTime(g)+' draw';
-    // the phone app re-checks for new results every 3 minutes while waiting
-    if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>180e3){lastPoll=Date.now();window.bzRefresh()}
+    // the phone app re-checks for new results every minute for the first 45 minutes after the draw (when BBN posts), then every 3 minutes (Nov 21, 2026)
+    if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>(since<45*60e3?60e3:180e3)){lastPoll=Date.now();window.bzRefresh()}
     return;
   }
   if(when&&when.dataset.next!==undefined)when.textContent=when.dataset.next;
