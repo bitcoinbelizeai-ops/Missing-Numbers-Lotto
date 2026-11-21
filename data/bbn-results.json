@@ -210,7 +210,30 @@
    },
    "status": "only-bbn",
    "published": true
+  },
+  {
+   "received": "2026-11-21T03:15:34Z",
+   "post_id": "300184130690312_2105780487041406",
+   "post_time": "2026-11-21T03:11:36.000Z",
+   "game": "boledo",
+   "date": "2026-11-20",
+   "read_as": {
+    "nums": [
+     "00"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "boledo-2026-11-20",
+    "game": "boledo",
+    "date": "2026-11-20",
+    "nums": [
+     "00"
+    ]
+   },
+   "status": "only-bbn",
+   "published": true
   }
  ],
- "updated": "2026-11-21T02:45:31Z"
+ "updated": "2026-11-21T03:15:34Z"
 }
