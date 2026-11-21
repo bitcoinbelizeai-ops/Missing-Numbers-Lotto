@@ -957,9 +957,10 @@ function render(){
         else row.insertAdjacentHTML('beforeend','<p class="allplayed">Every digit has played here.</p>');
         body.appendChild(row);
       });
-      say.innerHTML=total?'A Pick 3 number has 3 spots. Below, for each spot, are the digits that have <em>not</em> come out there in '+span+'. The number under each ball shows how many draws it has been waiting. Tap a ball for details.'
+      // same wording as the other games (owner, Nov 21, 2026); the 3-spot explanation moved to More info
+      say.innerHTML=total?(total===1?'<b>1</b> digit has <em>not</em> come out in its spot':'<b>'+total+'</b> digits have <em>not</em> come out in their spot')+' in '+span+'. The number under each ball shows how many draws it has been waiting. Tap a ball for details.'
         :'Every digit from 0 to 9 has come out in every spot in '+span+'.';
-      setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
+      setNote(dates,'A Pick 3 number has 3 spots, read left to right. Each row shows the digits that have not come out in that spot.');
     }
     shadeColumns();
     limitMissing(state.game+'|'+WK);
@@ -1110,13 +1111,13 @@ function addRecent(last,all,nBig){
   const dayLab=iso=>{const t=isoDay(iso);return WKD[t.getDay()]+' '+t.getDate()};
   if(state.game==='pick3'){
     const p=prev[0];
-    cap.textContent=p.date===isoAdd(bzNow().iso,-1)?'Yesterday':WKD_LONG[isoDay(p.date).getDay()];
+    // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
     const it=document.createElement('div');it.className='recent-item';
-    it.setAttribute('role','img');it.setAttribute('aria-label',cap.textContent+', '+fmtDay(p.date)+': '+p.nums.join(' '));
+    it.setAttribute('role','img');it.setAttribute('aria-label','Draw before, '+fmtDay(p.date)+': '+p.nums.join(' '));
     const chips=document.createElement('div');chips.className='p3chips';
     p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);chips.appendChild(t)});
     const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
-    it.append(cap,chips,lab);list.appendChild(it);   // Pick 3: day name centred over the three balls
+    it.append(chips,lab);list.appendChild(it);
   }else{
     const G=GAMES.boledo,L=all.length;
     const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
@@ -1127,7 +1128,7 @@ function addRecent(last,all,nBig){
       const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
       it.append(t,lab);list.appendChild(it)});
   }
-  if(!cap.parentNode)box.append(cap);box.append(list);last.appendChild(box);
+  if(state.game!=='pick3')box.append(cap);box.append(list);last.appendChild(box);
   fitRecent(last);
 }
 /* show only as many small balls as fit on the line; Pick 3 drops below the big balls if there's no room */
