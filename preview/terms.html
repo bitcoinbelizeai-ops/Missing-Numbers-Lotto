@@ -21,6 +21,14 @@ p,li{margin:0 0 8px}ul{padding-left:22px;margin:0}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px 8px}
 a{color:var(--gold)}
 .foot{margin-top:30px;padding-top:14px;border-top:1px dashed var(--line);font-size:15px;color:var(--muted)}
+/* design pass (Nov 2026): readable back link with a thumb-sized target, visible focus, comfortable line length */
+main{max-width:620px}
+p,li{text-wrap:pretty}
+h1,h2{text-wrap:balance}
+.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border-radius:999px;background:rgba(3,20,58,.45);border:1px solid var(--line)}
+a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+.back:focus-visible{border-radius:999px}
+.foot{border-top-style:solid}
 </style>
 </head>
 <body>
