@@ -1,43 +1,16 @@
-// Offline support. Bump VERSION whenever you change index.html, app.css or app.js.
-const VERSION = 'boledo-v84';
-const CORE = ['./', 'index.html', 'app.css', 'app.js', 'draws.json', 'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
-
-self.addEventListener('install', e => {
-  // cache: 'reload' skips the browser's own short-term cache, so a new version never stores old files
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))).then(() => self.skipWaiting()));
-});
+// Clean-up worker (launch, Nov 2026).
+// The old main site saved its files on phones for offline use. The new site doesn't use offline saving
+// (it shows an "Update now" bar instead), so this version deletes the old saved files, removes itself,
+// and reloads any open page once so it shows the new site. Keep this file for a few months after launch
+// so every returning phone picks it up; it does nothing for new visitors.
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
-    .then(() => self.clients.claim()));
-});
-
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-
-  // The private admin page always loads fresh and is never stored for offline use.
-  if (url.pathname.endsWith('/admin.html')) return;
-
-  // The preview site (/preview/) always loads fresh too, so its updates show straight away.
-  if (url.pathname.includes('/preview/')) return;
-
-  // Results file: try the network first so new results show up, fall back to the saved copy.
-  if (url.pathname.endsWith('/draws.json')) {
-    e.respondWith(fetch(req).then(r => {
-      const copy = r.clone(); caches.open(VERSION).then(c => c.put('draws.json', copy)); return r;
-    }).catch(() => caches.match('draws.json')));
-    return;
-  }
-
-  // Everything else (app files and Google Fonts): saved copy first, then network.
-  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
-    if (r.ok && (url.origin === location.origin || url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com')) {
-      const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy));
-    }
-    return r;
-  }).catch(() => req.mode === 'navigate' ? caches.match('index.html') : undefined)));
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    await self.registration.unregister();
+    const pages = await self.clients.matchAll({ type: 'window' });
+    pages.forEach(p => p.navigate(p.url).catch(() => {}));
+  })());
 });

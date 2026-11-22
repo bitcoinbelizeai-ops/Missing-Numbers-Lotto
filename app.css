@@ -2,9 +2,10 @@
 /* Layout: one column on royal blue (#094692) with logo yellow (#fec207) on the title — ball-badge header, game tabs, last draw, poker-chip look-back, missing, hot; hand entry folded at the bottom */
 :root{
   /* "Bright Royal" theme (Nov 15, 2026): lighter, more vivid blue and see-through panels */
-  --felt:#1866cc; --felt-deep:#0d4ea6; --felt-hi:#3d8ef2; --panel:rgba(6,35,92,.40);
-  --gold:#e9c46a; --gold-ink:#f6d888; --gold-hi:#fff0b8; --gold-deep:#a97a22; --cream:#f7f0dc; --muted:#dde7f7;
-  --line:rgba(255,255,255,.24); --red:#d63c3c; --red-deep:#8f1717; --ok:#9fe0c4; --bulb:#fff3c4;
+  /* Contrast fix (Nov 19, 2026): slightly deeper blue and panels that darken, so gold and small text stay readable in sunlight */
+  --felt:#144fa6; --felt-deep:#0a3a80; --felt-hi:#1f67c9; --panel:rgba(3,20,58,.30);
+  --gold:#f6cd5c; --gold-ink:#f6d888; --gold-hi:#fff0b8; --gold-deep:#a97a22; --cream:#f7f0dc; --muted:#f1f5fc;
+  --line:rgba(255,255,255,.30); --red:#b8282b; --red-deep:#8f1717; --ok:#9fe0c4; --bulb:#fff3c4;
   --f-brand:"Outfit","Barlow",ui-sans-serif,system-ui,sans-serif;
   --f-label:"Barlow Condensed","Arial Narrow",ui-sans-serif,system-ui,sans-serif;
   --f-body:"Barlow",ui-sans-serif,system-ui,sans-serif;
@@ -18,7 +19,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 
 /* header: centered wordmark */
 .top{display:flex;flex-direction:column;gap:14px}
-.brand{display:flex;align-items:center;justify-content:center;padding:14px 0 6px}
+.brand{display:flex;align-items:center;justify-content:center;padding:28px 0 6px}
 .brand-txt{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
 .brand .eyebrow{margin:0 0 2px;padding-left:.3em;font:700 12px var(--f-label);letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
 .brand h1{margin:2px 0 0;font:800 clamp(30px,8vw,38px)/1 var(--f-brand);letter-spacing:-.01em;color:#fff}
@@ -100,6 +101,33 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 .plaque strong u{text-decoration:none;color:#ffcf4a}
 .letter{width:44px;height:44px;border-radius:10px;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 24px var(--f-label);color:var(--gold-ink)}
 .lastdraw .lnote{flex-basis:100%;margin:0;font-size:13px;color:var(--muted)}
+/* earlier results beside the winning ball (Boledo: Past X Draws, Pick 3: Yesterday) */
+.recent{flex:1 1 0;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:6px;padding-left:14px;border-left:1px dashed rgba(255,255,255,.3)}
+.recent.below{flex-basis:100%;padding:12px 0 0;border-left:0;border-top:1px dashed rgba(255,255,255,.3)}
+.recent-cap{margin:0;font:700 12px var(--f-label);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;text-shadow:0 1px 0 rgba(0,0,0,.85)}
+.recent-list{display:flex;align-items:flex-start;gap:10px;overflow:hidden;padding:3px 4px 6px;margin:-3px -4px -6px}
+.recent-item{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px}
+.recent-item.bwrap{padding:0 1px}
+.recent-item.off{display:none}
+.recent .tile{width:42px;filter:saturate(.78) brightness(.93)}
+.recent .tile span{font-size:15px}
+.recent-day{font:600 12px/1.1 var(--f-body);color:var(--muted);white-space:nowrap}
+.p3chips{display:flex;gap:3px}
+.recent .p3chips .tile{width:30px}
+.recent .p3chips .tile span{font-size:14px;width:66%}
+body[data-enter] .lastdraw.roll .recent .tile,.lastdraw.roll .recent .tile{animation:rollinr 1s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s)}
+body[data-enter] .lastdraw.roll .recent .p3chips .tile{animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .12s)}
+.lastdraw.roll .recent-cap{animation:topfade .45s both;animation-delay:var(--rs,1.3s)}
+.lastdraw.roll .recent-day{animation:topfade .4s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s + .45s)}
+.lastdraw.roll .recent{animation:topfade .3s both;animation-delay:calc(var(--rs,1.3s) - .3s)}
+/* roll in from the right, overshoot a little, settle */
+@keyframes rollinr{
+  0%{opacity:0;transform:translateX(90px) rotate(400deg);animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+  15%{opacity:1}
+  62%{transform:translateX(-10px) rotate(-28deg);animation-timing-function:cubic-bezier(.45,0,.4,1)}
+  85%{transform:translateX(3px) rotate(7deg);animation-timing-function:ease-in-out}
+  100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.lastdraw.roll *{animation:none!important}}
 
 /* folds and forms */
 .banner{border:1px dashed var(--gold);background:var(--panel);border-radius:12px;padding:10px 14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:14px}
@@ -164,6 +192,8 @@ body[data-game="boledo"] .say b{text-shadow:none}
 .bwrap.sel .tile{transform:translateY(-4px) scale(1.08);box-shadow:0 0 0 3px var(--gold),0 0 24px var(--gc),0 10px 16px rgba(0,0,0,.55)}
 .bwrap.sel .tag,.bwrap.sel .tag b{color:var(--gold-ink)}
 .bwrap:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.bwrap.ldball{padding:0}
+.bwrap.ldpair{flex-direction:row;gap:8px}
 .ballset{display:flex;flex-direction:column;gap:12px}
 .balldetail{margin:0;padding:10px 14px;border:1px solid var(--gold);border-radius:12px;background:rgba(233,196,106,.10);font-size:15px;color:var(--cream);
   box-shadow:0 0 18px var(--gc);animation:pop .2s ease-out}
@@ -172,6 +202,7 @@ body[data-game="boledo"] .say b{text-shadow:none}
 
 /* last draw: balls roll in one by one */
 .lastdraw.roll .tile,.lastdraw.roll .letter{animation:rollin 1.5s both;animation-delay:calc(.2s + var(--i,0) * .38s)}
+.lastdraw.hold .tile,.lastdraw.hold .letter,.lastdraw.hold .recent{opacity:0}
 .lastdraw.roll .prizerow .tile{animation-duration:1.25s;animation-delay:calc(.2s + var(--i,0) * .2s)}
 /* roll in from the left, overshoot past the spot, roll back and settle */
 @keyframes rollin{
@@ -386,6 +417,7 @@ body[data-enter="flip"] .bwrap.reveal.reveal-star{animation-name:flipin,starglow
 .cd.live .cd-dot{background:#ff5a5a;animation-duration:1s}
 .cd.live b{color:#ffd0d0;font-size:15px;letter-spacing:.04em}
 .cd-when{font-size:14px;color:var(--muted)}
+.cd-holiday{flex-basis:100%;font:600 15.5px/1.35 var(--f-body);color:var(--gold-hi)}
 
 /* ---------- loading skeletons ---------- */
 .sk,.skl{background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.17),rgba(255,255,255,.06));background-size:200% 100%;animation:skshine 1.3s linear infinite}
@@ -611,6 +643,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .resrest{flex-basis:100%;font-size:12.5px;color:var(--muted)}
 .resrest b{font:700 14px var(--f-label);letter-spacing:.06em;color:var(--cream)}
 .resnone{font-size:14px;color:var(--muted);font-style:italic}
+.resnone.resholiday{font-style:normal;font-weight:600;color:var(--gold-hi)}
 #resMoreWrap{margin-top:0}
 .resfrom{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--line)}
 .resfrom-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -659,6 +692,13 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .pickbtns .btn{min-width:130px}
 .pickdone{border:0;background:none;color:var(--muted);font:600 14px var(--f-body);text-decoration:underline;cursor:pointer;padding:4px 8px}
 .toast{z-index:70}
+/* 'new version ready' bar: top of the screen, above everything but the opening splash */
+.updbar{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:150;width:min(460px,calc(100% - 32px));display:flex;align-items:center;gap:10px;padding:10px 8px 10px 16px;border-radius:16px;background:var(--cream);color:var(--felt-deep);font:600 16px/1.35 var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 2px var(--gold)}
+.updbar span{flex:1;min-width:0}
+.updbar-go{flex:none;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-deep));color:#2a1d00;font:700 16px var(--f-body);cursor:pointer}
+.updbar-x{flex:none;width:44px;height:44px;border:0;background:none;color:var(--felt-deep);font-size:24px;line-height:1;cursor:pointer}
+.updbar-go:focus-visible,.updbar-x:focus-visible{outline:2px solid var(--felt-deep);outline-offset:2px}
+html.easy .updbar{font-size:17px}
 @media (prefers-reduced-motion:reduce){.mine-item.armed,.pickball.pop .tile{animation:none}.mine-item{transition:none}}
 
 /* ---------- Mixer: high-pressure air jets and slot-machine reveal ---------- */
@@ -694,7 +734,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 
 /* site sound on/off: small speaker at the top-right of the header */
 .top{position:relative}
-.sndbtn{position:absolute;top:0;right:0;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+.sndbtn{position:absolute;top:-12px;right:0;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
   background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);touch-action:manipulation;transition:background-color .15s,box-shadow .15s}
 .sndbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .sndbtn svg path:first-child{fill:currentColor;fill-opacity:.25}
@@ -754,7 +794,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 /* keep "My Lucky Numbers" on one line on phones */
 #mineTitle{white-space:nowrap;font-size:clamp(18px,5.4vw,24px)}
 
-/* ---------- opening intro: the gold 00 ball and the title, about 2 seconds ---------- */
+/* ---------- opening intro: the gold 00 ball and the title, about 6.5 seconds (tap skips) ---------- */
 /* ---------- the intro ---------- */
 .iz-splash{position:fixed;inset:0;z-index:200;cursor:pointer;display:grid;place-items:center;overflow:hidden;
   background:radial-gradient(120% 80% at 50% 42%,#1866cc 0%,#0b3f8f 55%,#06275c 100%)}
@@ -794,7 +834,11 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
   background:linear-gradient(180deg,#fff4c4 0%,#ffd451 38%,#f5b81c 62%,#d99406 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .iz-w2 .iz-shine{position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.95) 48%,transparent 62%);
   -webkit-background-clip:text;background-clip:text;color:transparent;background-size:250% 100%;background-position:120% 0}
-.iz-tag{position:absolute;left:0;right:0;top:calc(100% + clamp(18px,5vw,28px));text-align:center;font:600 clamp(13px,3.8vw,16px) var(--f-body);color:#b9cbec;letter-spacing:.02em;opacity:0;white-space:nowrap}
+.iz-under{position:absolute;left:0;right:0;top:calc(100% + clamp(20px,5.5vw,30px));display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.iz-tag{margin:0;font:600 clamp(17px,4.9vw,20px)/1.3 var(--f-body);color:#fff;letter-spacing:.01em;opacity:0;text-wrap:balance;text-shadow:0 1px 2px rgba(0,16,50,.5)}
+.iz-status{margin:0;min-height:1.3em;font:500 clamp(15px,4.3vw,17px)/1.3 var(--f-body);color:#eef3ff;opacity:0;text-shadow:0 1px 2px rgba(0,16,50,.5)}
+/* tells people the screen moves on by itself, and that a tap moves on now */
+.iz-skiphint{position:absolute;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#f2f6ff;font:600 17px/1.2 var(--f-body);white-space:nowrap;opacity:0;pointer-events:none}
 .iz-glint{position:absolute;width:1px;height:1px;pointer-events:none}
 .iz-glint i{position:absolute;left:0;top:0;width:2px;height:9px;margin-left:-1px;border-radius:2px;background:#fff4c4;opacity:0;transform-origin:50% 0}
 
@@ -825,7 +869,11 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .iz-play .iz-bloom{animation:iz-bloom 640ms cubic-bezier(.4,0,.2,1) 1000ms both}
 .iz-play .iz-w2 .iz-shine{animation:iz-shine 300ms ease-in-out 1560ms both}
 .iz-play .iz-tag{animation:iz-tag 260ms ease-out 1460ms both}
-.iz-play.iz-exit{animation:iz-vanish 260ms ease-in 2600ms both}
+.iz-play .iz-status{animation:iz-tag 400ms ease-out 2200ms both}
+.iz-play .iz-skiphint{animation:iz-hint-in 400ms ease-out 1900ms both}
+.iz-play #izMainBall{animation:iz-breathe 2.4s ease-in-out 1.6s infinite}
+.iz-play.iz-short .iz-status{display:none}
+.iz-play.iz-exit{animation:iz-vanish 300ms ease-in var(--iz-out,4700ms) both}   /* --iz-out is set in app.js (INTRO) */
 
 @keyframes iz-grow{0%{transform:scale(.04);filter:brightness(2.2)}70%{transform:scale(1.08);filter:brightness(1.15)}100%{transform:scale(1);filter:none}}
 @keyframes iz-floor{from{opacity:0;transform:scaleX(.2)}to{opacity:1;transform:none}}
@@ -849,6 +897,8 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 @keyframes iz-bloom{0%{opacity:0;transform:scale(.25)}85%{opacity:.75;transform:scale(1)}100%{opacity:.35;transform:scale(1.05)}}
 @keyframes iz-shine{from{background-position:120% 0}to{background-position:-30% 0}}
 @keyframes iz-tag{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes iz-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+@keyframes iz-hint-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translateX(-50%)}}
 @keyframes iz-vanish{to{opacity:0;filter:blur(8px);transform:scale(1.05)}}
 
 @media (prefers-reduced-motion:reduce){
@@ -856,7 +906,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
   .iz-play *,.iz-play{animation:none!important}
   .iz-play .iz-ballgrow,.iz-play .iz-ballmove{transform:none}
   .iz-play .iz-ghost{display:none}
-  .iz-play .iz-floor,.iz-play .iz-w1 span,.iz-play .iz-w2,.iz-play .iz-tag{opacity:1}
+  .iz-play .iz-floor,.iz-play .iz-w1 span,.iz-play .iz-w2,.iz-play .iz-tag,.iz-play .iz-status,.iz-play .iz-skiphint{opacity:1}
 }
 
 
@@ -871,6 +921,185 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 @keyframes iz-hint{0%,100%{opacity:0;transform:scale(.3) rotate(0)}45%{opacity:1;transform:scale(1) rotate(45deg)}70%{opacity:.8;transform:scale(.8) rotate(70deg)}}
 @media (prefers-reduced-motion:reduce){.brand h1.iz-hint::after{animation:none}}
 
+/* ---------- contrast fix: brighter gold headings with a soft dark edge ---------- */
+.pick-title,h2,.brand-txt b{color:#ffd659}
+h1,h2,h3,.pick-title,.winbadge,.eyebrow,.when,.fresh,.cd-when{text-shadow:0 1px 2px rgba(0,10,40,.45)}
+
+/* ---------- Easy reading: magnifier button (+ to enlarge, − when on) (top-right, beside the sound button) ---------- */
+.eyebtn{position:absolute;top:-12px;right:46px;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);touch-action:manipulation;transition:background-color .15s,box-shadow .15s,color .15s}
+.eyebtn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.eyebtn:hover,.eyebtn:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
+.eyebtn[aria-pressed="true"] .zv{display:none}
+.eyebtn[aria-pressed="true"]{background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-deep));border-color:var(--gold);color:#2a1d00}
+.eyehint{position:absolute;top:34px;right:30px;z-index:30;max-width:230px;padding:10px 34px 10px 12px;border-radius:12px;background:#fffdf5;color:#13233f;
+  font:600 15px/1.35 var(--f-body);box-shadow:0 8px 22px rgba(0,0,0,.35);animation:eyehint-in .35s ease-out}
+.eyehint::before{content:"";position:absolute;top:-7px;right:22px;width:14px;height:14px;background:#fffdf5;transform:rotate(45deg)}
+.eyehint button{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;background:none;color:#13233f;font-size:20px;line-height:1;cursor:pointer}
+@keyframes eyehint-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.eyehint{animation:none}}
+/* Easy reading: larger text everywhere comes from the generated "html.easy" rules (see build.py); these add the rest */
+html.easy body{line-height:1.6}
+html.easy .eyebrow,html.easy .lookback-lbl,html.easy .fresh,html.easy .label,html.easy .topout-h,html.easy .when,html.easy .winbadge,html.easy .pick-title{letter-spacing:.06em}
+html.easy .tabbar button{font-size:13.5px}
+
+/* very narrow phones: keep the small "Belize Lottery" line clear of the header buttons */
+@media (max-width:359px){.brand .eyebrow{letter-spacing:.18em}}
+
+/* ---- Easy reading (generated by build.py) ---- */
+html.easy body{font-size:17px}
+html.easy .brand .eyebrow{font-size:14px}
+html.easy .brand h1{font-size:clamp(30px,8vw,38px)}
+html.easy .fresh{font-size:15.5px}
+html.easy .pick-title{font-size:20px}
+html.easy .games button .gball span{font-size:17px}
+html.easy .gtxt b{font-size:20px}
+html.easy .gtxt small{font-size:15px}
+html.easy .panel h2{font-size:24px}
+html.easy .when{font-size:16px}
+html.easy .say{font-size:17px}
+html.easy .say b{font-size:16px}
+html.easy .say em{font-size:.9em}
+html.easy .note{font-size:15px}
+html.easy .tile span{font-size:clamp(20px,4.4vw,24px)}
+html.easy .tile.sm span{font-size:20px}
+html.easy .tag{font-size:15px}
+html.easy .tag b{font-size:16px}
+html.easy .posrow h3{font-size:16px}
+html.easy .allplayed{font-size:16px}
+html.easy .plaque small{font-size:14px}
+html.easy .plaque strong{font-size:30px}
+html.easy .letter{font-size:24px}
+html.easy .lastdraw .lnote{font-size:15px}
+html.easy .recent-cap{font-size:14px}
+html.easy .recent .tile span{font-size:16px}
+html.easy .recent-day{font-size:14px}
+html.easy .recent .p3chips .tile span{font-size:15.5px}
+html.easy .banner{font-size:15.5px}
+html.easy summary{font-size:17px}
+html.easy summary::after{font-size:15.5px}
+html.easy .label{font-size:14px}
+html.easy input{font-size:17px}
+html.easy #quickNums{font-size:20px}
+html.easy .btn{font-size:17px}
+html.easy .btn.small{font-size:15.5px}
+html.easy .hint{font-size:15px}
+html.easy .msg{font-size:15.5px}
+html.easy td{font-size:16px}
+html.easy td.num{font-size:17px}
+html.easy .del{font-size:15px}
+html.easy footer{font-size:14px}
+html.easy .toast{font-size:15.5px}
+@media (max-width:700px){html.easy .gtxt b{font-size:19px}}
+html.easy .games button[data-g="lottery"] .gball span{font-size:15px}
+html.easy .balldetail{font-size:16px}
+html.easy .balldetail b{font-size:17px}
+html.easy .nudge h2{font-size:20px}
+html.easy .nudge-head span{font-size:15.5px}
+html.easy .ntext small{font-size:15.5px}
+html.easy .ntext b{font-size:17px}
+html.easy .linkbtn{font-size:15px}
+html.easy .nudge-more{font-size:15px}
+html.easy .toast b{font-size:17px}
+html.easy .nudge li .linkbtn{font-size:15px}
+html.easy .winbadge{font-size:16px}
+html.easy .winbadge::before,html.easy .winbadge::after{font-size:.85em}
+html.easy .prizelab{font-size:15.5px}
+html.easy .tile.xs span{font-size:19px}
+html.easy .addgame .gball span{font-size:17px}
+html.easy #addBall[data-game="lottery"] span{font-size:15px}
+html.easy .addgame-txt small{font-size:15px}
+html.easy .addgame-txt b{font-size:26px}
+html.easy .letter.sm{font-size:20px}
+html.easy tr.skipped td.num{font-size:15.5px}
+html.easy .undo{font-size:15px}
+html.easy .toast-undo{font-size:15.5px}
+html.easy .disclaimer{font-size:13px}
+html.easy .drawinfo b{font-size:16px}
+html.easy .drawinfo{font-size:16px}
+html.easy .more{font-size:14px}
+html.easy .more::before{font-size:12px}
+html.easy .fine{font-size:15px}
+html.easy .showmore-btn{font-size:16px}
+html.easy .showmore-btn .cnt{font-size:15px}
+html.easy .showmore-btn .chev{font-size:15px}
+html.easy .lookback-lbl{font-size:14px}
+html.easy .seg button{font-size:15px}
+html.easy .cd{font-size:15.5px}
+html.easy .cd b{font-size:18px}
+html.easy .cd.live b{font-size:16px}
+html.easy .cd-when{font-size:15.5px}
+html.easy .cd-holiday{font-size:15.5px}
+@media (max-width:700px){html.easy .tabbar button{font-size:13.5px}}
+html.easy .mine-hint{font-size:16px}
+html.easy .mine-item .tile span{font-size:18px}
+html.easy .mine-tag b{font-size:17px}
+html.easy .mine-tag small{font-size:13.5px}
+html.easy .mine-x{font-size:18px}
+html.easy .bwrap.is-mine .tile::after{font-size:15px}
+html.easy .starbtn{font-size:15.5px}
+html.easy .topout-h{font-size:15px}
+html.easy .topout-list .rk{font-size:15.5px}
+html.easy .topout-list .tile.sm span{font-size:15px}
+html.easy .tval{font-size:15px}
+html.easy .tval b{font-size:17px}
+html.easy .showmore.folded .showmore-btn{font-size:15px}
+html.easy .showmore.folded .showmore-btn .cnt{font-size:14.5px}
+html.easy .say b.plain{font-size:inherit}
+html.easy .sharebtn{font-size:15px}
+html.easy .sharebox-in h2{font-size:18px}
+html.easy .sharebox-tip{font-size:15.5px}
+html.easy .trend-h{font-size:14.5px}
+html.easy .tb em{font-size:13px}
+html.easy .trend-x span{font-size:12.5px}
+html.easy .top-star{font-size:17px}
+@media (max-width:420px){html.easy .tval small,html.easy .tval{font-size:14px}}
+html.easy .mixcap{font-size:13.5px}
+html.easy .mixbtn{font-size:15.5px}
+html.easy .mixbox-in h2{font-size:18px}
+html.easy .mixstage .mixball span{font-size:15px}
+html.easy .mixgroup h3{font-size:15px}
+html.easy .mixplay .tile.sm span{font-size:15px}
+html.easy .mixnote{font-size:15.5px}
+html.easy .mixplays.single .tile.sm span{font-size:16px}
+html.easy .mixbox-in.swirl h2{font-size:15px}
+html.easy .resdate b{font-size:15px}
+html.easy .resdate span{font-size:15px}
+html.easy .tile.rb span{font-size:clamp(13px,3.6vw,15px)}
+html.easy .letter.rbl{font-size:17px}
+html.easy .resrest{font-size:14.5px}
+html.easy .resrest b{font-size:15.5px}
+html.easy .resnone{font-size:15.5px}
+html.easy .resbox-sub{font-size:15.5px}
+html.easy .mine-tip{font-size:15px}
+html.easy .mine-rm{font-size:13px}
+html.easy .mine-add-ring{font-size:28px}
+html.easy .mine-add-txt{font-size:15.5px}
+html.easy .pick-sub{font-size:15.5px}
+html.easy .pick-sub #pickRange{font-size:16px}
+html.easy .pickball .tile span{font-size:clamp(15px,4.4vw,19px)}
+html.easy .pickstar{font-size:14px}
+html.easy .pickdone{font-size:15.5px}
+html.easy .showmore.open .showmore-btn,html.easy .showmore.open .showless-btn{font-size:15.5px}
+html.easy .showless-btn{font-size:16px}
+html.easy .showless-btn .chev{font-size:15px}
+html.easy .sheet-txt h2{font-size:20px}
+html.easy .sheet-txt p{font-size:16px}
+html.easy .sheet-txt p b{font-size:17px}
+html.easy .sheet-x{font-size:24px}
+html.easy .sheet-facts{font-size:16px}
+html.easy .sheet-facts b{font-size:17px}
+html.easy .sheet-none{font-size:15.5px}
+html.easy .trend-avg span{font-size:12px}
+html.easy .trend-sum{font-size:14.5px}
+html.easy #mineTitle{font-size:clamp(18px,5.4vw,24px)}
+html.easy .iz-w1{font-size:clamp(34px,10.5vw,50px)}
+html.easy .iz-w2{font-size:clamp(34px,10.5vw,50px)}
+html.easy .iz-tag{font-size:clamp(19px,5.4vw,22px)}
+html.easy .iz-status,html.easy .iz-skiphint{font-size:18px}
+html.easy .eyehint{font-size:16px}
+html.easy .eyehint button{font-size:20px}
+
 /* ---- app shell ---- */
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}
@@ -880,6 +1109,100 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 .backup label.btn{display:inline-flex;align-items:center}
 .backup input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 
+/* ---- free accounts (phone app only) ---- */
+.acct-strip{position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)}
+.acct-strip.glow{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 18px rgba(233,196,106,.35)}
+.acct-ico{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(233,196,106,.16);color:var(--gold-ink);font-size:16px}
+.acct-txt{flex:1 1 180px;min-width:0;margin:0;font-size:14px;line-height:1.35;color:var(--cream)}
+.acct-txt b{color:var(--gold-ink)}
+.acct-btns{display:flex;gap:8px;flex-wrap:wrap}
+.acct-btns .btn{white-space:nowrap}
+.acct-sheet .sheet-in{gap:10px}
+.ac-tabs{display:flex;gap:6px;background:rgba(0,0,0,.25);padding:4px;border-radius:12px}
+.ac-tabs button{flex:1;border:0;background:none;color:var(--muted);font:700 15px var(--f-label);letter-spacing:.06em;text-transform:uppercase;min-height:40px;border-radius:9px;cursor:pointer}
+.ac-tabs button[aria-selected=true]{background:rgba(255,255,255,.14);color:var(--gold-ink)}
+.ac-form{display:flex;flex-direction:column;gap:8px}
+.ac-f{font:700 15px var(--f-body);color:var(--cream);display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.ac-hint{font-weight:400;font-size:13px;color:var(--muted)}
+.ac-form select{font:600 17px var(--f-body);color:var(--cream);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-height:46px}
+.ac-form select option{color:#13233f}
+.ac-form input[type=text],.ac-form input[type=email]{min-height:46px}
+.ac-form [aria-invalid=true]{border-color:#e86a5e}
+.ac-row{display:flex;gap:8px}.ac-row input{flex:1;min-width:0}
+.ac-check{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.35;color:var(--cream);margin-top:4px}
+.ac-check input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--gold)}
+.ac-check a{color:var(--gold-ink)}
+.ac-msg{margin:0;min-height:1.2em;font-size:14px;color:var(--muted)}
+.ac-msg.bad{color:#ffb0a8}.ac-msg.good{color:var(--ok)}
+.ac-lead{margin:0;font-size:15px}
+.ac-code{font:800 30px/1 var(--f-brand)!important;letter-spacing:.4em;text-align:center;padding-left:.4em!important;min-height:58px}
+.ac-links{margin:0;text-align:center;font-size:13px;color:var(--muted)}
+.ac-links .linkbtn:disabled{opacity:.6;cursor:default;text-decoration:none}
+.ac-dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px}
+.ac-dl dt{color:var(--muted)}.ac-dl dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.ac-sync{margin:0;font-size:14px;color:var(--ok)}
+.ac-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}
+.ac-btns .btn{flex:1 1 140px}
+.ac-confirm{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:1px solid #e86a5e;background:rgba(0,0,0,.25)}
+.ac-confirm p{margin:0;font-size:14px}
+.btn.ac-danger{background:#a32222;border-color:#a32222;color:#fff}
+
+.ac-end{justify-content:flex-end}
+.btn.ac-danger.armed{animation:ac-armed .5s ease-in-out infinite alternate}
+@keyframes ac-armed{from{box-shadow:0 0 0 0 rgba(232,106,94,.0)}to{box-shadow:0 0 0 4px rgba(232,106,94,.55)}}
+/* the sign-up moment */
+.acct-strip.wow{animation:acct-wow 2.4s cubic-bezier(.2,.8,.3,1)}
+@keyframes acct-wow{0%{transform:scale(1)}12%{transform:scale(1.045);box-shadow:0 0 0 2px var(--gold),0 0 40px rgba(254,194,7,.75)}
+  30%{transform:scale(.99)}45%{transform:scale(1.025);box-shadow:0 0 0 2px var(--gold),0 0 30px rgba(254,194,7,.6)}100%{transform:scale(1)}}
+.acct-strip.wow .acct-ico{animation:acct-spin 1.2s ease-out}
+@keyframes acct-spin{from{transform:rotate(-200deg) scale(.4)}to{transform:none}}
+.acct-strip.wow .acct-btns .btn:not(.ghost){position:relative;overflow:hidden;animation:acct-bump .6s .5s 3 ease-in-out}
+.acct-strip.wow .acct-btns .btn:not(.ghost)::after{content:"";position:absolute;inset:-2px auto -2px -60%;width:45%;transform:skewX(-20deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:acct-shine 1s .3s 2}
+@keyframes acct-shine{to{left:130%}}
+@keyframes acct-bump{50%{transform:scale(1.08)}}
+.acct-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:3}
+.acct-burst i{position:absolute;left:0;top:0;font-style:normal;font-size:var(--s);line-height:1;opacity:0;text-shadow:0 0 8px currentColor;
+  animation:acct-spark var(--d) var(--w) cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes acct-spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}15%{opacity:1}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1) rotate(160deg)}}
+@media (prefers-reduced-motion:reduce){.acct-strip.wow,.acct-strip.wow .acct-ico,.acct-strip.wow .acct-btns .btn,.btn.ac-danger.armed{animation:none}.acct-strip.wow .acct-btns .btn::after{display:none}}
+
+/* account button: top-left of the header, opposite the sound button */
+.acctbtn{position:absolute;top:-12px;left:0;z-index:2;height:38px;min-width:38px;padding:0 10px 0 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  background:rgba(255,255,255,.1);border:1px solid var(--line);color:var(--cream);font:700 12px var(--f-label);letter-spacing:.05em;text-transform:uppercase;touch-action:manipulation;transition:background-color .15s,box-shadow .15s}
+@media (max-width:399px){.acctbtn:not(.me){width:38px;padding:0;justify-content:center}.acctbtn:not(.me) #acctBtnTxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+.acctbtn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.acctbtn:hover,.acctbtn:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
+.acctbtn.me{width:38px;padding:0;justify-content:center;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-deep));border-color:var(--gold);color:#2a1d00;font:800 17px var(--f-brand);letter-spacing:0}
+.acctbtn.me svg{display:none}
+/* banner inside the number picker at the 3rd number */
+.ac-pickban{position:relative;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:10px 12px;border-radius:12px;
+  background:rgba(254,194,7,.14);border:1px solid var(--gold);box-shadow:0 0 18px rgba(254,194,7,.35)}
+.ac-pickban b{font:800 17px var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--gold-ink)}
+.ac-pickban span{font-size:14px;color:var(--cream)}
+.ac-pickban.wow{animation:acct-wow 2.4s cubic-bezier(.2,.8,.3,1)}
+@media (prefers-reduced-motion:reduce){.ac-pickban.wow{animation:none}}
+
+html.easy .acct-ico{font-size:17px}
+html.easy .acct-txt{font-size:15.5px}
+html.easy .ac-tabs button{font-size:16px}
+html.easy .ac-f{font-size:16px}
+html.easy .ac-hint{font-size:15px}
+html.easy .ac-form select{font-size:17px}
+html.easy .ac-check{font-size:15.5px}
+html.easy .ac-msg{font-size:15.5px}
+html.easy .ac-lead{font-size:16px}
+html.easy .ac-code{font-size:30px}
+html.easy .ac-links{font-size:15px}
+html.easy .ac-dl{font-size:16px}
+html.easy .ac-sync{font-size:15.5px}
+html.easy .ac-confirm p{font-size:15.5px}
+html.easy .acct-burst i{font-size:var(--s)}
+html.easy .acctbtn{font-size:14px}
+html.easy .acctbtn.me{font-size:17px}
+html.easy .ac-pickban b{font-size:17px}
+html.easy .ac-pickban span{font-size:15.5px}
 /* ---------- Tap targets (design pass, Nov 2026) ----------
    Players use this one-handed, often outdoors. Every control gets at least a 44px tap area;
    where the visible shape should stay small, an invisible ::after extends the hit area. */
@@ -893,6 +1216,11 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 .top-star{position:relative;width:38px;height:38px}
 .top-star::after{content:"";position:absolute;inset:-3px;border-radius:50%}
 .sndbtn{width:44px;height:44px}
+/* all three top buttons share the 44px size, with a 10px gap between magnifier and sound */
+.eyebtn{width:44px;height:44px;right:54px}
+.acctbtn{height:44px;min-width:44px}
+.acctbtn.me{width:44px}
+@media (max-width:399px){.acctbtn:not(.me){width:44px}}
 .mine-x{width:32px;height:32px;top:0;right:0}
 .mine-x::after{content:"";position:absolute;inset:-6px}
 .showmore-btn{min-height:44px}
