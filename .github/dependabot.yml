@@ -1,0 +1,12 @@
+# Dependabot checks the tools our GitHub Actions workflows use (checkout, ZAP scan)
+# once a week and opens a pull request when a newer, safer version is out.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        patterns: ["*"]   # one pull request for all action updates, not one each
