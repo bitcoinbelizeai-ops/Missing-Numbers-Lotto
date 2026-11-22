@@ -265,7 +265,34 @@
    },
    "status": "only-bbn",
    "published": true
+  },
+  {
+   "received": "2026-11-22T16:15:40Z",
+   "post_id": "300184130690312_2107588026860652",
+   "post_time": "2026-11-22T16:05:03.000Z",
+   "game": "lottery",
+   "date": "2026-11-22",
+   "read_as": {
+    "nums": [
+     "7216",
+     "0855",
+     "5096"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "lottery-2026-11-22",
+    "game": "lottery",
+    "date": "2026-11-22",
+    "nums": [
+     "7216",
+     "0855",
+     "5096"
+    ]
+   },
+   "status": "only-bbn",
+   "published": true
   }
  ],
- "updated": "2026-11-22T02:07:15Z"
+ "updated": "2026-11-22T16:15:40Z"
 }

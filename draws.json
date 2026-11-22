@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-21",
+ "updated": "2026-11-22",
  "source": "magayo.com",
  "draws": [
   {
@@ -1714,6 +1714,18 @@
    "letter": "P",
    "source": "bbn",
    "added": "2026-11-22T02:07:15Z"
+  },
+  {
+   "id": "lottery-2026-11-22",
+   "game": "lottery",
+   "date": "2026-11-22",
+   "nums": [
+    "7216",
+    "0855",
+    "5096"
+   ],
+   "source": "bbn",
+   "added": "2026-11-22T16:15:40Z"
   }
  ]
 }
