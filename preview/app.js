@@ -569,7 +569,12 @@ function topOut(missing,total){
   wrap.innerHTML='<h3 class="topout-h">Longest out</h3>';
   const ol=document.createElement('ol');ol.className='topout-list';
   top.forEach(([k,o],i)=>{const li=document.createElement('li');li.style.setProperty('--i',i);
-    li.innerHTML='<span class="rk">'+(i+1)+'</span>';li.appendChild(ballEl(k,true));
+    li.innerHTML='<span class="rk">'+(i+1)+'</span>';
+    /* the ball opens the same detail sheet as the matching ball in the grid below */
+    const ob=document.createElement('button');ob.type='button';ob.className='topball';ob.setAttribute('aria-label',k+'. Show details');ob.appendChild(ballEl(k,true));
+    ob.addEventListener('click',()=>{const sec=ob.closest('section')||document;const g=[...sec.querySelectorAll('.bwrap[data-key]')].find(b=>b.dataset.key===k);
+      if(g){openBallSheet(g);sheetFrom=ob}});
+    li.appendChild(ob);
     const bar=document.createElement('span');bar.className='tbar';bar.innerHTML='<s style="--w:'+Math.max(6,Math.round(val(o)/max*100))+'%"></s>';li.appendChild(bar);
     const v=document.createElement('span');v.className='tval';v.innerHTML=o==null?'<b>'+total+'+</b> draws':'<b>'+o+'</b> draw'+(o===1?'':'s');li.appendChild(v);
     const st=document.createElement('button');st.type='button';st.className='top-star';st.dataset.key=k;topStarLabel(st);li.appendChild(st);
@@ -715,16 +720,13 @@ function pickEnter(){
    Plays once per game or look-back change, when the section scrolls into view. */
 const WAVE_S=.8,TOP_STEP=.3;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-const dramaState={tiles:{key:null,played:false},hot:{key:null,played:false}};
+const dramaState={tiles:{key:null,played:false,seen:false},hot:{key:null,played:false,seen:false}};
 let dramaIO=null;
-function countUp(el,ms,delay){
+/* Answer first: numbers always show their real value. They used to count up from 0,
+   which briefly showed wrong values like "0+ draws" or "1 times". */
+function countUp(el){
   const m=/^(\d+)(.*)$/.exec(el.textContent);if(!m)return;
-  const to=+m[1],rest=m[2];el.dataset.final=to;if(to<2){return}
-  el.textContent='0'+rest;
-  const t0=performance.now()+delay;
-  const step=now=>{const p=Math.min(1,Math.max(0,(now-t0)/ms)),e=1-Math.pow(1-p,3);
-    el.textContent=Math.round(to*e)+rest;if(p<1)requestAnimationFrame(step)};
-  requestAnimationFrame(step);
+  el.dataset.final=+m[1];
 }
 function playDrama(id){
   const box=$(id),st=dramaState[id];if(!box||st.played)return;
@@ -748,6 +750,9 @@ function drama(key,ids){
   if(reduceMotion())return;
   (ids||['tiles']).forEach(id=>{
     const st=dramaState[id],box=$(id);if(!box)return;
+    // first render after the page opens: show the answer straight away, no reveal.
+    // The reveal plays only when the player switches game or look-back.
+    if(!st.seen){st.seen=true;st.key=key;st.played=true;return}
     if(st.key!==key){st.key=key;st.played=false;if(id==='tiles'&&Date.now()-enterPickedAt>120)pickEnter()}
     if(st.played)return;           // already shown for this game and look-back
     if(!box.querySelector('.bwrap')){st.played=true;return}
@@ -759,7 +764,7 @@ function drama(key,ids){
 }
 
 /* ---------- Missing Numbers: show a few rows, "Continue" opens more ---------- */
-const MISS_FIRST_ROWS=2,MISS_STEP_ROWS=4; // the first two rows show straight away (longest wait first), like Pick 3
+const MISS_FIRST_ROWS=2,MISS_STEP_ROWS=10; // the first two rows show straight away (longest wait first), like Pick 3
 const missView={key:null,rows:MISS_FIRST_ROWS};
 function gridCols(g){return getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length||1}
 function limitMissing(key,reveal){
@@ -773,8 +778,8 @@ function limitMissing(key,reveal){
   const fresh=[];
   balls.forEach((b,i)=>{const hide=i>=show;if(!hide&&b.hidden&&reveal)fresh.push(b);b.hidden=hide});
   if(fresh.length&&!reduceMotion()){
-    // one by one, slower: stagger shrinks a little for big batches so it never drags past ~2.6 s
-    const step=Math.min(.16,1.6/Math.max(1,fresh.length-1));
+    // a quick cascade: the whole batch lands within about half a second
+    const step=Math.min(.05,.5/Math.max(1,fresh.length-1));
     fresh.forEach((b,j)=>{b.classList.remove('reveal','reveal-star');void b.offsetWidth;
       b.style.setProperty('--r',(j*step).toFixed(3)+'s');b.classList.add('reveal');
       if(j===fresh.length-1)b.classList.add('reveal-star');
