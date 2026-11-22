@@ -1486,6 +1486,40 @@ if(false){
   const hadSW=!!navigator.serviceWorker.controller;let reloaded=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadSW||reloaded)return;reloaded=true;location.reload()});
 }
+/* ---------- "new version ready" (Nov 22, 2026) ----------
+   iPhones (Safari) keep the page in memory and the web host lets browsers reuse a saved copy for 10 minutes,
+   so a phone could keep showing an old version after an update. Each time the page opens or comes back to the
+   screen, ask the server for the newest page (skipping saved copies) and compare its app.js version with ours.
+   If it's newer, show a bar with an Update button. Updating loads the page with ?v=<new version>, which
+   no saved copy can answer, then tidies the address back up. */
+(()=>{
+  const verOf=t=>{const m=/app\.js\?v=([0-9a-z]+)/.exec(t||'');return m?m[1]:''};
+  const mine=verOf(([...document.scripts].find(s=>/app\.js\?v=/.test(s.src))||{}).src);
+  if(!mine||location.protocol==='file:')return;
+  // came here from the Update button: remove ?v= from the address bar
+  if(/[?&]v=/.test(location.search)){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}}
+  let busy=false,shown=false;
+  function bar(newer){
+    if(shown||$('updBar'))return;shown=true;
+    const b=document.createElement('div');b.className='updbar';b.id='updBar';b.setAttribute('role','status');
+    b.innerHTML='<span>A newer version of Missing Numbers is ready.</span><button type="button" class="updbar-go">Update now</button><button type="button" class="updbar-x" aria-label="Not now">\u00d7</button>';
+    b.querySelector('.updbar-go').onclick=()=>{try{sessionStorage.setItem('bz-upd-tried',newer)}catch(e){}location.replace(location.pathname+'?v='+newer+location.hash)};
+    b.querySelector('.updbar-x').onclick=()=>b.remove();
+    document.body.appendChild(b);
+  }
+  async function check(){
+    if(busy||shown||!navigator.onLine)return;busy=true;
+    try{
+      const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});
+      if(r.ok){const v=verOf(await r.text());let tried='';try{tried=sessionStorage.getItem('bz-upd-tried')||''}catch(e){}
+        // offer each new version once per visit, so a slow-to-update server can't cause a loop
+        if(v&&v!==mine&&v!==tried)bar(v)}
+    }catch(e){}finally{busy=false}
+  }
+  setTimeout(check,8000);   // after the opening splash
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
+  window.addEventListener('pageshow',e=>{if(e.persisted)check()});   // Safari brought the page back from memory
+})();
 refreshShipped();
 refreshHolidays();
 })();
