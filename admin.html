@@ -109,6 +109,38 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
 .attn .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 @media (max-width:420px){.attn .item.red,.attn .item.gold{flex-direction:column;align-items:stretch}.attn .item .btns{justify-content:flex-start}}
 
+/* ---------- design pass (Nov 2026): focus, tap targets, readable faded states, folding ---------- */
+/* keyboard focus is always visible; a dark ring separates it from the gold buttons */
+button:focus-visible,a:focus-visible,summary:focus-visible,label.filebtn:focus-within{outline:2px solid var(--gold-hi);outline-offset:2px;box-shadow:0 0 0 4px #042456}
+/* fields and controls: borders that pass 3:1, readable hints */
+input,select,.item button,.tabs button{border-color:rgba(233,196,106,.62)}
+input::placeholder{color:#aab6c9;opacity:1}
+/* thumb-sized buttons for posting in a hurry */
+.btn{min-height:44px}
+.item button{min-height:44px;padding:10px 14px;font-size:15px}
+.item .btns{gap:10px}
+.tabs button{min-height:48px;font-size:14px;letter-spacing:.02em}
+/* selected game tab: a solid tint and ring instead of a glow */
+.tabs button[aria-pressed="true"]{box-shadow:inset 0 0 0 1px var(--gc),0 2px 8px rgba(0,0,0,.35)}
+/* past and skipped rows stay readable: quieter colour, not transparency */
+.item.past,.item.skip{opacity:1}
+.item.past b,.item.past .why,.item.past span,.item.skip b,.item.skip span{color:#c9d4e6}
+.ball.blank{opacity:1;filter:grayscale(1) brightness(.75)}
+.item small{font-size:13px}
+/* restore: real radio buttons and a one-line confirm label */
+.opt input{width:22px;height:22px;padding:0;flex:none;accent-color:var(--gold)}
+#replaceWrap span{display:block}
+/* rarely used sections fold behind their heading */
+details.fold>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;cursor:pointer}
+details.fold>summary::-webkit-details-marker,details.fold-help>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:"";width:10px;height:10px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(45deg);margin:-4px 6px 0 0;transition:transform .15s}
+details.fold[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+details.fold .fold-body{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+details.fold-help>summary{list-style:none;cursor:pointer;color:var(--yellow);font-size:15.5px;text-decoration:underline;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center}
+details.fold-help p{margin-top:8px}
+@media (prefers-reduced-motion:reduce){details.fold>summary::after{transition:none}}
+@media (max-width:700px){.list.all{max-height:none;overflow:visible}}
+@media (max-width:420px){.hol-form{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-g="boledo">
@@ -128,12 +160,12 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
     </ol>
     <label>Access key<input type="password" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
     <div class="row"><button class="btn" id="saveToken">Connect</button></div>
-    <div class="msg" id="connMsg"></div>
+    <div class="msg" id="connMsg" role="status"></div>
   </section>
 
   <!-- Needs attention: waiting results and anything else that needs the admin (Nov 20, 2026) -->
-  <section class="panel attn clear" id="attnBox" hidden aria-live="polite">
-    <h2 id="attnTitle">All results are in</h2>
+  <section class="panel attn clear" id="attnBox" hidden>
+    <h2 id="attnTitle" aria-live="polite">All results are in</h2>
     <div class="list" id="attnList"></div>
     <div class="foot"><span class="help" id="attnWhen"></span><button class="btn ghost" id="attnRefresh">Refresh</button></div>
   </section>
@@ -155,17 +187,19 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
       <div id="confirmText"></div>
       <div class="row"><button class="btn" id="publish">Publish to everyone</button><button class="btn ghost" id="cancel">Change</button></div>
     </div>
-    <div class="msg" id="msg"></div>
+    <div class="msg" id="msg" role="status"></div>
   </section>
 
   <!-- recent -->
   <section class="panel" id="bbnBox" hidden>
     <h2>BBN (Facebook) · main source</h2>
+    <details class="fold-help"><summary>How BBN works</summary>
     <p class="help">Results read from BBN Belize's Facebook posts. A good result for a draw the site doesn't have yet is <b>added to the site automatically</b> within about a minute. It never replaces a result already on the site: anything that doesn't fit stays here with "Add to site", and disagreements show in red at the top. magayo is the backup and double-checks BBN overnight.</p>
+    </details>
     <div class="bbnsum" id="bbnSum"></div>
     <div class="row"><button class="btn ghost" id="bbnRefresh">Refresh</button></div>
     <div class="list all" id="bbnList"></div>
-    <div class="msg" id="bbnMsg"></div>
+    <div class="msg" id="bbnMsg" role="status"></div>
   </section>
 
   <section class="panel" id="recentBox" hidden>
@@ -175,7 +209,8 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
   </section>
 
   <section class="panel" id="holBox" hidden>
-    <h2>Public holidays</h2>
+    <details class="fold"><summary><h2>Public holidays</h2></summary>
+    <div class="fold-body">
     <p class="help">No Boledo, Pick 3 or Fantasy 5 draw on these days. Members see the greeting in the app ("No draw today · Happy Independence Day! 🇧🇿"), and the results jobs save "no draw" automatically. Use the dates the government <b>observes</b> (some holidays move to a Monday). The yearly list is on <a href="https://www.pressoffice.gov.bz/" target="_blank" rel="noopener">pressoffice.gov.bz</a>.</p>
     <div class="list" id="holList"></div>
     <hr class="sep">
@@ -186,7 +221,8 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
       <label class="wide">Greeting members see<input id="holGreet" maxlength="80" placeholder="Happy Garifuna Settlement Day! 🪘"></label>
     </div>
     <div class="row"><button class="btn" id="holSave">Add holiday</button><button class="btn ghost" id="holCancel" hidden>Cancel</button></div>
-    <div class="msg" id="holMsg"></div>
+    <div class="msg" id="holMsg" role="status"></div>
+    </div></details>
   </section>
 
   <section class="panel" id="allBox" hidden>
@@ -196,10 +232,11 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
   </section>
 
   <section class="panel" id="backupBox" hidden>
-    <h2>Backups &amp; data</h2>
+    <details class="fold"><summary><h2>Backups &amp; restore</h2></summary>
+    <div class="fold-body">
     <p class="help">Download everything that is on the site. Keep a backup somewhere safe (email it to yourself, or save it to a USB stick).</p>
     <div class="row"><button class="btn" id="dlJson">Save a backup (.json)</button><button class="btn ghost" id="dlCsv">Download spreadsheet (.csv)</button></div>
-    <div class="msg" id="dlMsg"></div>
+    <div class="msg" id="dlMsg" role="status"></div>
     <hr class="sep">
     <h2>Restore a backup</h2>
     <p class="help">Choose a backup file. Nothing changes on the site until you check what it will do and press Restore.</p>
@@ -208,18 +245,22 @@ body[data-g="pick3"]{--b1:#cdb0ff;--b2:#7a45d6;--b3:#45208f;--gc:rgba(122,69,214
       <div id="planText"></div>
       <label class="opt"><input type="radio" name="rmode" value="merge" checked> <span><b>Add only what is missing</b> (safe). Results already on the site are never changed or removed.</span></label>
       <label class="opt"><input type="radio" name="rmode" value="replace"> <span><b>Replace everything on the site</b> with this backup. Results not in the backup are removed.</span></label>
-      <label id="replaceWrap" hidden>Type <b>REPLACE</b> to confirm<input id="replaceWord" autocomplete="off" spellcheck="false" placeholder="REPLACE"></label>
+      <label id="replaceWrap" hidden><span>Type <b>REPLACE</b> to confirm</span><input id="replaceWord" autocomplete="off" spellcheck="false" placeholder="REPLACE"></label>
       <p class="help">Before anything changes, a safety copy of what is on the site now is saved to this device, and you can press Undo right after.</p>
       <div class="row"><button class="btn" id="restoreGo" disabled>Restore</button><button class="btn ghost" id="restoreCancel">Cancel</button></div>
     </div>
-    <div class="msg" id="restoreMsg"></div>
+    <div class="msg" id="restoreMsg" role="status"></div>
     <div class="row" id="undoRow" hidden><button class="btn ghost" id="undoRestore">Undo the restore</button></div>
+    </div></details>
   </section>
 
   <section class="panel" id="deviceBox" hidden>
+    <details class="fold"><summary><h2>This device</h2></summary>
+    <div class="fold-body">
     <label id="expWrap">This key expires on <small>(GitHub shows the date when you make the key. You'll get a warning 30 days before.)</small><input type="date" id="keyExp"></label>
     <div class="row"><button class="btn ghost" id="forget">Disconnect this device</button></div>
     <p class="help">Lost this phone? On GitHub go to Settings → Developer settings → Fine-grained tokens and delete <code>Results admin</code>. The key stops working at once.</p>
+    </div></details>
   </section>
 </div>
 
@@ -241,7 +282,10 @@ function addDays(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTC
 function dowOf(iso){return new Date(iso+'T12:00:00Z').getUTCDay()}
 function lastDraw(g){const n=bz(),s=SCHED[g];let iso=n.iso;for(let i=0;i<8;i++){if(s.days.includes(dowOf(iso))&&(iso<n.iso||n.min>=s.h*60+s.m))return iso;iso=addDays(iso,-1)}return n.iso}
 const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
-function msg(el,text,kind){el.textContent=text;el.className='msg '+(kind||'info')}
+function msg(el,text,kind){el.textContent=text;el.className='msg '+(kind||'info');
+  // design pass: make sure the message is seen (open its folded section, bring it into view)
+  const fold=el.closest('details');if(fold)fold.open=true;
+  const r=el.getBoundingClientRect();if(text&&(r.top<0||r.bottom>innerHeight))el.scrollIntoView({block:'nearest',behavior:'smooth'})}
 const toks=()=>$('nums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
 const digits=t=>t.map(x=>x.replace(/\D/g,'')).filter(Boolean);
 function make(g,t){
@@ -682,7 +726,7 @@ function showHolidays(){
       '<span class="why">'+esc(h.greeting||'')+'</span><small>'+(games.length?'No '+games.join(', ')+' draw':'No weekday game is drawn that day anyway')+'</small></div>';
     const btns=document.createElement('div');btns.className='btns';
     const ed=document.createElement('button');ed.textContent='Edit';ed.onclick=()=>{holEdit=k;$('holDate').value=k;$('holName').value=h.name||'';$('holGreet').value=h.greeting||'';
-      $('holFormTitle').textContent='Edit holiday';$('holSave').textContent='Save changes';$('holCancel').hidden=false;$('holDate').scrollIntoView({behavior:'smooth',block:'center'})};
+      $('holFormTitle').textContent='Edit holiday';$('holSave').textContent='Save changes';$('holCancel').hidden=false;$('holDate').closest('details').open=true;$('holDate').scrollIntoView({behavior:'smooth',block:'center'})};
     btns.appendChild(ed);
     btns.appendChild(tapTwice('Remove','Tap again to remove',async()=>{await holCommit(d=>{delete d.days[k]},'Admin: remove holiday '+k);msg($('holMsg'),'Removed '+fmtDay(k)+'.','ok')}));
     it.appendChild(btns);box.appendChild(it)});
