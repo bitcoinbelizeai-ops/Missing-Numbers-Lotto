@@ -408,7 +408,9 @@ const EASY=(()=>{
     toast(on?'Easy reading on: larger, clearer text. Tap the magnifier again to switch it off.':'Easy reading off.',false,3200)});
   function maybeHint(){
     if(!btn||get(HINT)||on)return;
-    if(document.querySelector('#intro:not([hidden]),.sheet:not([hidden]),.mixbox:not([hidden])')){setTimeout(maybeHint,1500);return}
+    if(document.querySelector('#izSplash:not([hidden]),.sheet:not([hidden]),.mixbox:not([hidden])')){setTimeout(maybeHint,1000);return}
+    // let people read the title first: the tip waits 2.5 s after the opening splash ends, so it never covers the title as the app appears
+    const sp=$('izSplash'),since=sp&&sp.dataset.endedAt?Date.now()-(+sp.dataset.endedAt):1e9;if(since<2500){setTimeout(maybeHint,2500-since);return}
     const h=document.createElement('div');h.className='eyehint';h.id='eyeHint';h.setAttribute('role','status');
     h.innerHTML='Easier to read? Tap the magnifier for larger, clearer text.<button type="button" aria-label="Close tip">×</button>';
     h.querySelector('button').onclick=ev=>{ev.stopPropagation();hideHint()};
@@ -1369,25 +1371,35 @@ const INTRO=(()=>{
   let timer=0,running=false,t0=0,soundOn=false;
   const elapsed=()=>(performance.now()-t0)/1000;
   let fadeT=0;
-  function end(){clearTimeout(timer);clearTimeout(fadeT);sp.classList.remove('iz-play','iz-exit','iz-skip');sp.hidden=true;running=false;introFading()}
+  function end(){clearTimeout(timer);clearTimeout(fadeT);clearTimeout(statT);sp.classList.remove('iz-play','iz-exit','iz-skip','iz-short');sp.hidden=true;running=false;sp.dataset.endedAt=Date.now();introFading()}
+  // how long it stays (owner, Nov 22, 2026): 5 s on the first open of the day, 3 s if it already played today. Was 6.8 s.
+  // The words are all on screen by 1.5 s; the rest is reading time, with a breathing ball and a status line so it never looks frozen.
+  const FULL=5000,SHORT=3000,FADE=300,DAYKEY='bz-intro-day';
+  const seenToday=()=>{try{return localStorage.getItem(DAYKEY)===bzNow().iso}catch(e){return false}};
+  const markSeen=()=>{try{localStorage.setItem(DAYKEY,bzNow().iso)}catch(e){}};
+  const statusText=()=>state.loaded?'Latest results ready':'Loading the latest results\u2026';
+  let statT=0;
+  function skip(){if(!running)return;clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)}
   function play(withSound){
     if(reduceMotion()||running)return false;
-    running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip');void sp.offsetWidth;measure();
-    sp.classList.add('iz-play','iz-exit');
+    const short=!withSound&&seenToday(),total=short?SHORT:FULL;markSeen();
+    sp.style.setProperty('--iz-out',(total-FADE)+'ms');
+    const st=g('izStatus');if(st){st.textContent=statusText();statT=setTimeout(()=>{st.textContent=statusText()},2100)}
+    running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip','iz-short');void sp.offsetWidth;measure();
+    sp.classList.add('iz-play','iz-exit');if(short)sp.classList.add('iz-short');
     t0=performance.now();soundOn=false;
     // try the chime straight away: allowed for home-screen apps on Android and installed apps on computers.
     // Elsewhere (iPhone, phone browsers) the first tap on the intro starts it.
     if(withSound){SND.intro(0);soundOn=true}
     else if(!SND.isMuted()){SND.init();const go=()=>{if(!soundOn&&running&&SND.running()&&elapsed()<.4){soundOn=true;SND.intro(elapsed())}};go();setTimeout(go,120)}
-    // the words stay on screen until about 6.5 seconds so they can be read without rushing (Nov 20, 2026; was 2.6 s)
-    introOn=true;fadeT=setTimeout(introFading,6450);
-    timer=setTimeout(end,6800);return true;
+    introOn=true;fadeT=setTimeout(introFading,total-FADE-50);
+    timer=setTimeout(end,total);return true;
   }
-  // tap anywhere on the intro to skip it
-  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;
-    // first tap while silent: switch the sound on and let the intro finish; the next tap skips
-    if(!soundOn&&!SND.isMuted()){soundOn=true;SND.unlock(()=>{if(running||elapsed()<7.1)SND.intro(elapsed())});return}
-    clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)});
+  // a tap anywhere always moves on (Nov 22, 2026: it used to switch the sound on first, which surprised people on silent phones).
+  // The chime still plays where the phone allows it, and always when the title is tapped to replay the intro.
+  sp.addEventListener('click',e=>{e.stopPropagation();skip()});
+  // keyboard: Enter, Space or Esc moves on too
+  document.addEventListener('keydown',e=>{if(running&&(e.key==='Enter'||e.key===' '||e.key==='Escape')){e.preventDefault();skip()}});
   return{play};
 })();
 // tap the "Missing Numbers" title to watch the intro again, with sound
