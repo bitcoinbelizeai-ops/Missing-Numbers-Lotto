@@ -654,7 +654,7 @@ async function makeShareImage(){
 $('shareBtn').addEventListener('click',async()=>{
   const blob=await makeShareImage();if(!blob){toast('Nothing to share yet');return}
   shareBlob=blob;const file=new File([blob],'belize-'+state.game+'-result.png',{type:'image/png'});
-  const text=GAMES[state.game].label+' result · Belize Lottery Missing Numbers';
+  const text=GAMES[state.game].label+' result · Belize Lottery Missing Numbers · https://missingnumbers.bz';
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}catch(e){if(e&&e.name==='AbortError')return}
   const url=URL.createObjectURL(blob),img=$('shareImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.src=url;img.dataset.url=url;img.alt=text;
   $('shareGo').hidden=!(navigator.canShare&&navigator.canShare({files:[file]}));
