@@ -141,6 +141,15 @@ function drawsFor(){
   const src=real(state.sample||state.draws);
   return src.filter(d=>d.game===state.game).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
 }
+/* Last Draw balls are tappable too (owner, Nov 22, 2026): the same ball card as the Missing and Hot boards.
+   Facts count every draw we have. Pick 3 keys are 'spot:digit'; Sunday Jackpot's two counted digits form one button. */
+function ldFactsFn(all){const L=all.length,dates=all.map(x=>x.date),span='all '+L+' draws we have';
+  if(state.game==='pick3'){const f=SPOTS.map((_,i)=>factsFor(all.map(d=>[String(d.nums[i])]),dates,L,null,null,span));
+    return key=>{const [i,dg]=key.split(':');return f[+i](dg,'<b>'+dg+'</b> in the '+SPOTS[+i]+' spot · ')}}
+  const G=GAMES[state.game],f=factsFor(all.map(G.keys),dates,L,null,null,span);return key=>f(key,'<b>'+key+'</b> · ')}
+function tapBall(kids,key,label,detail,say){const b=document.createElement('button');b.type='button';b.className='bwrap ldball';
+  b.dataset.key=key;b.dataset.label=label;b.dataset.detail=detail;b.setAttribute('aria-label',say+'. Tap for details.');
+  if(isMine(key))b.classList.add('is-mine');[].concat(kids).forEach(k=>b.appendChild(k));return b}
 function ballEl(k,small){const t=document.createElement('div');t.className='tile'+(small?' sm':'');const s=document.createElement('span');s.textContent=k;t.appendChild(s);return t}
 function ballWithTag(k,tagHTML,detail,key){const w=document.createElement('button');w.type='button';w.className='bwrap';w.appendChild(ballEl(k));
   if(key!==undefined){w.dataset.key=key;if(isMine(key))w.classList.add('is-mine')}
@@ -905,15 +914,21 @@ function render(){
     if(roll){if(introRunning()){last.classList.add('hold');ldPending=true}else requestAnimationFrame(()=>startLastRoll())}
     $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
     $('shareBtn').hidden=!!d.nodraw;
-    let bi=0;
+    let bi=0;const ldFacts=ldFactsFn(all);
     if(state.game==='lottery'){
       d.nums.forEach((n,i)=>{const row=document.createElement('div');row.className='prizerow';
         const lab=document.createElement('span');lab.className='prizelab';lab.textContent=['1st','2nd','3rd'][i]+' prize';row.appendChild(lab);
-        pad(n,4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('xs');if(i===0&&j>=2)t.classList.add('counted');t.style.setProperty('--i',bi++);row.appendChild(t)});
+        const pair=[];
+        pad(n,4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('xs');t.style.setProperty('--i',bi++);
+          if(i===0&&j>=2&&!d.nodraw){t.classList.add('counted');pair.push(t)}else{if(i===0&&j>=2)t.classList.add('counted');row.appendChild(t)}});
+        if(pair.length){const k=pad(n,4).slice(-2),pb=tapBall(pair,k,k,ldFacts(k),'Winning number '+k);pb.classList.add('ldpair');row.appendChild(pb)}
         last.appendChild(row)});
       const ln=document.createElement('p');ln.className='lnote';ln.textContent='The gold-ringed balls are the last two digits of the 1st prize, the number the board counts.';last.appendChild(ln);
     }else{
-      (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach(k=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);last.appendChild(t)});
+      (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach((k,i)=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);
+        if(d.nodraw){last.appendChild(t);return}
+        const p3=state.game==='pick3',key=p3?i+':'+k:k;
+        last.appendChild(tapBall(t,key,k,ldFacts(key),p3?'Digit '+k+', '+SPOTS[i]+' spot':'Winning number '+k))});
       if(d.letter){const l=document.createElement('div');l.className='letter';l.textContent=d.letter;l.title='Free letter';l.style.setProperty('--i',bi++);last.appendChild(l)}
       if(!d.nodraw&&(state.game==='boledo'||state.game==='pick3'))addRecent(last,all,bi);
     }
@@ -1118,9 +1133,10 @@ function addRecent(last,all,nBig){
     const p=prev[0];
     // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
     const it=document.createElement('div');it.className='recent-item';
-    it.setAttribute('role','img');it.setAttribute('aria-label','Draw before, '+fmtDay(p.date)+': '+p.nums.join(' '));
-    const chips=document.createElement('div');chips.className='p3chips';
-    p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);chips.appendChild(t)});
+    it.setAttribute('role','group');it.setAttribute('aria-label','Draw before, '+fmtDay(p.date)+': '+p.nums.join(' '));
+    const chips=document.createElement('div');chips.className='p3chips';const pf=ldFactsFn(all);
+    p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);const key=r+':'+n;
+      chips.appendChild(tapBall(t,key,String(n),pf(key),'Digit '+n+', '+SPOTS[r]+' spot, draw before'))});
     const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
     it.append(chips,lab);list.appendChild(it);
   }else{
@@ -1164,7 +1180,7 @@ function onBallTap(e){
 function openBallSheet(b){
   document.querySelectorAll('.bwrap.sel').forEach(x=>{x.classList.remove('sel');x.setAttribute('aria-pressed','false')});
   b.classList.add('sel');b.setAttribute('aria-pressed','true');sheetFrom=b;
-  const key=b.dataset.key,label=(b.querySelector('.tile span')||{}).textContent||'';
+  const key=b.dataset.key,label=b.dataset.label||(b.querySelector('.tile span')||{}).textContent||'';
   const pick=state.game==='pick3'&&key&&key.includes(':');
   const sb=$('sheetBall');sb.innerHTML='';const t=ballEl(label);if(b.classList.contains('alt'))t.classList.add('alt');sb.appendChild(t);
   $('sheetTitle').textContent=pick?'Digit '+label+' · '+SPOTS[+key.split(':')[0]]+' spot':(GAMES[state.game].label+' '+label);
