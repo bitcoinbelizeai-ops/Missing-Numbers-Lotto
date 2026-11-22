@@ -192,6 +192,8 @@ body[data-game="boledo"] .say b{text-shadow:none}
 .bwrap.sel .tile{transform:translateY(-4px) scale(1.08);box-shadow:0 0 0 3px var(--gold),0 0 24px var(--gc),0 10px 16px rgba(0,0,0,.55)}
 .bwrap.sel .tag,.bwrap.sel .tag b{color:var(--gold-ink)}
 .bwrap:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.bwrap.ldball{padding:0}
+.bwrap.ldpair{flex-direction:row;gap:8px}
 .ballset{display:flex;flex-direction:column;gap:12px}
 .balldetail{margin:0;padding:10px 14px;border:1px solid var(--gold);border-radius:12px;background:rgba(233,196,106,.10);font-size:15px;color:var(--cream);
   box-shadow:0 0 18px var(--gc);animation:pop .2s ease-out}
@@ -1196,6 +1198,11 @@ html.easy .ac-pickban span{font-size:15.5px}
 .top-star{position:relative;width:38px;height:38px}
 .top-star::after{content:"";position:absolute;inset:-3px;border-radius:50%}
 .sndbtn{width:44px;height:44px}
+/* all three top buttons share the 44px size, with a 10px gap between magnifier and sound */
+.eyebtn{width:44px;height:44px;right:54px}
+.acctbtn{height:44px;min-width:44px}
+.acctbtn.me{width:44px}
+@media (max-width:399px){.acctbtn:not(.me){width:44px}}
 .mine-x{width:32px;height:32px;top:0;right:0}
 .mine-x::after{content:"";position:absolute;inset:-6px}
 .showmore-btn{min-height:44px}
