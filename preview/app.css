@@ -692,6 +692,13 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .pickbtns .btn{min-width:130px}
 .pickdone{border:0;background:none;color:var(--muted);font:600 14px var(--f-body);text-decoration:underline;cursor:pointer;padding:4px 8px}
 .toast{z-index:70}
+/* 'new version ready' bar: top of the screen, above everything but the opening splash */
+.updbar{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:150;width:min(460px,calc(100% - 32px));display:flex;align-items:center;gap:10px;padding:10px 8px 10px 16px;border-radius:16px;background:var(--cream);color:var(--felt-deep);font:600 16px/1.35 var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 2px var(--gold)}
+.updbar span{flex:1;min-width:0}
+.updbar-go{flex:none;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-deep));color:#2a1d00;font:700 16px var(--f-body);cursor:pointer}
+.updbar-x{flex:none;width:44px;height:44px;border:0;background:none;color:var(--felt-deep);font-size:24px;line-height:1;cursor:pointer}
+.updbar-go:focus-visible,.updbar-x:focus-visible{outline:2px solid var(--felt-deep);outline-offset:2px}
+html.easy .updbar{font-size:17px}
 @media (prefers-reduced-motion:reduce){.mine-item.armed,.pickball.pop .tile{animation:none}.mine-item{transition:none}}
 
 /* ---------- Mixer: high-pressure air jets and slot-machine reveal ---------- */
