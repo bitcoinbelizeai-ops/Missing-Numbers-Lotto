@@ -51,7 +51,7 @@
     <p class="fine" id="drawFine" hidden></p>
   </section>
 
-  <section class="panel" id="secMiss" aria-labelledby="missTitle" aria-live="polite">
+  <section class="panel" id="secMiss" aria-labelledby="missTitle">
     <div class="panel-head">
       <h2 id="missTitle">Missing Numbers</h2>
       <div class="lookback"><span class="lookback-lbl" id="lookLbl">Last</span><div class="seg" role="group" aria-labelledby="lookLbl" id="winSeg"></div></div>
@@ -61,7 +61,7 @@
       <label class="label" for="missTo">To</label><input type="date" id="missTo">
       <button type="button" class="btn ghost small" id="missClear">Use the slider</button>
     </div>
-    <p class="say" id="say" aria-busy="true"><span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span></p>
+    <p class="say" id="say" aria-live="polite" aria-busy="true"><span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span></p>
     <div id="tiles" class="answer-body"></div>
     <div class="notebar"><p class="note" id="note"></p><button type="button" class="more" data-more="noteFine" aria-expanded="false" aria-controls="noteFine">More info</button></div>
     <p class="fine" id="noteFine" hidden></p>

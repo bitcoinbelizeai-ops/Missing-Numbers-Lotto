@@ -2,8 +2,8 @@
 /* Layout: one column on royal blue (#094692) with logo yellow (#fec207) on the title — ball-badge header, game tabs, last draw, poker-chip look-back, missing, hot; hand entry folded at the bottom */
 :root{
   /* "Bright Royal" theme (Nov 15, 2026): lighter, more vivid blue and see-through panels */
-  --felt:#1866cc; --felt-deep:#0d4ea6; --felt-hi:#3d8ef2; --panel:rgba(255,255,255,.10);
-  --gold:#e9c46a; --gold-hi:#fff0b8; --gold-deep:#a97a22; --cream:#f7f0dc; --muted:#dde7f7;
+  --felt:#1866cc; --felt-deep:#0d4ea6; --felt-hi:#3d8ef2; --panel:rgba(6,35,92,.40);
+  --gold:#e9c46a; --gold-ink:#f6d888; --gold-hi:#fff0b8; --gold-deep:#a97a22; --cream:#f7f0dc; --muted:#dde7f7;
   --line:rgba(255,255,255,.24); --red:#d63c3c; --red-deep:#8f1717; --ok:#9fe0c4; --bulb:#fff3c4;
   --f-brand:"Outfit","Barlow",ui-sans-serif,system-ui,sans-serif;
   --f-label:"Barlow Condensed","Arial Narrow",ui-sans-serif,system-ui,sans-serif;
@@ -24,10 +24,10 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 .brand h1{margin:2px 0 0;font:800 clamp(30px,8vw,38px)/1 var(--f-brand);letter-spacing:-.01em;color:#fff}
 .brand h1 em{font-style:normal;color:var(--logo-yellow)}
 .fresh{margin:0;text-align:center;font:600 14px var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.fresh b{color:var(--gold)}
+.fresh b{color:var(--gold-ink)}
 
 /* game picker */
-.pick-title{margin:6px 0 -4px;text-align:center;font:700 20px var(--f-label);letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
+.pick-title{margin:6px 0 -4px;text-align:center;font:700 20px var(--f-label);letter-spacing:.24em;text-transform:uppercase;color:var(--gold-ink);
   display:flex;align-items:center;gap:12px}
 .pick-title::before,.pick-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
 .pick-title::after{background:linear-gradient(90deg,var(--gold),transparent)}
@@ -53,7 +53,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 /* panels */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
 .panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
-.panel h2{margin:0;font:700 24px/1.1 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.panel h2{margin:0;font:700 24px/1.1 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
 .when{font:600 15px var(--f-label);letter-spacing:.05em;color:var(--cream);text-transform:uppercase}
 .say{margin:0;font-size:16px;color:var(--cream);max-width:56ch}
 /* numbers in the explanations sit in a small pill in the game's ball color, like the look-back switch */
@@ -85,7 +85,7 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 .tile.sm span{font-size:20px}
 .tag{font:600 13px/1.1 var(--f-label);letter-spacing:0;color:var(--muted);text-align:center;white-space:nowrap}
 .tag b{color:var(--cream);font-size:15px}
-.hot .tag b{color:var(--gold)}
+.hot .tag b{color:var(--gold-ink)}
 .posrow{display:flex;flex-direction:column;gap:10px}
 .posrow+.posrow{border-top:1px dashed var(--line);padding-top:16px}
 .posrow h3{font:700 15px var(--f-label);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0}
@@ -98,16 +98,16 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 .plaque small{font:700 12px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .plaque strong{font:700 30px/1 var(--f-label);letter-spacing:.06em;color:var(--cream);font-variant-numeric:tabular-nums}
 .plaque strong u{text-decoration:none;color:#ffcf4a}
-.letter{width:44px;height:44px;border-radius:10px;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 24px var(--f-label);color:var(--gold)}
+.letter{width:44px;height:44px;border-radius:10px;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 24px var(--f-label);color:var(--gold-ink)}
 .lastdraw .lnote{flex-basis:100%;margin:0;font-size:13px;color:var(--muted)}
 
 /* folds and forms */
 .banner{border:1px dashed var(--gold);background:var(--panel);border-radius:12px;padding:10px 14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:14px}
-.banner b{color:var(--gold)}
+.banner b{color:var(--gold-ink)}
 details{background:var(--panel);border:1px solid var(--line);border-radius:14px}
 summary{cursor:pointer;padding:14px 18px;font:700 17px var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--cream);list-style:none;display:flex;justify-content:space-between;gap:12px}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"Show";color:var(--gold);font-size:14px}
+summary::after{content:"Show";color:var(--gold-ink);font-size:14px}
 details[open] summary::after{content:"Hide"}
 .fold{padding:0 18px 18px;display:flex;flex-direction:column;gap:12px}
 .label{font:700 12px var(--f-label);text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
@@ -121,7 +121,7 @@ input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;width:22px;he
 input[type=date]::-webkit-calendar-picker-indicator:hover{background-color:rgba(254,194,7,.32);box-shadow:0 0 8px rgba(254,194,7,.55)}
 #quickNums{font:700 20px var(--f-label);letter-spacing:.08em}
 .btn{font:700 16px var(--f-label);letter-spacing:.08em;text-transform:uppercase;border-radius:10px;padding:11px 20px;cursor:pointer;border:1px solid var(--gold);background:linear-gradient(180deg,var(--gold-hi),var(--gold) 45%,var(--gold-deep));color:#2a1d00}
-.btn.ghost{background:transparent;color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--gold-ink)}
 .btn.small{padding:6px 12px;font-size:14px}
 .hint{font-size:13px;color:var(--muted)}
 .msg{font-size:14px;min-height:20px}
@@ -162,12 +162,12 @@ body[data-game="boledo"] .say b{text-shadow:none}
 .bwrap:hover .tile{transform:translateY(-3px);box-shadow:inset -4px -6px 10px rgba(0,0,0,.25),0 8px 14px rgba(0,0,0,.5),0 0 16px var(--gc)}
 .bwrap:active .tile{transform:translateY(1px) scale(.94)}
 .bwrap.sel .tile{transform:translateY(-4px) scale(1.08);box-shadow:0 0 0 3px var(--gold),0 0 24px var(--gc),0 10px 16px rgba(0,0,0,.55)}
-.bwrap.sel .tag,.bwrap.sel .tag b{color:var(--gold)}
+.bwrap.sel .tag,.bwrap.sel .tag b{color:var(--gold-ink)}
 .bwrap:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ballset{display:flex;flex-direction:column;gap:12px}
 .balldetail{margin:0;padding:10px 14px;border:1px solid var(--gold);border-radius:12px;background:rgba(233,196,106,.10);font-size:15px;color:var(--cream);
   box-shadow:0 0 18px var(--gc);animation:pop .2s ease-out}
-.balldetail b{color:var(--gold);font-family:var(--f-label);font-size:17px}
+.balldetail b{color:var(--gold-ink);font-family:var(--f-label);font-size:17px}
 @keyframes pop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 
 /* last draw: balls roll in one by one */
@@ -197,7 +197,7 @@ body[data-game="boledo"] .say b{text-shadow:none}
 .nudge>summary h2{display:inline}
 .nudge-body{padding:0 16px 14px;display:flex;flex-direction:column;gap:10px}
 .nudge-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.nudge h2{margin:0;font:700 20px var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);text-shadow:0 1px 0 rgba(0,0,0,.85)}
+.nudge h2{margin:0;font:700 20px var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink);text-shadow:0 1px 0 rgba(0,0,0,.85)}
 .nudge-head span{display:none;font:600 14px var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .nudge ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .nudge li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.28)}
@@ -222,7 +222,7 @@ body[data-game="boledo"] .say b{text-shadow:none}
 .nudge li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:2px}
 .nudge li .linkbtn{grid-column:2/-1;justify-self:start;padding:2px 0 0;font-size:13px}
 /* winning badge on the last draw */
-.winbadge{flex-basis:100%;margin:0 0 2px;display:inline-flex;align-items:center;gap:8px;font:700 15px var(--f-label);letter-spacing:.16em;text-transform:uppercase;color:var(--gold);
+.winbadge{flex-basis:100%;margin:0 0 2px;display:inline-flex;align-items:center;gap:8px;font:700 15px var(--f-label);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-ink);
   text-shadow:0 1px 0 rgba(0,0,0,.85)}
 .winbadge::before,.winbadge::after{content:"★";color:var(--red);font-size:.85em;text-shadow:0 0 6px rgba(214,60,60,.6)}
 
@@ -252,13 +252,13 @@ body[data-game="boledo"] .say b{text-shadow:none}
 /* skipped dates and undo */
 tr.skipped td{color:var(--muted);font-style:italic;opacity:.8}
 tr.skipped td.num{font-family:var(--f-body);font-weight:500;font-size:14px;letter-spacing:0}
-.undo{border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;font:700 13px var(--f-label);letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:8px;font-style:normal}
+.undo{border:1px solid var(--gold);background:transparent;color:var(--gold-ink);cursor:pointer;font:700 13px var(--f-label);letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:8px;font-style:normal}
 .undo:hover{background:rgba(233,196,106,.15)}
-.toast-undo{margin-left:10px;border:0;background:var(--felt);color:var(--gold);font:700 14px var(--f-label);letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px;cursor:pointer;vertical-align:middle}
+.toast-undo{margin-left:10px;border:0;background:var(--felt);color:var(--gold-ink);font:700 14px var(--f-label);letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px;cursor:pointer;vertical-align:middle}
 
 /* just-skipped row with Undo, right where the user tapped */
 .nudge li.skipped{position:relative;overflow:hidden;background:rgba(233,196,106,.12);border:1px dashed var(--gold)}
-.nudge li.skipped .ntext b{color:var(--gold)}
+.nudge li.skipped .ntext b{color:var(--gold-ink)}
 .nudge li.skipped .ntext small{font-style:italic}
 .undo-btn{background:var(--cream)!important;color:var(--felt-deep)!important;border-color:var(--cream)!important}
 .undo-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--gold);transform-origin:left;animation:undobar linear forwards}
@@ -268,7 +268,7 @@ tr.skipped td.num{font-family:var(--f-body);font-weight:500;font-size:14px;lette
 .disclaimer{display:block;margin-top:6px;font-size:11px;opacity:.85}
 
 /* draw schedule notes */
-.drawinfo b{font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.drawinfo b{font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
 .hint.warn{color:#ffd27a;font-weight:600}
 .hint.warn::before{content:"⚠ "}
 
@@ -278,7 +278,7 @@ tr.skipped td.num{font-family:var(--f-body);font-weight:500;font-size:14px;lette
 .notebar,.morebar{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap}
 .morebar{justify-content:flex-end}
 .notebar .note{flex:1 1 200px;min-width:0}
-.more{flex:none;display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 7px;font:600 12px var(--f-body);letter-spacing:.02em;color:var(--gold);cursor:pointer;transition:border-color .15s,box-shadow .15s,background-color .15s}
+.more{flex:none;display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 7px;font:600 12px var(--f-body);letter-spacing:.02em;color:var(--gold-ink);cursor:pointer;transition:border-color .15s,box-shadow .15s,background-color .15s}
 .more::before{content:"i";display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1.5px solid currentColor;font:700 10px/1 Georgia,serif;font-style:italic}
 .more:hover,.more:focus-visible{border-color:var(--gold);background:rgba(254,194,7,.1);box-shadow:0 0 8px rgba(254,194,7,.35)}
 .more[aria-expanded="true"]{background:rgba(254,194,7,.14);border-color:var(--gold)}
@@ -309,7 +309,7 @@ footer .fine{text-align:left;margin-top:8px}
 
 /* Missing Numbers "Continue" */
 .showmore{display:flex;justify-content:center;margin-top:16px}
-.showmore-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:999px;font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase;background:rgba(254,194,7,.1);color:var(--gold);border:1px solid var(--gold);box-shadow:0 0 10px rgba(254,194,7,.18);transition:background-color .15s,box-shadow .15s,transform .15s}
+.showmore-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:999px;font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase;background:rgba(254,194,7,.1);color:var(--gold-ink);border:1px solid var(--gold);box-shadow:0 0 10px rgba(254,194,7,.18);transition:background-color .15s,box-shadow .15s,transform .15s}
 .showmore-btn:hover,.showmore-btn:focus-visible{background:rgba(254,194,7,.2);box-shadow:0 0 14px rgba(254,194,7,.45);transform:translateY(-1px)}
 .showmore-btn:active{transform:translateY(1px)}
 .showmore-btn .cnt{font:600 13px var(--f-body);letter-spacing:.02em;text-transform:none;opacity:.8}
@@ -378,7 +378,7 @@ body[data-enter="flip"] .bwrap.reveal.reveal-star{animation-name:flipin,starglow
 #drawNext{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
 .cd{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 11px;border-radius:999px;background:rgba(254,194,7,.12);border:1px solid var(--gold);
   font:600 14px var(--f-body);color:var(--cream);box-shadow:0 0 10px rgba(254,194,7,.15)}
-.cd b{text-transform:none;font:700 18px/1 var(--f-label);letter-spacing:.06em;color:var(--logo-yellow);font-variant-numeric:tabular-nums}
+.cd b{text-transform:none;font:700 18px/1 var(--f-label);letter-spacing:.06em;color:var(--gold-ink);font-variant-numeric:tabular-nums}
 .cd-dot{width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:cdpulse 1.8s infinite}
 @keyframes cdpulse{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
 .cd.soon{border-color:var(--logo-yellow);box-shadow:0 0 14px rgba(254,194,7,.4)}
@@ -434,7 +434,7 @@ body[data-enter="flip"] .bwrap.reveal.reveal-star{animation-name:flipin,starglow
 .bwrap.is-mine .tile::after{content:"★";position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
   font-size:13px;line-height:1;color:#2a1d00;background:var(--logo-yellow);box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .starbtn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:6px 14px;border-radius:999px;cursor:pointer;
-  font:600 14px var(--f-body);color:var(--gold);background:rgba(254,194,7,.1);border:1px solid var(--gold);transition:background-color .15s,box-shadow .15s}
+  font:600 14px var(--f-body);color:var(--gold-ink);background:rgba(254,194,7,.1);border:1px solid var(--gold);transition:background-color .15s,box-shadow .15s}
 .starbtn:hover{background:rgba(254,194,7,.2);box-shadow:0 0 10px rgba(254,194,7,.35)}
 .starbtn.on{color:#2a1d00;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-deep))}
 .balldetail .starbtn{display:flex;width:max-content;max-width:100%}
@@ -445,6 +445,10 @@ body[data-enter="flip"] .bwrap.reveal.reveal-star{animation-name:flipin,starglow
 .topout-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .topout-list li{display:flex;align-items:center;gap:10px;min-width:0}
 .topout-list .rk{width:14px;flex:none;font:700 14px var(--f-label);color:var(--muted);text-align:right}
+.topball{flex:none;display:grid;place-items:center;width:44px;height:44px;margin:-4px;padding:0;border:0;border-radius:50%;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.topball:focus-visible{outline:2px solid var(--gold);outline-offset:0}
+@media (hover:hover){.topball:hover .tile.sm{filter:brightness(1.08)}}
+.topball:active .tile.sm{transform:scale(.94)}
 .topout-list .tile.sm{width:36px;height:36px;flex:none}
 .topout-list .tile.sm span{font-size:13px}
 .tbar{flex:1;min-width:40px;height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
@@ -488,13 +492,13 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 
 /* ---------- share ---------- */
 .panel-head .sharebtn{margin-left:auto}
-.sharebtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;cursor:pointer;font:600 13px var(--f-body);color:var(--gold);
+.sharebtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;cursor:pointer;font:600 13px var(--f-body);color:var(--gold-ink);
   background:rgba(254,194,7,.08);border:1px solid var(--line);transition:border-color .15s,background-color .15s,box-shadow .15s}
 .sharebtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .sharebtn:hover,.sharebtn:focus-visible{border-color:var(--gold);background:rgba(254,194,7,.16);box-shadow:0 0 10px rgba(254,194,7,.35)}
 .sharebox{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px max(16px,env(safe-area-inset-right,0px)) 20px max(16px,env(safe-area-inset-left,0px));background:rgba(2,10,28,.78)}
 .sharebox-in{width:min(100%,420px);display:flex;flex-direction:column;gap:12px;align-items:center;background:linear-gradient(180deg,#0b3e82,#042456);border:1px solid var(--gold);border-radius:18px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
-.sharebox-in h2{margin:0;font:700 18px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.sharebox-in h2{margin:0;font:700 18px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-ink)}
 .sharebox-in img{width:100%;height:auto;border-radius:12px;display:block}
 .sharebox-tip{margin:0;font-size:14px;color:var(--muted);text-align:center}
 .sharebox-btns{display:flex;gap:10px}
@@ -515,7 +519,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 
 /* star buttons in Longest out */
 .top-star{flex:none;width:34px;height:34px;margin-left:-2px;border-radius:50%;border:1px solid var(--line);background:rgba(254,194,7,.06);cursor:pointer;
-  font-size:17px;line-height:1;color:var(--gold);display:grid;place-items:center;transition:background-color .15s,box-shadow .15s,transform .15s}
+  font-size:17px;line-height:1;color:var(--gold-ink);display:grid;place-items:center;transition:background-color .15s,box-shadow .15s,transform .15s}
 .top-star:hover,.top-star:focus-visible{background:rgba(254,194,7,.18);box-shadow:0 0 8px rgba(254,194,7,.4)}
 .top-star:active{transform:scale(.9)}
 .top-star.on{color:#2a1d00;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-deep));border-color:var(--gold)}
@@ -533,7 +537,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .mixbox{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px max(12px,env(safe-area-inset-right,0px)) 16px max(12px,env(safe-area-inset-left,0px));background:rgba(2,10,28,.82)}
 .mixbox-in{width:min(100%,520px);max-height:calc(100dvh - 32px);overflow:auto;display:flex;flex-direction:column;gap:14px;align-items:center;
   background:radial-gradient(ellipse 120% 70% at 50% 0%,#1a64c0,#094692 45%,#042456);border:1px solid var(--gold);border-radius:20px;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
-.mixbox-in h2{margin:0;font:700 18px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.mixbox-in h2{margin:0;font:700 18px var(--f-label);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-ink)}
 .mixstage{position:relative;width:100%;height:300px;border-radius:50%/40%;background:radial-gradient(ellipse at center,rgba(254,194,7,.12),rgba(0,0,0,0) 65%);overflow:hidden}
 .mixstage .mixball{position:absolute;left:0;top:0;width:36px;height:36px;will-change:transform}
 .mixstage .mixball span{font-size:13px}
@@ -596,7 +600,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .resrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.08)}
 .resrow.skipped{opacity:.7}
 .resdate{flex:0 0 54px;display:flex;flex-direction:column;line-height:1.15}
-.resdate b{font:700 13px var(--f-label);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.resdate b{font:700 13px var(--f-label);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-ink)}
 .resdate span{font-size:13.5px;color:var(--cream);white-space:nowrap}
 .resballs{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:5px}
 .tile.rb{width:clamp(32px,8.8vw,38px)}
@@ -629,7 +633,7 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .mine-item.leaving{transform:scale(.6);opacity:0}
 @keyframes mine-shake{0%,100%{transform:none}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
 .mine-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:76px;padding:10px 8px 8px;border-radius:14px;cursor:pointer;
-  background:none;border:1.5px dashed var(--gold);color:var(--gold);touch-action:manipulation}
+  background:none;border:1.5px dashed var(--gold);color:var(--gold-ink);touch-action:manipulation}
 .mine-add-ring{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font:700 28px/1 var(--f-label);background:rgba(254,194,7,.1);border:1px solid rgba(254,194,7,.5)}
 .mine-add-txt{font:700 14px var(--f-label);letter-spacing:.1em;text-transform:uppercase}
 .mine-add:hover .mine-add-ring,.mine-add:focus-visible .mine-add-ring{background:rgba(254,194,7,.22);box-shadow:0 0 12px rgba(254,194,7,.45)}
@@ -721,13 +725,13 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 .sheet-head{display:flex;align-items:center;gap:14px}
 .sheet-ball .tile{width:64px}
 .sheet-txt{flex:1;min-width:0}
-.sheet-txt h2{margin:0;font:700 20px/1.15 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.sheet-txt h2{margin:0;font:700 20px/1.15 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
 .sheet-txt p{margin:3px 0 0;font-size:15px;color:var(--cream)}
 .sheet-txt p b{font-family:var(--f-label);font-size:17px}
 .sheet-x{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.1);color:var(--cream);font-size:24px;line-height:1;cursor:pointer}
 .sheet-x:hover,.sheet-x:focus-visible{background:rgba(255,255,255,.2);outline:none;box-shadow:0 0 0 2px var(--gold)}
 .sheet-facts{margin:0;font-size:15px;color:var(--cream);line-height:1.45}
-.sheet-facts b{color:var(--gold);font-family:var(--f-label);font-size:16px}
+.sheet-facts b{color:var(--gold-ink);font-family:var(--f-label);font-size:16px}
 .sheet-none{margin:0;padding:12px;border-radius:12px;background:rgba(0,0,0,.2);border:1px dashed var(--line);font-size:14px;color:var(--muted)}
 .sheet-star .starbtn{display:flex;width:max-content;max-width:100%}
 .sheet .trend{margin-top:0}
@@ -875,3 +879,42 @@ body{margin:0;min-height:100%;padding-top:env(safe-area-inset-top,0px);padding-b
 .brand img{width:28px;height:28px;border-radius:50%}
 .backup label.btn{display:inline-flex;align-items:center}
 .backup input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+
+/* ---------- Tap targets (design pass, Nov 2026) ----------
+   Players use this one-handed, often outdoors. Every control gets at least a 44px tap area;
+   where the visible shape should stay small, an invisible ::after extends the hit area. */
+.seg{gap:4px}
+.seg button{position:relative;min-width:40px;height:34px;padding:0 10px;font-size:14px}
+.seg button::after{content:"";position:absolute;inset:-5px -2px}
+.more{position:relative;min-height:34px;padding:6px 14px 6px 10px;font-size:13px}
+.more::after{content:"";position:absolute;inset:-5px -2px}
+.sharebtn{position:relative;min-height:38px;padding:7px 14px;font-size:14px}
+.sharebtn::after{content:"";position:absolute;inset:-3px}
+.top-star{position:relative;width:38px;height:38px}
+.top-star::after{content:"";position:absolute;inset:-3px;border-radius:50%}
+.sndbtn{width:44px;height:44px}
+.mine-x{width:32px;height:32px;top:0;right:0}
+.mine-x::after{content:"";position:absolute;inset:-6px}
+.showmore-btn{min-height:44px}
+
+/* ---------- Hierarchy and readable sizes (design pass, Nov 2026) ----------
+   Last Draw and Missing Numbers are the answers players come for, so they keep the big gold titles.
+   Hot, Lucky and Past Results step down one level so the page has a clear order. */
+#secHot h2,#secMine h2,#secRes h2{font-size:20px;letter-spacing:.1em;color:var(--cream)}
+#secMine h2 .star{color:var(--logo-yellow)}
+/* nothing outdoors-readable goes below 12.5px */
+footer{font-size:14px}
+.disclaimer{font-size:13px;opacity:1}
+.label,.lookback-lbl{font-size:13px}
+.mine-tag small,.mixcap{font-size:12.5px}
+.trend-x span{font-size:12px}
+.tb em{font-size:12px}
+.trend-avg span{font-size:11.5px}
+@media (max-width:700px){.tabbar button{font-size:12.5px}}
+@media (max-width:420px){.tval,.tval small{font-size:13px}}
+/* fine print: a full soft border instead of a stripe down one side */
+.fine{border:1px solid var(--line);border-radius:10px}
+/* contrast: the red NOT badge and "no draw" rows */
+.say em{color:#a51d1d}
+.resrow.skipped{opacity:1;background:rgba(0,0,0,.08)}
+.resrow.skipped .resdate b{color:var(--muted)}
