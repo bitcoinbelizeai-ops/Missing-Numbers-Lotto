@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever you change index.html, app.css or app.js.
-const VERSION = 'boledo-v83';
+const VERSION = 'boledo-v84';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'draws.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
@@ -35,7 +35,7 @@ self.addEventListener('fetch', e => {
 
   // Everything else (app files and Google Fonts): saved copy first, then network.
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
-    if (r.ok && (url.origin === location.origin || url.hostname.endsWith('gstatic.com') || url.hostname.endsWith('googleapis.com'))) {
+    if (r.ok && (url.origin === location.origin || url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com')) {
       const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy));
     }
     return r;
