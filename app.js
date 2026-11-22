@@ -44,7 +44,7 @@ const ORDER=['boledo','lottery','fantasy5','pick3'];
 /* Official draw days (0=Sun) and times, Belize time (UTC-6, no daylight saving).
    Boledo & Sunday Jackpot: Belize Government Lotteries Ltd. Fantasy 5 & Pick 3: the game operator. */
 const SCHEDULE={
-  boledo:{days:[1,2,3,4,5],at:'21:10',text:'Monday to Friday at 9:10 pm'},
+  boledo:{days:[1,2,3,4,5],at:'21:00',text:'Monday to Friday at 9:00 pm'},
   pick3:{days:[1,2,3,4,5],at:'20:30',text:'Monday to Friday at 8:30 pm'},
   fantasy5:{days:[2,4,6],at:'20:00',text:'Tuesday, Thursday and Saturday at 8:00 pm'},
   lottery:{days:[0],at:'10:00',text:'Sunday at 10:00 am',extra:'If a Sunday draw is postponed, it can be held on Monday instead.'}
@@ -59,7 +59,16 @@ const isoDow=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(Date
 const isoAdd=(iso,n)=>{const [y,m,d]=iso.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1,2)+'-'+pad(t.getUTCDate(),2)};
 const atMin=g=>{const [h,m]=SCHEDULE[g].at.split(':').map(Number);return h*60+m};
 const fmtTime=g=>{const [h,m]=SCHEDULE[g].at.split(':').map(Number);return ((h%12)||12)+':'+pad(m,2)+' '+(h<12?'am':'pm')};
-const isDrawDay=(g,iso)=>SCHED[g].includes(isoDow(iso));
+/* Public holidays: no Boledo, Pick 3 or Fantasy 5 draw (Lotteries Control Regulations; the game operator).
+   The list lives in data/holidays.json on the site (editable from the Admin page); this copy is the fallback. */
+const HOLIDAY_GAMES=['boledo','pick3','fantasy5'];
+let HOLIDAYS={"2026-01-01":{"name":"New Year's Day","greeting":"Happy New Year! 🎆"},"2026-01-15":{"name":"George Price Day","greeting":"Happy George Price Day! 🇧🇿"},"2026-03-09":{"name":"National Heroes and Benefactors Day","greeting":"Happy National Heroes and Benefactors Day! 🇧🇿"},"2026-04-03":{"name":"Good Friday","greeting":"Blessed Good Friday"},"2026-04-04":{"name":"Holy Saturday","greeting":"Blessed Holy Saturday"},"2026-04-06":{"name":"Easter Monday","greeting":"Happy Easter! 🐣"},"2026-05-01":{"name":"Labour Day","greeting":"Happy Labour Day! 💪"},"2026-08-01":{"name":"Emancipation Day","greeting":"Happy Emancipation Day! 🕊️"},"2026-09-10":{"name":"St. George's Caye Day","greeting":"Happy St. George's Caye Day! 🇧🇿"},"2026-09-21":{"name":"Independence Day","greeting":"Happy Independence Day! 🇧🇿"},"2026-10-12":{"name":"Indigenous Peoples' Resistance Day","greeting":"Happy Indigenous Peoples' Resistance Day!"},"2026-11-19":{"name":"Garifuna Settlement Day","greeting":"Happy Garifuna Settlement Day! 🪘"},"2026-12-25":{"name":"Christmas Day","greeting":"Merry Christmas! 🎄"},"2026-12-26":{"name":"Boxing Day","greeting":"Happy Boxing Day! 🎁"}};
+try{const c=JSON.parse(localStorage.getItem('bz-holidays-v1')||'null');if(c&&typeof c==='object')HOLIDAYS=c}catch(e){}
+const holidayOn=(g,iso)=>(HOLIDAY_GAMES.includes(g)&&HOLIDAYS[iso])||null;
+const holidayGreeting=h=>h?(h.greeting||('Happy '+h.name+'!')):'';
+window.bzSetHolidays=days=>{if(!days||typeof days!=='object')return;HOLIDAYS=days;try{localStorage.setItem('bz-holidays-v1',JSON.stringify(days))}catch(e){}
+  if(typeof render==='function'&&state.loaded)render()};
+const isDrawDay=(g,iso)=>SCHED[g].includes(isoDow(iso))&&!holidayOn(g,iso);
 /* has this game's draw on this date happened (plus the 30-minute allowance)? */
 function drawDone(g,iso){const n=bzNow();if(iso<n.iso)return true;if(iso>n.iso)return false;return n.min>=atMin(g)+RESULT_LAG_MIN}
 /* most recent scheduled draw date that has already happened */
@@ -81,7 +90,11 @@ try{Object.assign(prefs,JSON.parse(localStorage.getItem(PREF)||'{}'))}catch(e){}
 const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),hotWins:Object.assign({},prefs.hotWins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:'',missRange:{}};
 const curHot=()=>{const G=GAMES[state.game],w=state.hotWins[state.game];return G.hotWins.includes(w)?w:G.hotDef};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
-const savePrefs=()=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,hotWins:state.hotWins,mine:prefs.mine||{}}))}catch(e){}};
+const savePrefs=(quiet)=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,hotWins:state.hotWins,mine:prefs.mine||{}}))}catch(e){}
+  if(!quiet&&window.bzLucky&&typeof window.bzLucky.onChange==='function'){try{window.bzLucky.onChange()}catch(e){}}};
+/* hooks used by the free-accounts feature in the phone app (unused in the tracker page) */
+window.bzLucky={get:()=>JSON.parse(JSON.stringify(prefs.mine||{})),
+  set(m){prefs.mine=m&&typeof m==='object'?m:{};savePrefs(true);if(state.loaded||state.sample)render()},onChange:null};
 
 /* ---------- game tabs and look-back picker ---------- */
 const seg=$('gameSeg');
@@ -128,6 +141,15 @@ function drawsFor(){
   const src=real(state.sample||state.draws);
   return src.filter(d=>d.game===state.game).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
 }
+/* Last Draw balls are tappable too (owner, Nov 22, 2026): the same ball card as the Missing and Hot boards.
+   Facts count every draw we have. Pick 3 keys are 'spot:digit'; Sunday Jackpot's two counted digits form one button. */
+function ldFactsFn(all){const L=all.length,dates=all.map(x=>x.date),span='all '+L+' draws we have';
+  if(state.game==='pick3'){const f=SPOTS.map((_,i)=>factsFor(all.map(d=>[String(d.nums[i])]),dates,L,null,null,span));
+    return key=>{const [i,dg]=key.split(':');return f[+i](dg,'<b>'+dg+'</b> in the '+SPOTS[+i]+' spot · ')}}
+  const G=GAMES[state.game],f=factsFor(all.map(G.keys),dates,L,null,null,span);return key=>f(key,'<b>'+key+'</b> · ')}
+function tapBall(kids,key,label,detail,say){const b=document.createElement('button');b.type='button';b.className='bwrap ldball';
+  b.dataset.key=key;b.dataset.label=label;b.dataset.detail=detail;b.setAttribute('aria-label',say+'. Tap for details.');
+  if(isMine(key))b.classList.add('is-mine');[].concat(kids).forEach(k=>b.appendChild(k));return b}
 function ballEl(k,small){const t=document.createElement('div');t.className='tile'+(small?' sm':'');const s=document.createElement('span');s.textContent=k;t.appendChild(s);return t}
 function ballWithTag(k,tagHTML,detail,key){const w=document.createElement('button');w.type='button';w.className='bwrap';w.appendChild(ballEl(k));
   if(key!==undefined){w.dataset.key=key;if(isMine(key))w.classList.add('is-mine')}
@@ -275,7 +297,7 @@ const SND=(()=>{
       noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
     if(ctx.state!=='running'){const r=ctx.resume();if(r&&r.catch)r.catch(()=>{})}
     // iPhone: play one silent sample inside the tap, which unlocks sound for the page
-    if(!unlocked){unlocked=true;const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0)}
+    if(!unlocked){const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);if(ctx.state==='running')unlocked=true}
   }catch(e){}}
   const ok=()=>!!ctx&&!muted&&ctx.state==='running';
   const gap=(k,ms)=>{const n=performance.now();if(last[k]&&n-last[k]<ms)return false;last[k]=n;return true};
@@ -289,6 +311,10 @@ const SND=(()=>{
   function stopHiss(){if(!hiss)return;const h=hiss,hg=hissGain;hiss=null;try{hg.gain.setTargetAtTime(0,ctx.currentTime,.06)}catch(e){}setTimeout(()=>{try{h.stop()}catch(e){}},400)}
   return{
     init,isMuted:()=>muted,
+    running:()=>!!ctx&&!muted&&ctx.state==='running',
+    // inside a tap: switch sound on, then run cb once it is really playing
+    unlock(cb){init();if(!ctx||muted)return;if(ctx.state==='running'){cb();return}
+      try{const r=ctx.resume();if(r&&r.then)r.then(()=>{if(ctx.state==='running')cb()},()=>{})}catch(e){}},
     setMuted(m){muted=m;try{localStorage.setItem('bz-sound',m?'off':'on')}catch(e){}if(m)stopHiss();else init()},
     // ball hits ball: a hard plastic clack
     clack(v){if(!ok()||v<60||!gap('clack',24))return;const vol=Math.min(.42,.05+v/2600);
@@ -315,12 +341,12 @@ const SND=(()=>{
     star(on){if(!ok())return;on?(tone(988,.08,.055,'sine'),tone(1480,.14,.05,'sine',null,.06)):tone(880,.12,.045,'sine',520)},
     roll(i){if(!ok())return;tone(260+i*35,.07,.07,'sine',150);noise(.025,1800+i*120,4,.04)},
     // a ball rolling in: quick clicks across a hard surface that spread out as it slows, then a wooden tok
-    rollIn(i,dur){if(!ok())return;let t=0,gap=.035,k=0;const base=640+i*40;
-      while(t<dur*.92&&k<40){const v=.09*(1-.55*t/dur),dl=t;
+    rollIn(i,dur,vol){if(!ok())return;let t=0,gap=.035,k=0;const base=640+i*40,q=vol||1;
+      while(t<dur*.92&&k<40){const v=.09*q*(1-.55*t/dur),dl=t;
         tone(base*(1+(Math.random()-.5)*.08),.018,v,'triangle',null,dl);
         if(k%2===0)tone(170,.03,v*.6,'sine',null,dl);
         t+=gap;gap*=1.09;k++}
-      tone(210+i*12,.11,.14,'sine',120,dur);noise(.035,900,2,.07,'bandpass',null,dur)},
+      tone(210+i*12,.11,.14*q,'sine',120,dur);noise(.035,900,2,.07*q,'bandpass',null,dur)},
     // a ball spinning in: an airy whir that flutters faster then slows like a spinning coin, then a light ting
     spinIn(i,dur){if(!ok())return;const t=ctx.currentTime,src=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),am=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
       src.buffer=noiseBuf;src.loop=true;fl.type='bandpass';fl.frequency.setValueAtTime(2600,t);fl.frequency.exponentialRampToValueAtTime(1300,t+dur);fl.Q.value=3;
@@ -337,23 +363,26 @@ const SND=(()=>{
     ping(){if(!ok())return;tone(1760,.35,.045,'sine');tone(2637,.25,.02,'sine',null,.01)},
     later(ms,fn){return setTimeout(fn,ms)},
     // the opening intro: sparkles, a rising shimmer that builds, and a mystical chime at the peak
-    intro(){if(!ok())return;const c=ctx,T=x=>c.currentTime+.03+x,rr=(a,b)=>a+Math.random()*(b-a);
+    intro(off){if(!ok())return;off=Math.max(0,off||0);if(off<.12)off=0;
+      // started late (first tap): parts already gone are skipped, the peak chord still lands with the picture
+      // (or straight away if the peak has passed)
+      const late=off>1.5,sh=late?1.55:off,c=ctx,T=x=>c.currentTime+.03+Math.max(0,x-sh),gone=x=>off>0&&x<sh+.001&&x<1.55,rr=(a,b)=>a+Math.random()*(b-a);
       const out=c.createGain();out.gain.value=.8;out.connect(master);
       const dl=c.createDelay(1);dl.delayTime.value=.19;const fb=c.createGain();fb.gain.value=.38;const wet=c.createGain();wet.gain.value=.45;
       dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(out);
       const bell=(f,t,dur,vol)=>[[1,1],[2.76,.28],[5.4,.1]].forEach(([m,a])=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*m;
         g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol*a,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur/m**.4);
         o.connect(g);g.connect(out);g.connect(dl);o.start(t);o.stop(t+dur+.1)});
-      bell(2637,T(.02),.5,.05);
-      [3136,3520,3951,4186].forEach((f,k)=>bell(f,T(.18+k*.07),.35,.025));
-      {const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf;s.loop=true;f.type='bandpass';f.Q.value=2.5;
+      if(!gone(.02))bell(2637,T(.02),.5,.05);
+      [3136,3520,3951,4186].forEach((f,k)=>{if(!gone(.18+k*.07))bell(f,T(.18+k*.07),.35,.025)});
+      if(!gone(.55)){const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf;s.loop=true;f.type='bandpass';f.Q.value=2.5;
         f.frequency.setValueAtTime(500,T(.55));f.frequency.exponentialRampToValueAtTime(5200,T(1.52));
         g.gain.setValueAtTime(.0001,T(.55));g.gain.exponentialRampToValueAtTime(.16,T(1.48));g.gain.exponentialRampToValueAtTime(.0001,T(1.6));
         s.connect(f);f.connect(g);g.connect(out);s.start(T(.55));s.stop(T(1.7))}
-      {const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(220,T(.8));o.frequency.exponentialRampToValueAtTime(660,T(1.52));
+      if(!gone(.8)){const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(220,T(.8));o.frequency.exponentialRampToValueAtTime(660,T(1.52));
         g.gain.setValueAtTime(.0001,T(.8));g.gain.exponentialRampToValueAtTime(.05,T(1.45));g.gain.exponentialRampToValueAtTime(.0001,T(1.58));o.connect(g);g.connect(out);o.start(T(.8));o.stop(T(1.7))}
-      for(let k=0;k<5;k++)bell(rr(2800,4600),T(.95+k*.025),.3,.03);
-      bell(1568,T(1.03),.6,.05);
+      for(let k=0;k<5;k++)if(!gone(.95+k*.025))bell(rr(2800,4600),T(.95+k*.025),.3,.03);
+      if(!gone(1.03))bell(1568,T(1.03),.6,.05);
       [1318.5,1661.2,1975.5,2637].forEach((f,k)=>bell(f,T(1.55+k*.055),1.9,.13-k*.015));
       {const o=c.createOscillator(),g=c.createGain();o.frequency.value=329.6;g.gain.setValueAtTime(.0001,T(1.55));g.gain.exponentialRampToValueAtTime(.09,T(1.6));g.gain.exponentialRampToValueAtTime(.0001,T(3.2));o.connect(g);g.connect(out);o.start(T(1.55));o.stop(T(3.3))}
     }
@@ -363,11 +392,38 @@ const MUTE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v1
 const MUTE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 function muteLabel(){const m=SND.isMuted();['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(!b)return;b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',m?'Turn sound on':'Mute sound');b.title=m?'Sound off':'Sound on';b.innerHTML=m?MUTE_ON:MUTE_OFF})}
 ['mixMute','sndBtn'].forEach(id=>{const b=$(id);if(b)b.addEventListener('click',e=>{e.stopPropagation();const m=!SND.isMuted();SND.setMuted(m);muteLabel();if(!m)setTimeout(()=>SND.select(),60)})});
+/* ---------- Easy reading (magnifier button, + / −): larger, clearer text for anyone who wants it ----------
+   Remembered on this device. On the very first visit it switches on by itself if the phone is set to
+   "increase contrast", and a one-time hint points at the magnifier. */
+const EASY=(()=>{
+  const KEY='bz-easy',HINT='bz-easy-hint',root=document.documentElement,btn=$('eyeBtn');
+  const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}},put=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+  let saved=get(KEY);
+  let on=saved==='on'||(saved===null&&window.matchMedia&&matchMedia('(prefers-contrast: more)').matches);
+  function apply(){root.classList.toggle('easy',on);if(btn){btn.setAttribute('aria-pressed',String(on));btn.title=on?'Easy reading on':'Easy reading'}}
+  apply();
+  function hideHint(){const h=$('eyeHint');if(h)h.remove();put(HINT,'1')}
+  if(btn)btn.addEventListener('click',e=>{e.stopPropagation();on=!on;put(KEY,on?'on':'off');apply();hideHint();
+    try{SND.select()}catch(_){}
+    toast(on?'Easy reading on: larger, clearer text. Tap the magnifier again to switch it off.':'Easy reading off.',false,3200)});
+  function maybeHint(){
+    if(!btn||get(HINT)||on)return;
+    if(document.querySelector('#izSplash:not([hidden]),.sheet:not([hidden]),.mixbox:not([hidden])')){setTimeout(maybeHint,1000);return}
+    // let people read the title first: the tip waits 2.5 s after the opening splash ends, so it never covers the title as the app appears
+    const sp=$('izSplash'),since=sp&&sp.dataset.endedAt?Date.now()-(+sp.dataset.endedAt):1e9;if(since<2500){setTimeout(maybeHint,2500-since);return}
+    const h=document.createElement('div');h.className='eyehint';h.id='eyeHint';h.setAttribute('role','status');
+    h.innerHTML='Easier to read? Tap the magnifier for larger, clearer text.<button type="button" aria-label="Close tip">×</button>';
+    h.querySelector('button').onclick=ev=>{ev.stopPropagation();hideHint()};
+    btn.parentElement.appendChild(h);setTimeout(()=>{if($('eyeHint'))hideHint()},9000);
+  }
+  setTimeout(maybeHint,4200);
+  return {isOn:()=>on};
+})();
 // the browser only allows sound after a tap, so wake the sound up on the first one
 ['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true}));
 // soft taps for buttons and switches across the page (the mixer and My Lucky Numbers make their own)
 document.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;
-  if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#mixMute,#mixBtn'))return;
+  if(t.closest('#mixBox,#mineAdd,.mine-item,.pickball,.starbtn,.top-star,#sndBtn,#eyeBtn,#eyeHint,#mixMute,#mixBtn'))return;
   if(t.closest('.games button')){SND.select();return}
   if(t.closest('.bwrap')){SND.pop();return}
   if(t.closest('.showless-btn'))return;
@@ -631,8 +687,8 @@ function tickCountdown(){
     $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Waiting for results';
     el.textContent=mins<1?'just drawn':mins<60?mins+' min ago':Math.floor(mins/60)+' h '+pad(mins%60,2)+' m ago';
     if(when)when.textContent=(held===bzNow().iso?'Today':fmtDay(held).replace(/,? \d{4}$/,''))+' · '+fmtTime(g)+' draw';
-    // the phone app re-checks for new results every 3 minutes while waiting
-    if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>180e3){lastPoll=Date.now();window.bzRefresh()}
+    // the phone app re-checks for new results every minute for the first 45 minutes after the draw (when BBN posts), then every 3 minutes (Nov 21, 2026)
+    if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>(since<45*60e3?60e3:180e3)){lastPoll=Date.now();window.bzRefresh()}
     return;
   }
   if(when&&when.dataset.next!==undefined)when.textContent=when.dataset.next;
@@ -640,6 +696,12 @@ function tickCountdown(){
   if(left<=0){render();return}
   $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
   chip.classList.toggle('soon',left<3600e3);
+}
+/* "No draw today · Happy Garifuna Settlement Day! 🪘" on a holiday, "No draw tomorrow · …" the day before */
+function holidayLine(g){
+  const td=bzNow().iso,tm=isoAdd(td,1),h1=SCHED[g].includes(isoDow(td))&&holidayOn(g,td),h2=!h1&&SCHED[g].includes(isoDow(tm))&&holidayOn(g,tm);
+  const h=h1||h2;if(!h)return'';
+  return '<span class="cd-holiday">'+(h1?'No draw today':'No draw tomorrow')+' · '+esc(holidayGreeting(h))+'</span>';
 }
 function startCountdown(){clearInterval(cdTimer);tickCountdown();cdTimer=setInterval(tickCountdown,1000)}
 
@@ -713,7 +775,7 @@ function drama(key,ids){
 }
 
 /* ---------- Missing Numbers: show a few rows, "Continue" opens more ---------- */
-const MISS_FIRST_ROWS=0,MISS_STEP_ROWS=10; // the grid starts folded: the Longest-out top 5 is the summary
+const MISS_FIRST_ROWS=2,MISS_STEP_ROWS=10; // the first two rows show straight away (longest wait first), like Pick 3
 const missView={key:null,rows:MISS_FIRST_ROWS};
 function gridCols(g){return getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length||1}
 function limitMissing(key,reveal){
@@ -723,7 +785,6 @@ function limitMissing(key,reveal){
   const balls=[...g.children],cols=gridCols(g),total=balls.length;
   let show=Math.min(total,missView.rows*cols);
   if(show>0&&total-show<=cols){show=total}   // don't leave a lonely last row behind the button
-  if(total<=5)show=0;                        // all of them are already in the top 5
   g.closest('.ballset').hidden=show===0;
   const fresh=[];
   balls.forEach((b,i)=>{const hide=i>=show;if(!hide&&b.hidden&&reveal)fresh.push(b);b.hidden=hide});
@@ -740,11 +801,12 @@ function limitMissing(key,reveal){
     const first=fresh[0];setTimeout(()=>first.scrollIntoView({block:'center',behavior:'smooth'}),60);
   }
   const left=total-show,btn=mb.querySelector('.showmore-btn'),less=mb.querySelector('.showless-btn');
-  if(total<=5){mb.hidden=true;return}
-  mb.hidden=false;mb.classList.toggle('folded',show===0);mb.classList.toggle('open',show>0);
+  const firstView=Math.min(total,MISS_FIRST_ROWS*cols);
+  if(total-firstView<=cols){mb.hidden=true;return}   // everything fits in the first view: no button needed
+  mb.hidden=false;mb.classList.toggle('folded',missView.rows===MISS_FIRST_ROWS);mb.classList.toggle('open',missView.rows>MISS_FIRST_ROWS);
   // once opened, a Close button sits beside Continue and the bar follows you down the list
-  if(less){less.hidden=!(show>0&&left>0);less.setAttribute('aria-label','Close the list and go back to the top of Missing Numbers')}
-  if(show===0){btn.innerHTML='Show all <span class="cnt">'+total+' missing numbers</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
+  if(less){less.hidden=!(missView.rows>MISS_FIRST_ROWS&&left>0);less.setAttribute('aria-label','Close the list and go back to the top of Missing Numbers')}
+  if(missView.rows===MISS_FIRST_ROWS&&left>0){btn.innerHTML='Show all <span class="cnt">'+left+' more</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
   else if(left>0){btn.innerHTML='Continue <span class="cnt">'+left+' more</span> <span class="chev" aria-hidden="true">▾</span>';btn.dataset.act='more';btn.setAttribute('aria-expanded','false')}
   else{btn.innerHTML='Close <span class="chev" aria-hidden="true">▴</span>';btn.dataset.act='less';btn.setAttribute('aria-expanded','true')}
 }
@@ -836,38 +898,46 @@ function render(){
       ['missFrom','missTo'].forEach(id=>{$(id).min=mn;$(id).max=mx})} }
   const WK=RANGE?'d'+RANGE.from+'_'+RANGE.to:W;
   const body=$('tiles'),hot=$('hot'),last=$('lastDraw');
-  body.innerHTML='';hot.innerHTML='';last.innerHTML='';
+  body.innerHTML='';hot.innerHTML='';
   setNote('','');$('hotSay').textContent='';$('lastDate').textContent='';
 
-  /* last draw */
-  if(all.length){
+  /* last draw: rebuilt only when its results change, so a refresh with the same results
+     doesn't cut the roll-in short */
+  const ldNew=all.length?state.game+'|'+(state.sample?'s':'r')+'|'+all.slice(-8).map(x=>x.id+':'+(x.nums||[]).join('.')+(x.letter||'')+(x.nodraw?'x':'')).join(','):'empty|'+state.game;
+  if(all.length&&ldNew===ldSig){const d=all[all.length-1];$('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));$('shareBtn').hidden=!!d.nodraw}
+  else if(all.length){
+    ldSig=ldNew;last.innerHTML='';
     const d=all[all.length-1];
     const many=state.game!=='boledo';
     const badge=document.createElement('p');badge.className='winbadge';badge.textContent=many?'Winning Numbers':'Winning Number';last.appendChild(badge);
     const animKey=state.game+'|'+d.id+'|'+(state.sample?'s':'r');
     const roll=animKey!==lastAnim;lastAnim=animKey;if(roll)pickEnter();
-    last.classList.toggle('roll',roll);
-    if(roll&&!reduceMotion())requestAnimationFrame(()=>{const ts=[...last.querySelectorAll('.tile,.letter')];ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
-      if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
-      else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
-      else SND.later(st+D*.45,()=>SND.roll(j))})});
+    last.classList.remove('roll','hold');ldPending=false;
+    if(roll){if(introRunning()){last.classList.add('hold');ldPending=true}else requestAnimationFrame(()=>startLastRoll())}
     $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
     $('shareBtn').hidden=!!d.nodraw;
-    let bi=0;
+    let bi=0;const ldFacts=ldFactsFn(all);
     if(state.game==='lottery'){
       d.nums.forEach((n,i)=>{const row=document.createElement('div');row.className='prizerow';
         const lab=document.createElement('span');lab.className='prizelab';lab.textContent=['1st','2nd','3rd'][i]+' prize';row.appendChild(lab);
-        pad(n,4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('xs');if(i===0&&j>=2)t.classList.add('counted');t.style.setProperty('--i',bi++);row.appendChild(t)});
+        const pair=[];
+        pad(n,4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('xs');t.style.setProperty('--i',bi++);
+          if(i===0&&j>=2&&!d.nodraw){t.classList.add('counted');pair.push(t)}else{if(i===0&&j>=2)t.classList.add('counted');row.appendChild(t)}});
+        if(pair.length){const k=pad(n,4).slice(-2),pb=tapBall(pair,k,k,ldFacts(k),'Winning number '+k);pb.classList.add('ldpair');row.appendChild(pb)}
         last.appendChild(row)});
       const ln=document.createElement('p');ln.className='lnote';ln.textContent='The gold-ringed balls are the last two digits of the 1st prize, the number the board counts.';last.appendChild(ln);
     }else{
-      (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach(k=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);last.appendChild(t)});
+      (state.game==='boledo'?[pad(d.nums[0],2)]:d.nums.map(String)).forEach((k,i)=>{const t=ballEl(k,true);t.style.setProperty('--i',bi++);
+        if(d.nodraw){last.appendChild(t);return}
+        const p3=state.game==='pick3',key=p3?i+':'+k:k;
+        last.appendChild(tapBall(t,key,k,ldFacts(key),p3?'Digit '+k+', '+SPOTS[i]+' spot':'Winning number '+k))});
       if(d.letter){const l=document.createElement('div');l.className='letter';l.textContent=d.letter;l.title='Free letter';l.style.setProperty('--i',bi++);last.appendChild(l)}
+      if(!d.nodraw&&(state.game==='boledo'||state.game==='pick3'))addRecent(last,all,bi);
     }
-  }else{last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
+  }else{ldSig=ldNew;last.classList.remove('roll','hold');last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
     $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
-      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>';
+      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>'+holidayLine(state.game);
     startCountdown();
     $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:''); }
 
@@ -875,7 +945,7 @@ function render(){
   if(!state.loaded&&!state.sample){say.innerHTML='<span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span>';say.setAttribute('aria-busy','true');
     body.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(12)+'</div>';
     hot.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(4)+'</div>';
-    last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
+    ldSig='skel';last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
   else if(!win.length&&RANGE){say.innerHTML='There were no '+esc(G.label)+' draws between <b>'+esc(fmtDate(RANGE.from))+'</b> and <b>'+esc(fmtDate(RANGE.to))+'</b>. Try other dates.'}
   else if(!win.length){say.textContent='There are no '+G.label+' results yet. Add one at the bottom of the page.'}
   else{
@@ -892,7 +962,7 @@ function render(){
         :missing.length?'<b>'+missing.length+'</b> numbers have <em>not</em> come out in '+span+'.'
         :'Every number from '+G.board[0]+' to '+G.board[G.board.length-1]+' has come out at least once in '+span+'.')+jp+
         (missing.length?' The number under each ball shows how many draws it has been waiting. Tap a ball for details.':'');
-      if(missing.length){body.appendChild(topOut(missing,all.length));
+      if(missing.length){
         body.appendChild(grid(missing.map(([k,o])=>ballWithTag(k,outTag(o,all.length),facts(k,'<b>'+k+'</b> · '),k))));
         const mb=document.createElement('div');mb.className='showmore';mb.hidden=true;
         mb.innerHTML='<button type="button" class="btn showmore-btn" aria-controls="tiles"></button><button type="button" class="btn showless-btn" aria-controls="tiles" hidden>Close <span class="chev" aria-hidden="true">▴</span></button>';body.appendChild(mb)}
@@ -909,9 +979,10 @@ function render(){
         else row.insertAdjacentHTML('beforeend','<p class="allplayed">Every digit has played here.</p>');
         body.appendChild(row);
       });
-      say.innerHTML=total?'A Pick 3 number has 3 spots. Below, for each spot, are the digits that have <em>not</em> come out there in '+span+'. The number under each ball shows how many draws it has been waiting. Tap a ball for details.'
+      // same wording as the other games (owner, Nov 21, 2026); the 3-spot explanation moved to More info
+      say.innerHTML=total?(total===1?'<b>1</b> digit has <em>not</em> come out in its spot':'<b>'+total+'</b> digits have <em>not</em> come out in their spot')+' in '+span+'. The number under each ball shows how many draws it has been waiting. Tap a ball for details.'
         :'Every digit from 0 to 9 has come out in every spot in '+span+'.';
-      setNote(dates,'Each row is one spot in the Pick 3 number, read left to right.');
+      setNote(dates,'A Pick 3 number has 3 spots, read left to right. Each row shows the digits that have not come out in that spot.');
     }
     shadeColumns();
     limitMissing(state.game+'|'+WK);
@@ -945,7 +1016,8 @@ function resRow(d){
   const dt=document.createElement('div');dt.className='resdate';
   dt.innerHTML='<b>'+esc(sd.wd)+'</b><span>'+esc(sd.dm)+(sd.yr!==new Date().getFullYear()?' '+sd.yr:'')+'</span>';
   const bx=document.createElement('div');bx.className='resballs';
-  if(d.nodraw){bx.innerHTML='<span class="resnone">No draw</span>'}
+  if(d.nodraw){const h=holidayOn(state.game,d.date)||(d.holiday?{name:d.holiday}:null);
+    bx.innerHTML='<span class="resnone'+(h?' resholiday':'')+'">No draw'+(h?' · '+esc(holidayGreeting(h)):'')+'</span>'}
   else if(state.game==='lottery'){
     const first=document.createElement('div');first.className='resprize';
     pad(d.nums[0],4).split('').forEach((dg,j)=>{const t=ballEl(dg,true);t.classList.add('rb');if(j>=2)t.classList.add('counted');first.appendChild(t)});
@@ -1029,7 +1101,77 @@ function shadeColumns(){
     const cols=getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length||1;
     [...g.children].forEach((t,i)=>t.classList.toggle('alt',(i%cols)%2===1))});
 }
-let lastAnim='';
+let lastAnim='',ldSig='',ldPending=false;
+/* start the Last Draw entrance: winning balls roll in, then the earlier results from the right, with sounds */
+function startLastRoll(){
+  const last=$('lastDraw');ldPending=false;
+  last.classList.remove('hold','roll');void last.offsetWidth;last.classList.add('roll');
+  if(reduceMotion())return;
+  const rec=last.querySelector('.recent'),rs=rec?parseFloat(rec.style.getPropertyValue('--rs'))*1000:0;
+  [...last.querySelectorAll('.recent .tile')].filter(t=>!t.closest('.off')).forEach((t,r)=>SND.later(rs+r*220,()=>SND.rollIn(4+r,.55,.45)));
+  const ts=[...last.querySelectorAll('.tile,.letter')].filter(t=>!t.closest('.recent'));ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
+    if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
+    else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
+    else SND.later(st+D*.45,()=>SND.roll(j))});
+}
+/* while the opening intro covers the screen, the Last Draw waits and rolls in as the intro fades */
+let introOn=false;const introRunning=()=>introOn;
+function introFading(){introOn=false;if(ldPending)startLastRoll()}
+
+/* Last Draw: earlier results beside the winning ball.
+   Boledo: up to 6 smaller balls, newest first, as many as fit ("Past 4 Draws"); tap one for its ball card.
+   Pick 3: the one draw before, as three mini balls ("Yesterday" only when it really was yesterday, counted from today; otherwise its weekday). */
+const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WKD_LONG=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const isoDay=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
+function addRecent(last,all,nBig){
+  const d=all[all.length-1],prev=all.slice(0,-1).filter(x=>!x.nodraw).reverse();
+  if(!prev.length)return;
+  const box=document.createElement('div');box.className='recent';
+  box.style.setProperty('--rs',(.2+(nBig-1)*.38+1.05).toFixed(2)+'s');   // start after the winning balls land
+  const cap=document.createElement('p');cap.className='recent-cap';
+  const list=document.createElement('div');list.className='recent-list';
+  const dayLab=iso=>{const t=isoDay(iso);return WKD[t.getDay()]+' '+t.getDate()};
+  if(state.game==='pick3'){
+    const p=prev[0];
+    // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
+    const it=document.createElement('div');it.className='recent-item';
+    it.setAttribute('role','group');it.setAttribute('aria-label','Draw before, '+fmtDay(p.date)+': '+p.nums.join(' '));
+    const chips=document.createElement('div');chips.className='p3chips';const pf=ldFactsFn(all);
+    p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);const key=r+':'+n;
+      chips.appendChild(tapBall(t,key,String(n),pf(key),'Digit '+n+', '+SPOTS[r]+' spot, draw before'))});
+    const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
+    it.append(chips,lab);list.appendChild(it);
+  }else{
+    const G=GAMES.boledo,L=all.length;
+    const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
+    prev.slice(0,6).forEach(p=>{const k=G.keys(p)[0];
+      const it=document.createElement('button');it.type='button';it.className='bwrap recent-item';
+      it.dataset.key=k;it.dataset.detail=facts(k,'<b>'+k+'</b> · ');
+      it.setAttribute('aria-label',k+', drawn '+fmtDay(p.date)+'. Tap for details.');
+      const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
+      it.append(t,lab);list.appendChild(it)});
+  }
+  if(state.game!=='pick3')box.append(cap);box.append(list);last.appendChild(box);
+  fitRecent(last);
+}
+/* show only as many small balls as fit on the line; Pick 3 drops below the big balls if there's no room */
+function fitRecent(last){
+  last=last||$('lastDraw');const box=last&&last.querySelector('.recent');if(!box)return;
+  const list=box.querySelector('.recent-list'),items=[...list.children];
+  box.classList.remove('below');items.forEach(x=>x.classList.remove('off'));
+  if(state.game==='pick3'){
+    const it=items[0],big=[...last.querySelectorAll(':scope>.tile')];
+    const used=big.reduce((s,t)=>s+t.offsetWidth+12,0),need=it.offsetWidth+parseFloat(getComputedStyle(box).paddingLeft)+2;
+    box.classList.toggle('below',last.clientWidth-used<need);return;
+  }
+  const W=list.clientWidth,vw=document.documentElement.clientWidth,cap=vw<360?3:vw<600?4:6;let n=0;
+  items.forEach(x=>{const fits=x.offsetLeft-list.offsetLeft+x.offsetWidth<=W+1;if(!fits||n>=cap)x.classList.add('off');else{x.style.setProperty('--r',n);n++}});
+  if(!n){items[0].classList.remove('off');n=1}
+  box.querySelector('.recent-cap').textContent=n===1?'Previous Draw':'Past '+n+' Draws';
+}
+if(window.ResizeObserver){let fr=0;const ro=new ResizeObserver(()=>{cancelAnimationFrame(fr);fr=requestAnimationFrame(()=>fitRecent())});
+  ro.observe($('lastDraw'));new MutationObserver(()=>fitRecent()).observe(document.documentElement,{attributes:true,attributeFilter:['class']})}
+else window.addEventListener('resize',()=>fitRecent());
 /* tapping a ball opens a card that slides up from the bottom of the screen, so it is always in view,
    however long the list is. The weekly chart only shows for a ball that has played in those weeks. */
 let sheetFrom=null;
@@ -1040,7 +1182,7 @@ function onBallTap(e){
 function openBallSheet(b){
   document.querySelectorAll('.bwrap.sel').forEach(x=>{x.classList.remove('sel');x.setAttribute('aria-pressed','false')});
   b.classList.add('sel');b.setAttribute('aria-pressed','true');sheetFrom=b;
-  const key=b.dataset.key,label=(b.querySelector('.tile span')||{}).textContent||'';
+  const key=b.dataset.key,label=b.dataset.label||(b.querySelector('.tile span')||{}).textContent||'';
   const pick=state.game==='pick3'&&key&&key.includes(':');
   const sb=$('sheetBall');sb.innerHTML='';const t=ballEl(label);if(b.classList.contains('alt'))t.classList.add('alt');sb.appendChild(t);
   $('sheetTitle').textContent=pick?'Digit '+label+' · '+SPOTS[+key.split(':')[0]]+' spot':(GAMES[state.game].label+' '+label);
@@ -1076,10 +1218,12 @@ document.addEventListener('click',e=>{
   const x=e.target.closest('.mine-x');if(x){toggleMine(x.dataset.key);return}
   const ts=e.target.closest('.top-star');if(ts){e.stopPropagation();toggleMine(ts.dataset.key);if(isMine(ts.dataset.key))toast('★ '+ts.dataset.key+' added to My Lucky Numbers')}
 },true);
-$('tiles').addEventListener('click',onBallTap);$('hot').addEventListener('click',onBallTap);
+$('tiles').addEventListener('click',onBallTap);$('hot').addEventListener('click',onBallTap);$('lastDraw').addEventListener('click',onBallTap);
 try{const ro=new ResizeObserver(shadeColumns);ro.observe($('tiles'));ro.observe($('hot'))}catch(e){window.addEventListener('resize',shadeColumns)}
 
 let toastTimer;
+window.bzToast=(t)=>toast(t,false,3600);
+window.bzSnd=SND;
 function toast(t,html,ms){const el=$('toast');if(!el)return;if(html)el.innerHTML=t;else el.textContent=t;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,ms||(html?4200:2400))}
 async function undoSkip(d){
   const id=d.id||(d.game+'-'+d.date);
@@ -1168,6 +1312,8 @@ function checkDate(){
   el.className='hint';el.textContent='';
   if(!date)return;
   if(!drawDone(g,date)&&date>=bzNow().iso){el.className='hint warn';el.textContent=isDrawDay(g,date)?'This '+G.label+' draw is at '+fmtTime(g)+' Belize time and hasn\'t happened yet.':'That date is in the future.';return}
+  const hol=holidayOn(g,date);
+  if(hol&&SCHED[g].includes(isoDow(date))){el.className='hint warn';el.textContent='No '+G.label+' draw that day: it was a public holiday ('+hol.name+'). Check the date.';return}
   if(!isDrawDay(g,date)){el.className='hint warn';el.textContent=G.label+' isn\'t normally drawn on '+['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][isoDow(date)]+'s. It\'s drawn '+SCHEDULE[g].text+'. Check the date.'}
 }
 $('dDate').addEventListener('input',()=>{pendingOdd=null;checkDate()});
@@ -1177,7 +1323,8 @@ $('addForm').addEventListener('submit',async e=>{e.preventDefault();
   const date=$('dDate').value;
   if(date&&!drawDone(state.game,date)&&date>=bzNow().iso){flash(isDrawDay(state.game,date)?'That draw hasn\'t happened yet. Results come in after '+fmtTime(state.game)+' Belize time.':'That date is in the future. Pick the date of the draw.',false);return}
   if(date&&!isDrawDay(state.game,date)&&pendingOdd!==state.game+date){pendingOdd=state.game+date;
-    flash(GAMES[state.game].label+' is normally drawn '+SCHEDULE[state.game].text+'. If this was a moved or special draw, tap Add again to save it.',false);return}
+    const hol=holidayOn(state.game,date);
+    flash(hol?'That day was a public holiday ('+hol.name+'), so there\'s normally no '+GAMES[state.game].label+' draw. If there really was one, tap Add again to save it.':GAMES[state.game].label+' is normally drawn '+SCHEDULE[state.game].text+'. If this was a moved or special draw, tap Add again to save it.',false);return}
   const tokens=$('quickNums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
   const d=date&&makeDraw(state.game,date,tokens);
   if(!d){flash(ERR[state.game],false);return}
@@ -1221,17 +1368,38 @@ const INTRO=(()=>{
     ['izG1','izG2'].forEach((id,k)=>{const q=gaps[k].getBoundingClientRect();g(id).style.left=(q.left-r0.left+q.width/2)+'px';g(id).style.top=(q.top-r0.top-2)+'px'});
     build(dx,dy,r.width);
   }
-  let timer=0,running=false;
-  function end(){clearTimeout(timer);sp.classList.remove('iz-play','iz-exit','iz-skip');sp.hidden=true;running=false}
+  let timer=0,running=false,t0=0,soundOn=false;
+  const elapsed=()=>(performance.now()-t0)/1000;
+  let fadeT=0;
+  function end(){clearTimeout(timer);clearTimeout(fadeT);clearTimeout(statT);sp.classList.remove('iz-play','iz-exit','iz-skip','iz-short');sp.hidden=true;running=false;sp.dataset.endedAt=Date.now();introFading()}
+  // how long it stays (owner, Nov 22, 2026): 5 s on the first open of the day, 3 s if it already played today. Was 6.8 s.
+  // The words are all on screen by 1.5 s; the rest is reading time, with a breathing ball and a status line so it never looks frozen.
+  const FULL=5000,SHORT=3000,FADE=300,DAYKEY='bz-intro-day';
+  const seenToday=()=>{try{return localStorage.getItem(DAYKEY)===bzNow().iso}catch(e){return false}};
+  const markSeen=()=>{try{localStorage.setItem(DAYKEY,bzNow().iso)}catch(e){}};
+  const statusText=()=>state.loaded?'Latest results ready':'Loading the latest results\u2026';
+  let statT=0;
+  function skip(){if(!running)return;clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)}
   function play(withSound){
     if(reduceMotion()||running)return false;
-    running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip');void sp.offsetWidth;measure();
-    sp.classList.add('iz-play','iz-exit');
-    if(withSound)SND.intro();
-    timer=setTimeout(end,2900);return true;
+    const short=!withSound&&seenToday(),total=short?SHORT:FULL;markSeen();
+    sp.style.setProperty('--iz-out',(total-FADE)+'ms');
+    const st=g('izStatus');if(st){st.textContent=statusText();statT=setTimeout(()=>{st.textContent=statusText()},2100)}
+    running=true;sp.hidden=false;sp.classList.remove('iz-play','iz-exit','iz-skip','iz-short');void sp.offsetWidth;measure();
+    sp.classList.add('iz-play','iz-exit');if(short)sp.classList.add('iz-short');
+    t0=performance.now();soundOn=false;
+    // try the chime straight away: allowed for home-screen apps on Android and installed apps on computers.
+    // Elsewhere (iPhone, phone browsers) the first tap on the intro starts it.
+    if(withSound){SND.intro(0);soundOn=true}
+    else if(!SND.isMuted()){SND.init();const go=()=>{if(!soundOn&&running&&SND.running()&&elapsed()<.4){soundOn=true;SND.intro(elapsed())}};go();setTimeout(go,120)}
+    introOn=true;fadeT=setTimeout(introFading,total-FADE-50);
+    timer=setTimeout(end,total);return true;
   }
-  // tap anywhere on the intro to skip it
-  sp.addEventListener('click',e=>{e.stopPropagation();if(!running)return;clearTimeout(timer);sp.classList.add('iz-skip');timer=setTimeout(end,220)});
+  // a tap anywhere always moves on (Nov 22, 2026: it used to switch the sound on first, which surprised people on silent phones).
+  // The chime still plays where the phone allows it, and always when the title is tapped to replay the intro.
+  sp.addEventListener('click',e=>{e.stopPropagation();skip()});
+  // keyboard: Enter, Space or Esc moves on too
+  document.addEventListener('keydown',e=>{if(running&&(e.key==='Enter'||e.key===' '||e.key==='Escape')){e.preventDefault();skip()}});
   return{play};
 })();
 // tap the "Missing Numbers" title to watch the intro again, with sound
@@ -1300,18 +1468,358 @@ async function refreshShipped(fast){
   push();
 }
 
+/* public holidays (no Boledo, Pick 3 or Fantasy 5 draw), edited from the Admin page */
+const HOL_URL='data/holidays.json';
+async function refreshHolidays(){try{const r=await fetch(HOL_URL,{cache:'no-cache'});if(!r.ok)return;const j=await r.json();
+  if(j&&j.days&&typeof j.days==='object'&&typeof window.bzSetHolidays==='function')window.bzSetHolidays(j.days)}catch(e){}}
+
 window.bzRefresh=()=>refreshShipped(true);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshShipped(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){refreshShipped(true);refreshHolidays()}});
 
 
-if('serviceWorker' in navigator&&location.protocol!=='file:'){
+if(false){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(reg=>{
     // iPhones keep a home-screen app paused instead of reopening it, so look for a new version each time it comes back
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{})});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg&&reg.update().catch(()=>{})});
   }).catch(()=>{}));
   // when a new version takes over, reload once so the new screens show right away
   const hadSW=!!navigator.serviceWorker.controller;let reloaded=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadSW||reloaded)return;reloaded=true;location.reload()});
 }
+/* ---------- "new version ready" (Nov 22, 2026) ----------
+   iPhones (Safari) keep the page in memory and the web host lets browsers reuse a saved copy for 10 minutes,
+   so a phone could keep showing an old version after an update. Each time the page opens or comes back to the
+   screen, ask the server for the newest page (skipping saved copies) and compare its app.js version with ours.
+   If it's newer, show a bar with an Update button. Updating loads the page with ?v=<new version>, which
+   no saved copy can answer, then tidies the address back up. */
+(()=>{
+  const verOf=t=>{const m=/app\.js\?v=([0-9a-z]+)/.exec(t||'');return m?m[1]:''};
+  const mine=verOf(([...document.scripts].find(s=>/app\.js\?v=/.test(s.src))||{}).src);
+  if(!mine||location.protocol==='file:')return;
+  // came here from the Update button: remove ?v= from the address bar
+  if(/[?&]v=/.test(location.search)){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}}
+  let busy=false,shown=false;
+  function bar(newer){
+    if(shown||$('updBar'))return;shown=true;
+    const b=document.createElement('div');b.className='updbar';b.id='updBar';b.setAttribute('role','status');
+    b.innerHTML='<span>A newer version of Missing Numbers is ready.</span><button type="button" class="updbar-go">Update now</button><button type="button" class="updbar-x" aria-label="Not now">\u00d7</button>';
+    b.querySelector('.updbar-go').onclick=()=>{try{sessionStorage.setItem('bz-upd-tried',newer)}catch(e){}location.replace(location.pathname+'?v='+newer+location.hash)};
+    b.querySelector('.updbar-x').onclick=()=>b.remove();
+    document.body.appendChild(b);
+  }
+  async function check(){
+    if(busy||shown||!navigator.onLine)return;busy=true;
+    try{
+      const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});
+      if(r.ok){const v=verOf(await r.text());let tried='';try{tried=sessionStorage.getItem('bz-upd-tried')||''}catch(e){}
+        // offer each new version once per visit, so a slow-to-update server can't cause a loop
+        if(v&&v!==mine&&v!==tried)bar(v)}
+    }catch(e){}finally{busy=false}
+  }
+  setTimeout(check,8000);   // after the opening splash
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
+  window.addEventListener('pageshow',e=>{if(e.persisted)check()});   // Safari brought the page back from memory
+})();
 refreshShipped();
+refreshHolidays();
+})();
+
+
+/* ---------- free accounts: sign up / sign in with an email code, Lucky Numbers synced to every device ----------
+   Phone app only. Needs supabase-config.js (project address + public key) and the Supabase library.
+   If either is missing, this part simply stays switched off and the app works as before. */
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const CFG=window.MN_SUPABASE||{};
+const strip=$('acctStrip'),sheet=$('acctSheet');
+if(!strip||!sheet||!CFG.url||/PASTE/.test(CFG.url)||!CFG.key||/PASTE/.test(CFG.key))return;
+
+const PENDING='mn-pending-profile',SYNCAT='mn-sync-at',NUDGED='mn-acct-nudged';
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const msg=(el,t,k)=>{el.textContent=t||'';el.className='ac-msg'+(k?' '+k:'')};
+const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+const NICK_RE=/^[A-Za-z0-9_]{3,16}$/;
+const NICK_BAD=/(fuck|shit|bitch|cunt|nigg|pussy|dick|whore|slut|admin|support|official|bgl)/i;
+const THROWAWAY=/@(mailinator|10minutemail|guerrillamail|tempmail|temp-mail|yopmail|trashmail|sharklasers|getnada|dispostable|maildrop)\./i;
+const day=d=>d?new Date(d).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'';
+const timeOf=d=>d?new Date(d).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}):'';
+function explain(err){
+  const m=(err&&(err.message||err.error_description||String(err)))||'Something went wrong';
+  if(err&&err.status===429||/rate limit|only request this after|too many/i.test(m))return 'Too many tries. Please wait a minute, then try again.';
+  if(/expired|invalid.*(otp|token)|token.*(invalid|expired)/i.test(m))return 'That code didn\'t match or has expired.';
+  if(/fetch|network|failed to load|load failed/i.test(m))return 'No connection. Check your internet and try again.';
+  if(/profiles_nickname_unique|duplicate key/i.test(m))return 'That nickname was just taken. Please choose another.';
+  if(/banned|suspended/i.test(m))return 'This account is suspended.';
+  return m;
+}
+
+let sb=null,user=null,profile=null,offline=false,glowOn=false;
+
+/* ---------- the strip in My Lucky Numbers ---------- */
+function luckyCount(){const m=(window.bzLucky&&window.bzLucky.get())||{};return Object.values(m).reduce((n,L)=>n+(Array.isArray(L)?L.length:0),0)}
+const hbtn=$('acctBtn');
+function drawHeader(){
+  if(!hbtn)return;hbtn.hidden=false;const t=$('acctBtnTxt');hbtn.classList.remove('me');
+  if(user&&profile){hbtn.classList.add('me');t.textContent=String(profile.nickname||'?').charAt(0).toUpperCase();hbtn.setAttribute('aria-label','Your account, '+profile.nickname);return}
+  if(user&&!profile){t.textContent='Finish';hbtn.setAttribute('aria-label','Finish creating your account');return}
+  t.textContent='Sign up';hbtn.setAttribute('aria-label','Sign up or sign in');
+}
+if(hbtn)hbtn.onclick=()=>{if(offline){window.bzToast&&window.bzToast('Accounts need an internet connection.');return}
+  window.bzSnd&&window.bzSnd.open&&window.bzSnd.open();openSheet(user&&profile?'me':user?'finish':'up')};
+function drawStrip(){
+  drawHeader();
+  // the box under My Lucky Numbers only shows for people who aren't signed in and have 3 or more numbers
+  const show=!offline&&((user&&!profile)||(!user&&luckyCount()>=3));
+  strip.hidden=!show;if(!show)return;
+  const txt=$('acctTxt'),btns=$('acctBtns');btns.textContent='';
+  const btn=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small'+(cls?' '+cls:'');b.textContent=label;b.onclick=fn;btns.appendChild(b)};
+  strip.classList.toggle('glow',glowOn&&!user);
+  if(offline){txt.textContent='Accounts need an internet connection. Your Lucky Numbers are safe on this device.';return}
+  if(user&&profile){txt.innerHTML='';const b=document.createElement('b');b.textContent=profile.nickname;txt.append('Saved to your account, ',b,'. They show on every device you sign in on.');btn('Account','ghost',()=>openSheet('me'));return}
+  if(user&&!profile){txt.textContent='Your email is confirmed. Finish your details to save your Lucky Numbers.';btn('Finish','',()=>openSheet('finish'));return}
+  txt.innerHTML='Saved on this device only. <b>Create a free account</b> to keep them on every device.';
+  btn('Create account','',()=>openSheet('up'));btn('Sign in','ghost',()=>openSheet('in'));
+}
+
+/* ---------- the sheet ---------- */
+let opener=null;
+const VIEWS=['acUp','acIn','acCode','acMe'];
+function view(v){
+  const map={up:'acUp',finish:'acUp',in:'acIn',code:'acCode',me:'acMe'};
+  VIEWS.forEach(id=>$(id).hidden=id!==map[v]);
+  $('acTabs').hidden=!(v==='up'||v==='in');
+  $('acTabUp').setAttribute('aria-selected',v==='up');$('acTabIn').setAttribute('aria-selected',v==='in');
+  $('acTitle').textContent={up:'Free account',in:'Sign in',finish:'Finish your account',code:'Check your email',me:'Your account'}[v];
+  $('acSub').textContent={up:'Keep your Lucky Numbers on every device.',in:'We\'ll email you a code. No password needed.',finish:'Just a few details and you\'re done.',code:'Type or paste the code from the email.',me:'Your Lucky Numbers are saved to this account.'}[v];
+  const fin=v==='finish';$('acEmail').disabled=fin;$('acUpBtn').textContent=fin?'Save my details':'Send my code';
+  if(fin&&user)$('acEmail').value=user.email||'';
+  if(v==='me')fillMe();
+}
+function openSheet(v){opener=document.activeElement;sheet.hidden=false;const inn=sheet.querySelector('.sheet-in');inn.classList.remove('up');void inn.offsetWidth;inn.classList.add('up');view(v);
+  setTimeout(()=>{const f={up:'acNick',finish:'acNick',in:'acInEmail',code:'acCodeIn',me:'acClose'}[v];$(f)&&$(f).focus({preventScroll:true})},60)}
+function closeSheet(){if(sheet.hidden)return;sheet.hidden=true;$('acDelBox').hidden=true;delDisarm();(opener&&opener.focus)?opener.focus({preventScroll:true}):0}
+$('acClose').onclick=closeSheet;
+sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
+$('acTabUp').onclick=()=>view('up');$('acTabIn').onclick=()=>view('in');
+
+/* ---------- nickname ---------- */
+let nickTimer=0,nickFree=null;
+function nickLocal(n){if(!n)return 'Choose a nickname.';if(!NICK_RE.test(n))return 'Use 3–16 letters, numbers or _ only.';if(NICK_BAD.test(n))return 'Please choose a different nickname.';if(/\d{7,}/.test(n))return 'Nicknames can\'t contain phone numbers.';return ''}
+async function checkNick(){
+  const n=$('acNick').value.trim(),bad=nickLocal(n);nickFree=null;
+  if(bad){msg($('acNickMsg'),bad,'bad');$('acNick').setAttribute('aria-invalid','true');return false}
+  msg($('acNickMsg'),'Checking…');
+  const {data,error}=await sb.rpc('nickname_available',{nick:n});
+  if($('acNick').value.trim()!==n)return null;
+  if(error){msg($('acNickMsg'),explain(error),'bad');return false}
+  nickFree=!!data;
+  if(data){msg($('acNickMsg'),'✓ '+n+' is available','good');$('acNick').removeAttribute('aria-invalid')}
+  else{msg($('acNickMsg'),n+' is taken. Try '+n.slice(0,13)+Math.floor(10+Math.random()*89)+'.','bad');$('acNick').setAttribute('aria-invalid','true')}
+  return !!data;
+}
+$('acNick').addEventListener('input',()=>{clearTimeout(nickTimer);nickFree=null;nickTimer=setTimeout(checkNick,450)});
+const W1=['Lucky','Gold','Jaguar','Toucan','Reef','Mango','Coral','Keel','Star','Tapir','Manatee','Cayo','Ceiba','Breeze','Palm'],W2=['Ball','Draw','Pick','Spin','Number','Charm','Streak','Wave','Seven','Lime'];
+$('acSuggest').onclick=()=>{$('acNick').value=W1[Math.floor(Math.random()*W1.length)]+W2[Math.floor(Math.random()*W2.length)]+Math.floor(10+Math.random()*89);checkNick()};
+
+/* ---------- create account / finish details ---------- */
+let codeEmail='',tries=0,resendTimer=0;
+function startResend(){let t=60;const b=$('acResend');b.disabled=true;clearInterval(resendTimer);b.textContent='Send a new code ('+t+')';
+  resendTimer=setInterval(()=>{t--;if(t<=0){clearInterval(resendTimer);b.disabled=false;b.textContent='Send a new code'}else b.textContent='Send a new code ('+t+')'},1000)}
+async function sendCode(email,btn,m){
+  btn.disabled=true;const old=btn.textContent;btn.textContent='Sending…';
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  btn.disabled=false;btn.textContent=old;
+  if(error){msg(m,explain(error),'bad');return false}
+  codeEmail=email;tries=0;$('acCodeTo').textContent=email;$('acCodeIn').value='';msg($('acCodeMsg'),'');view('code');startResend();
+  setTimeout(()=>$('acCodeIn').focus(),60);return true;
+}
+$('acUp').addEventListener('submit',async e=>{
+  e.preventDefault();const m=$('acUpMsg');msg(m,'','bad');
+  const fin=!!(user&&!profile);
+  const nick=$('acNick').value.trim(),first=$('acFirst').value.trim(),age=$('acAge').value,dist=$('acDist').value,email=(fin?(user.email||''):$('acEmail').value.trim()).toLowerCase();
+  ['acAge','acDist','acEmail'].forEach(id=>$(id).removeAttribute('aria-invalid'));
+  const free=nickFree===true?true:await checkNick();
+  if(!free){msg(m,'Please fix the nickname first.','bad');$('acNick').focus();return}
+  if(!age){$('acAge').setAttribute('aria-invalid','true');msg(m,'Choose your age range.','bad');$('acAge').focus();return}
+  if(!dist){$('acDist').setAttribute('aria-invalid','true');msg(m,'Choose your district.','bad');$('acDist').focus();return}
+  if(!emailOk(email)){$('acEmail').setAttribute('aria-invalid','true');msg(m,'Check the email address.','bad');$('acEmail').focus();return}
+  if(THROWAWAY.test(email)){$('acEmail').setAttribute('aria-invalid','true');msg(m,'Please use a permanent email address.','bad');return}
+  if(!$('acAgree').checked){msg(m,'Please tick the box to confirm you are 18 or older and agree.','bad');return}
+  const details={nickname:nick,first_name:first||null,age_range:age,district:dist,news_opt_in:$('acNews').checked,email,at:Date.now()};
+  ls.set(PENDING,details);
+  if(fin){$('acUpBtn').disabled=true;await makeProfile();$('acUpBtn').disabled=false;return}
+  await sendCode(email,$('acUpBtn'),m);
+});
+$('acIn').addEventListener('submit',async e=>{e.preventDefault();const email=$('acInEmail').value.trim().toLowerCase(),m=$('acInMsg');
+  if(!emailOk(email)){msg(m,'Check the email address.','bad');return}await sendCode(email,$('acInBtn'),m)});
+
+/* ---------- code ---------- */
+$('acCodeIn').addEventListener('input',e=>{const v=$('acCodeIn').value.replace(/\D/g,'').slice(0,10);$('acCodeIn').value=v;
+  const whole=e.inputType==='insertFromPaste'||e.inputType==='insertReplacementText'||!e.inputType;if(whole&&v.length>=6)$('acCode').requestSubmit()});
+$('acCode').addEventListener('submit',async e=>{
+  e.preventDefault();const code=$('acCodeIn').value,m=$('acCodeMsg');
+  if(!/^\d{6,10}$/.test(code)){msg(m,'Enter all the digits from the email.','bad');return}
+  if(tries>=5){msg(m,'Too many tries. Send a new code.','bad');return}
+  $('acCodeBtn').disabled=true;msg(m,'Checking…');
+  const {data,error}=await sb.auth.verifyOtp({email:codeEmail,token:code,type:'email'});
+  $('acCodeBtn').disabled=false;
+  if(error){tries++;const left=5-tries;msg(m,explain(error)+(left>0?' '+left+(left===1?' try':' tries')+' left.':' Send a new code.'),'bad');$('acCodeIn').select();return}
+  clearInterval(resendTimer);user=data.user;await afterSignIn(true);
+});
+$('acResend').onclick=async()=>{if(codeEmail)await sendCode(codeEmail,$('acResend'),$('acCodeMsg'))};
+$('acBack').onclick=()=>{clearInterval(resendTimer);view(ls.get(PENDING)?'up':'in')};
+
+/* record a visit (keeps the account from the 2-year clean-up); at most once every 20 hours */
+let seenAt=0;
+function touchSeen(){if(!user||!profile)return;const t=Date.now();if(t-seenAt<20*3600e3)return;seenAt=t;
+  sb.from('profiles').update({last_seen:new Date(t).toISOString()}).eq('id',user.id).then(()=>{},()=>{})}
+/* ---------- after sign-in ---------- */
+async function afterSignIn(fromSheet){
+  if(!user){profile=null;drawStrip();return}
+  const {data:prof,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(error){if(fromSheet){view('up');msg($('acUpMsg'),explain(error),'bad')}return}
+  if(prof){profile=prof;ls.del(PENDING);touchSeen();
+    await firstSync();drawStrip();if(fromSheet){view('me');window.bzToast&&window.bzToast('Signed in. Your Lucky Numbers are saved to your account.')}return}
+  const p=ls.get(PENDING);
+  if(p&&p.email===(user.email||'').toLowerCase()){await makeProfile(fromSheet);return}
+  profile=null;drawStrip();if(fromSheet)view('finish');
+}
+async function makeProfile(){
+  const p=ls.get(PENDING);if(!p||!user)return;
+  const row={id:user.id,nickname:p.nickname,first_name:p.first_name,age_range:p.age_range,district:p.district,news_opt_in:!!p.news_opt_in,terms_version:CFG.termsVersion||'2026-11'};
+  const {data,error}=await sb.from('profiles').insert(row).select().single();
+  if(error){view('finish');msg($('acUpMsg'),explain(error)+' Your email is confirmed; choose another nickname and press Save my details.','bad');return}
+  ls.del(PENDING);profile=data;await firstSync();drawStrip();view('me');
+  window.bzToast&&window.bzToast('Welcome, '+(profile.first_name||profile.nickname)+'! Your Lucky Numbers are saved to your account.');
+}
+
+/* ---------- Lucky Numbers sync ----------
+   First sign-in on a device: numbers here and numbers in the account are combined (up to 12 per game).
+   After that: changes here are saved to the account a moment later, and coming back to the app
+   picks up changes made on other devices. */
+const same=(a,b)=>JSON.stringify(norm(a))===JSON.stringify(norm(b));
+function norm(m){const o={};Object.keys(m||{}).sort().forEach(g=>{if(Array.isArray(m[g])&&m[g].length)o[g]=m[g].map(String)});return o}
+function merge(here,there){const out={};new Set([...Object.keys(here||{}),...Object.keys(there||{})]).forEach(g=>{
+  const L=[];[...(Array.isArray(here[g])?here[g]:[]),...(Array.isArray((there||{})[g])?there[g]:[])].forEach(k=>{k=String(k);if(!L.includes(k)&&L.length<12)L.push(k)});if(L.length)out[g]=L});return out}
+let pushTimer=0,pushing=false,lastSaved=null;
+async function firstSync(){
+  if(!window.bzLucky||!user)return;
+  const {data,error}=await sb.from('lucky_numbers').select('mine,updated_at').eq('user_id',user.id).maybeSingle();
+  if(error)return;
+  const server=(data&&data.mine)||{},merged=merge(window.bzLucky.get(),server);
+  if(!same(merged,window.bzLucky.get()))window.bzLucky.set(merged);
+  if(!data||!same(merged,server))await push();else{lastSaved=norm(merged);ls.set(SYNCAT,data.updated_at)}
+}
+async function push(){
+  if(!user||!profile||!window.bzLucky)return;
+  pushing=true;const mine=norm(window.bzLucky.get()),at=new Date().toISOString();
+  const {error}=await sb.from('lucky_numbers').upsert({user_id:user.id,mine,updated_at:at});
+  pushing=false;
+  if(!error){lastSaved=mine;ls.set(SYNCAT,at)}
+  if(!sheet.hidden&&!$('acMe').hidden)fillMe(error?'Couldn\'t save just now. We\'ll try again.':'');
+}
+function onLocalChange(){if(!user||!profile)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>{if(!same(window.bzLucky.get(),lastSaved))push()},1200)}
+async function pull(){
+  if(!user||!profile||pushing||!window.bzLucky)return;
+  if(lastSaved&&!same(window.bzLucky.get(),lastSaved)){push();return}  // unsaved changes here win
+  const {data,error}=await sb.from('lucky_numbers').select('mine,updated_at').eq('user_id',user.id).maybeSingle();
+  if(error||!data)return;
+  const at=ls.get(SYNCAT);
+  if(!at||data.updated_at>at){if(!same(data.mine,window.bzLucky.get()))window.bzLucky.set(norm(data.mine));lastSaved=norm(data.mine);ls.set(SYNCAT,data.updated_at)}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pull();touchSeen()}});
+
+/* ---------- account view ---------- */
+function fillMe(note){
+  if(!profile||!user)return;
+  $('acMeNick').textContent=profile.nickname;$('acMeAge').textContent=profile.age_range;$('acMeDist').textContent=profile.district;
+  $('acMeEmail').textContent=user.email||'';$('acMeSince').textContent=day(profile.created_at);
+  const at=ls.get(SYNCAT);$('acMeSync').textContent=note||(at?'✓ Lucky Numbers saved to your account at '+timeOf(at)+'.':'✓ Lucky Numbers saved to your account.');
+  $('acMeSync').style.color=note?'#ffb0a8':'';$('acDelNick').textContent=profile.nickname;
+}
+async function signOut(scope){
+  await sb.auth.signOut({scope}).catch(()=>{});user=null;profile=null;lastSaved=null;ls.del(SYNCAT);closeSheet();drawStrip();
+  window.bzToast&&window.bzToast('Signed out. Your Lucky Numbers stay on this device.');
+}
+$('acOut').onclick=()=>signOut('local');
+// delete needs two taps on the red button (the first tap arms it for 3 seconds), like removing a Lucky Number
+let delArmed=false,delTimer=0;
+function delDisarm(){delArmed=false;clearTimeout(delTimer);const b=$('acDelGo');b.textContent='Double-tap to delete';b.classList.remove('armed')}
+$('acDel').onclick=()=>{$('acDelBox').hidden=false;delDisarm();msg($('acMeMsg'),'');$('acDelBox').scrollIntoView({block:'nearest'})};
+$('acDelNo').onclick=()=>{$('acDelBox').hidden=true;delDisarm()};
+$('acDelGo').onclick=async()=>{
+  if(!delArmed){delArmed=true;const b=$('acDelGo');b.textContent='Tap again to delete';b.classList.add('armed');clearTimeout(delTimer);delTimer=setTimeout(delDisarm,3000);return}
+  delDisarm();
+  $('acDelGo').disabled=true;const {error}=await sb.rpc('delete_my_account');$('acDelGo').disabled=false;
+  if(error){msg($('acMeMsg'),explain(error),'bad');return}
+  await sb.auth.signOut({scope:'local'}).catch(()=>{});user=null;profile=null;lastSaved=null;ls.del(SYNCAT);closeSheet();drawStrip();
+  window.bzToast&&window.bzToast('Your account was deleted. Your Lucky Numbers stay on this device.');
+};
+
+/* ---------- the "sign up" moment: when a signed-out person reaches 3 Lucky Numbers ----------
+   Once per visit: the account box comes into view, sparkles burst around it, a magic chime plays,
+   the box pulses gold and the Create account button shines. Waits until the number picker is closed. */
+let lastCount=null,dramaDone=false,dramaWait=0;
+const reduce=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
+function overlayOpen(){return ['pickBox','ballSheet','mixBox','shareBox'].some(id=>$(id)&&!$(id).hidden)||!sheet.hidden}
+function maybeDrama(){
+  const n=luckyCount(),prev=lastCount;lastCount=n;
+  if(!user)drawStrip();
+  if(user||offline||dramaDone||prev===null||!(prev<3&&n>=3))return;
+  dramaDone=true;clearInterval(dramaWait);
+  const inPicker=$('pickBox')&&!$('pickBox').hidden;
+  if(inPicker)pickerMoment();
+  dramaWait=setInterval(()=>{if(overlayOpen())return;clearInterval(dramaWait);setTimeout(()=>drama(inPicker),350)},250);
+}
+/* inside the number picker: a banner with sparkles and the chime, right where the person is looking */
+function pickerMoment(){
+  const inn=$('pickBox').querySelector('.mixbox-in');if(!inn)return;
+  let ban=$('acPickBan');
+  if(!ban){ban=document.createElement('div');ban.id='acPickBan';ban.className='ac-pickban';ban.setAttribute('role','status');
+    ban.innerHTML='<b>★ 3 Lucky Numbers!</b><span>Keep them on every device with a free account.</span><button type="button" class="btn small" id="acPickGo">Create account</button>';
+    inn.insertBefore(ban,inn.children[1]||null);
+    ban.querySelector('#acPickGo').onclick=()=>{$('pickDone').click();setTimeout(()=>openSheet('up'),250)}}
+  ban.hidden=false;ban.classList.remove('wow');void ban.offsetWidth;ban.classList.add('wow');
+  const S=window.bzSnd;if(S){try{S.intro()}catch(e){}}
+  if(!reduce())burst(ban);
+}
+function drama(quiet){
+  if(user)return;
+  const ban=$('acPickBan');if(ban)ban.hidden=true;
+  glowOn=true;drawStrip();
+  strip.scrollIntoView({block:'center',behavior:reduce()?'auto':'smooth'});
+  $('acctTxt').innerHTML='<b>★ Nice picks!</b> Don\'t lose them. <b>Create a free account</b> and they\'ll be on every device you use.';
+  setTimeout(()=>{
+    const S=window.bzSnd;if(S){try{quiet?S.shimmer():S.intro()}catch(e){}}
+    strip.classList.remove('wow');void strip.offsetWidth;strip.classList.add('wow');
+    if(!reduce())burst(strip);
+    setTimeout(()=>strip.classList.remove('wow'),2600);
+  },reduce()?0:450);
+}
+function burst(host){
+  const box=document.createElement('div');box.className='acct-burst';box.setAttribute('aria-hidden','true');
+  const COLORS=['#fff0b8','#e9c46a','#ffd77a','#ffffff','#fec207'];
+  for(let i=0;i<34;i++){const sp=document.createElement('i');const a=Math.random()*Math.PI*2,d=70+Math.random()*130;
+    sp.style.setProperty('--dx',Math.cos(a)*d*1.6+'px');sp.style.setProperty('--dy',Math.sin(a)*d+'px');
+    sp.style.setProperty('--d',(.6+Math.random()*.7).toFixed(2)+'s');sp.style.setProperty('--w',(.05+Math.random()*.5).toFixed(2)+'s');
+    sp.style.setProperty('--s',(6+Math.random()*12).toFixed(0)+'px');sp.style.color=COLORS[i%COLORS.length];
+    sp.textContent=i%3?'✦':'★';box.appendChild(sp)}
+  host.appendChild(box);setTimeout(()=>box.remove(),2200);
+}
+function onAnyChange(){onLocalChange();maybeDrama()}
+
+/* ---------- start ---------- */
+function whenLibrary(cb){let n=0;(function wait(){if(window.supabase&&window.supabase.createClient)return cb(true);if(++n>100)return cb(false);setTimeout(wait,100)})()}
+drawStrip();lastCount=luckyCount();
+if(window.bzLucky)window.bzLucky.onChange=onAnyChange;
+whenLibrary(async ok=>{
+  if(!ok){offline=true;drawStrip();return}
+  let base;try{base=new URL(String(CFG.url).trim()).origin}catch(e){base=String(CFG.url).trim()}
+  sb=window.supabase.createClient(base,String(CFG.key).trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'mn-auth'}});
+  if(window.bzLucky)window.bzLucky.onChange=onAnyChange;
+  const {data:{session}}=await sb.auth.getSession();
+  if(session&&session.user){user=session.user;await afterSignIn(false)}else drawStrip();
+});
 })();

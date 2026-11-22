@@ -16,13 +16,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=f0367c0a">
+<script src="supabase-config.js?v=1"></script>
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="wrap">
 
 
   <div class="top" id="secGames">
+    <button type="button" class="acctbtn" id="acctBtn" hidden aria-label="Sign up or sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 19.5c1.2-3.6 4-5.4 7.2-5.4s6 1.8 7.2 5.4"/></svg><span id="acctBtnTxt">Sign up</span></button>
+    <button type="button" class="eyebtn" id="eyeBtn" aria-pressed="false" aria-label="Easy reading: larger, clearer text"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.4 15.4 20.6 20.6"/><path d="M7.9 10.5h5.2"/><path class="zv" d="M10.5 7.9v5.2"/></svg></button>
     <button type="button" class="sndbtn" id="sndBtn" aria-pressed="false" aria-label="Mute sound"></button>
     <header class="brand">
       <div class="brand-txt"><p class="eyebrow">Belize Lottery</p><h1>Missing <em>Numbers</em></h1></div>
@@ -76,6 +80,7 @@
     <p class="mine-hint" id="mineHint">Keep an eye on your favourite numbers. Tap <b>＋ Add</b> to pick them, or tap any ball above and choose <b>☆ Add to My Lucky Numbers</b>. They're saved on this device.</p>
     <p class="mine-tip" id="mineTip" hidden>Double-tap a number to remove it.</p>
     <div class="mine" id="mine"></div>
+    <div class="acct-strip" id="acctStrip" hidden><span class="acct-ico" aria-hidden="true">☁</span><p class="acct-txt" id="acctTxt"></p><div class="acct-btns" id="acctBtns"></div></div>
   </section>
 
 
@@ -158,6 +163,75 @@
       <button type="button" class="pickdone" id="pickDone">Done</button>
     </div>
   </div>
+  <div class="sheet acct-sheet" id="acctSheet" hidden role="dialog" aria-modal="true" aria-labelledby="acTitle">
+    <div class="sheet-in">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <div class="sheet-txt"><h2 id="acTitle">Free account</h2><p id="acSub">Keep your Lucky Numbers on every device.</p></div>
+        <button type="button" class="sheet-x" id="acClose" aria-label="Close">×</button>
+      </div>
+
+      <div class="ac-tabs" id="acTabs" role="tablist">
+        <button type="button" role="tab" id="acTabUp" aria-selected="true">Create account</button>
+        <button type="button" role="tab" id="acTabIn" aria-selected="false">Sign in</button>
+      </div>
+
+      <!-- create account -->
+      <form class="ac-form" id="acUp" novalidate>
+        <label class="ac-f" for="acNick">Nickname <span class="ac-hint">Shown instead of your name. 3–16 letters, numbers or _. Don't use your real name.</span></label>
+        <div class="ac-row"><input type="text" id="acNick" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="16"><button type="button" class="btn ghost small" id="acSuggest">Suggest</button></div>
+        <p class="ac-msg" id="acNickMsg" aria-live="polite"></p>
+        <label class="ac-f" for="acFirst">First name <span class="ac-hint">Optional. Never shown; only used to say hello.</span></label>
+        <input type="text" id="acFirst" autocomplete="given-name" maxlength="40">
+        <label class="ac-f" for="acAge">Age <span class="ac-hint">You must be 18 or older.</span></label>
+        <select id="acAge"><option value="">Choose…</option><option>18-24</option><option>25-34</option><option>35-44</option><option>45-54</option><option>55-64</option><option>65+</option></select>
+        <label class="ac-f" for="acDist">District</label>
+        <select id="acDist"><option value="">Choose…</option><option>Belize</option><option>Cayo</option><option>Corozal</option><option>Orange Walk</option><option>Stann Creek</option><option>Toledo</option><option>Outside Belize</option></select>
+        <label class="ac-f" for="acEmail">Email <span class="ac-hint">We send your code here. Never shown or shared.</span></label>
+        <input type="email" id="acEmail" autocomplete="email" inputmode="email">
+        <label class="ac-check"><input type="checkbox" id="acAgree"> <span>I am 18 or older and agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <label class="ac-check"><input type="checkbox" id="acNews"> <span>Send me occasional news about the site (optional).</span></label>
+        <p class="ac-msg bad" id="acUpMsg" aria-live="polite"></p>
+        <button type="submit" class="btn" id="acUpBtn">Send my code</button>
+      </form>
+
+      <!-- sign in -->
+      <form class="ac-form" id="acIn" novalidate hidden>
+        <label class="ac-f" for="acInEmail">Email</label>
+        <input type="email" id="acInEmail" autocomplete="email" inputmode="email">
+        <p class="ac-msg bad" id="acInMsg" aria-live="polite"></p>
+        <button type="submit" class="btn" id="acInBtn">Send my code</button>
+      </form>
+
+      <!-- code -->
+      <form class="ac-form" id="acCode" novalidate hidden>
+        <p class="ac-lead">We sent a code to <b id="acCodeTo"></b>. It works for 10 minutes.</p>
+        <input class="ac-code" id="acCodeIn" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" aria-label="Code from the email">
+        <p class="ac-msg" id="acCodeMsg" aria-live="polite"></p>
+        <button type="submit" class="btn" id="acCodeBtn">Confirm</button>
+        <p class="ac-links"><button type="button" class="linkbtn" id="acResend" disabled>Send a new code (60)</button> · <button type="button" class="linkbtn" id="acBack">Use a different email</button></p>
+      </form>
+
+      <!-- signed in -->
+      <div class="ac-form" id="acMe" hidden>
+        <dl class="ac-dl">
+          <dt>Nickname</dt><dd id="acMeNick"></dd>
+          <dt>Age</dt><dd id="acMeAge"></dd>
+          <dt>District</dt><dd id="acMeDist"></dd>
+          <dt>Email</dt><dd id="acMeEmail"></dd>
+          <dt>Member since</dt><dd id="acMeSince"></dd>
+        </dl>
+        <p class="ac-sync" id="acMeSync"></p>
+        <div class="ac-btns"><button type="button" class="btn ghost small" id="acOut">Sign out</button></div>
+        <div class="ac-btns ac-end"><button type="button" class="linkbtn" id="acDel">Delete my account</button></div>
+        <div class="ac-confirm" id="acDelBox" hidden>
+          <p>Delete your account <b id="acDelNick"></b> and the Lucky Numbers saved to it? This can't be undone. The numbers on this device stay.</p>
+          <div class="ac-btns"><button type="button" class="btn small ac-danger" id="acDelGo">Double-tap to delete</button><button type="button" class="btn ghost small" id="acDelNo">Keep my account</button></div>
+        </div>
+        <p class="ac-msg" id="acMeMsg" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
   <div class="sheet" id="ballSheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet-in">
       <span class="sheet-grab" aria-hidden="true"></span>
@@ -201,8 +275,12 @@
       </div>
       <div class="iz-w2">Numbers<span class="iz-shine" aria-hidden="true">Numbers</span></div>
     </div>
-    <p class="iz-tag">See which numbers haven't come out</p>
+    <div class="iz-under">
+      <p class="iz-tag">See which numbers haven't come out</p>
+      <p class="iz-status" id="izStatus"></p>
+    </div>
   </div>
+  <p class="iz-skiphint">Tap anywhere to continue</p>
 </div>
 <template id="izBallTpl">
   <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -232,6 +310,6 @@
 </template>
 </div>
 <div class="toast" id="toast" hidden></div>
-<script src="app.js"></script>
+<script src="app.js?v=31326295"></script>
 </body>
 </html>
