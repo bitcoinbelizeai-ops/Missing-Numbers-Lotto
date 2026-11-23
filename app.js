@@ -635,11 +635,14 @@ async function makeShareImage(){
   ctx.fillStyle=bg;ctx.fillRect(0,0,S,S);
   ctx.strokeStyle='rgba(233,196,106,.7)';ctx.lineWidth=6;ctx.beginPath();ctx.roundRect?ctx.roundRect(40,40,S-80,S-80,48):ctx.rect(40,40,S-80,S-80);ctx.stroke();
   ctx.textAlign='center';ctx.textBaseline='alphabetic';
-  ctx.fillStyle='#c9d5ea';ctx.font='700 34px "Barlow Condensed", Barlow, sans-serif';ctx.fillText('B E L I Z E   L O T T E R Y',S/2,150);
+  // "Weh Play?" stamp, same look as the opening screen: white, slight tilt, gold edge underneath (owner, Nov 23, 2026)
+  ctx.save();ctx.translate(S/2,136);ctx.rotate(-4*Math.PI/180);ctx.font='800 66px Outfit, Barlow, sans-serif';
+  ctx.shadowColor='rgba(0,16,50,.5)';ctx.shadowBlur=14;ctx.shadowOffsetY=6;ctx.fillStyle='#d99406';ctx.fillText('Weh Play?',0,4);
+  ctx.shadowColor='transparent';ctx.fillStyle='#ffffff';ctx.fillText('Weh Play?',0,0);ctx.restore();
   ctx.fillStyle='#ffffff';ctx.font='800 74px Outfit, Barlow, sans-serif';const t1='Missing ',t2='Numbers';
-  const w1=ctx.measureText(t1).width,w2=ctx.measureText(t2).width,x0=S/2-(w1+w2)/2;ctx.textAlign='left';ctx.fillText(t1,x0,240);ctx.fillStyle='#fec207';ctx.fillText(t2,x0+w1,240);
+  const w1=ctx.measureText(t1).width,w2=ctx.measureText(t2).width,x0=S/2-(w1+w2)/2;ctx.textAlign='left';ctx.fillText(t1,x0,262);ctx.fillStyle='#fec207';ctx.fillText(t2,x0+w1,262);
   ctx.textAlign='center';ctx.fillStyle='#e9c46a';ctx.font='700 58px "Barlow Condensed", Barlow, sans-serif';ctx.fillText(GAMES[state.game].label.toUpperCase(),S/2,360);
-  ctx.fillStyle='#f7f0dc';ctx.font='500 38px Barlow, sans-serif';ctx.fillText(fmtDay(d.date)+' · '+fmtTime(state.game),S/2,420);
+  ctx.fillStyle='#f7f0dc';ctx.font='500 38px Barlow, sans-serif';ctx.fillText('Belize Lottery · '+fmtDay(d.date)+' · '+fmtTime(state.game),S/2,420);
   const c=ballColors(),cy=640;
   if(state.game==='lottery'){
     const prizes=['1st','2nd','3rd'];d.nums.forEach((n,row)=>{const digits=pad(n,4).split(''),y=530+row*130,r=52,gap=124,xs=S/2-gap*1.5+60;
@@ -650,7 +653,8 @@ async function makeShareImage(){
     const r=state.game==='boledo'?150:labels.length>4?72:100,gap=r*2.25,x1=S/2-gap*(labels.length-1)/2;
     labels.forEach((l,i)=>drawBall(ctx,x1+i*gap,cy,r,l,i===labels.length-1&&d.letter?{hi:'#ffffff',main:'#e9e2cf',deep:'#9a917a'}:c));
   }
-  ctx.textAlign='center';ctx.fillStyle='#c9d5ea';ctx.font='500 30px Barlow, sans-serif';ctx.fillText('Every draw is random. Independent tracker.',S/2,S-110);
+  ctx.textAlign='center';ctx.fillStyle='#fec207';ctx.font='700 44px Barlow, sans-serif';ctx.fillText('missingnumbers.bz',S/2,S-140);
+  ctx.fillStyle='#c9d5ea';ctx.font='500 28px Barlow, sans-serif';ctx.fillText('Every draw is random. Independent tracker.',S/2,S-88);
   return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
 }
 $('shareBtn').addEventListener('click',async()=>{
@@ -906,7 +910,7 @@ function render(){
   /* last draw: rebuilt only when its results change, so a refresh with the same results
      doesn't cut the roll-in short */
   const ldNew=all.length?state.game+'|'+(state.sample?'s':'r')+'|'+all.slice(-8).map(x=>x.id+':'+(x.nums||[]).join('.')+(x.letter||'')+(x.nodraw?'x':'')).join(','):'empty|'+state.game;
-  if(all.length&&ldNew===ldSig){const d=all[all.length-1];$('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));$('shareBtn').hidden=!!d.nodraw}
+  if(all.length&&ldNew===ldSig){const d=all[all.length-1];$('lastDate').textContent='Last draw · '+fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));$('shareBtn').hidden=!!d.nodraw}
   else if(all.length){
     ldSig=ldNew;last.innerHTML='';
     const d=all[all.length-1];
@@ -916,7 +920,7 @@ function render(){
     const roll=animKey!==lastAnim;lastAnim=animKey;if(roll)pickEnter();
     last.classList.remove('roll','hold');ldPending=false;
     if(roll){if(introRunning()){last.classList.add('hold');ldPending=true}else requestAnimationFrame(()=>startLastRoll())}
-    $('lastDate').textContent=fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
+    $('lastDate').textContent='Last draw · '+fmtDay(d.date)+(d.nodraw?'':' · '+fmtTime(state.game));
     $('shareBtn').hidden=!!d.nodraw;
     let bi=0;const ldFacts=ldFactsFn(all);
     if(state.game==='lottery'){
