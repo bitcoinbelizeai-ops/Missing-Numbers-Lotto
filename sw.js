@@ -35,7 +35,10 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = new URL((e.notification.data && e.notification.data.url) || '/?alert=1', self.location.origin).href;
+  // only ever open a page on this site, whatever the alert says
+  let url = new URL((e.notification.data && e.notification.data.url) || '/?alert=1', self.location.origin);
+  if (url.origin !== self.location.origin) url = new URL('/?alert=1', self.location.origin);
+  url = url.href;
   e.waitUntil((async () => {
     const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const p of pages) {
