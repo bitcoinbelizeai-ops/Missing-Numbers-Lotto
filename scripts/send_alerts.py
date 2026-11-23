@@ -238,14 +238,14 @@ def message(new, histories, sub):
     top = scored[0]
     d = top[1]
     if len(mine_draws) == 1:
-        title = f"{LABELS[d['game']]}: {shown(d)}"
+        title = f"Weh Play? {LABELS[d['game']]}: {shown(d)}"   # owner, Nov 23, 2026
         if top[2] == "hit":
             title += " · your number hit!"
         body = top[3]
     else:
-        title = "Results are in"
+        title = "Weh Play? Results are in"
         if top[2] == "hit":
-            title = "Results are in · your number hit!"
+            title = "Weh Play? Results are in · your number hit!"
         body = "\n".join(f"{LABELS[x['game']]}: {shown(x)}" for _, x, _, _ in sorted(scored, key=lambda s: AT[s[1]["game"]])) + "\n" + top[3]
     return {"title": title, "body": body, "url": f"/?game={d['game']}&alert=1", "tag": "mn-draw"}
 
