@@ -801,7 +801,8 @@ html.easy .updbar{font-size:17px}
 .iz-splash::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 55% at 50% 45%,transparent 60%,rgba(0,0,0,.35))}
 .iz-bloom{position:absolute;left:50%;top:50%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;border-radius:50%;pointer-events:none;opacity:0;
   background:radial-gradient(closest-side,rgba(255,224,130,.42),rgba(255,200,70,.14) 28%,rgba(255,200,70,0) 55%)}
-.iz-lockup{position:relative;display:flex;align-items:center;gap:clamp(12px,3.6vw,18px);padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.iz-lockup{position:relative;display:flex;align-items:center;gap:clamp(12px,3.6vw,18px);padding-inline:max(16px,env(safe-area-inset-left,0px));
+  margin-bottom:clamp(96px,17vh,150px)}   /* lifts the logo so the logo + the three lines under it sit balanced on screen */
 .iz-ballslot{position:relative;width:clamp(74px,22vw,100px);height:clamp(74px,22vw,100px);flex:none}
 
 /* sparkles and fairy dust */
@@ -834,9 +835,15 @@ html.easy .updbar{font-size:17px}
   background:linear-gradient(180deg,#fff4c4 0%,#ffd451 38%,#f5b81c 62%,#d99406 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .iz-w2 .iz-shine{position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.95) 48%,transparent 62%);
   -webkit-background-clip:text;background-clip:text;color:transparent;background-size:250% 100%;background-position:120% 0}
-.iz-under{position:absolute;left:0;right:0;top:calc(100% + clamp(20px,5.5vw,30px));display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
-.iz-tag{margin:0;font:600 clamp(17px,4.9vw,20px)/1.3 var(--f-body);color:#fff;letter-spacing:.01em;opacity:0;text-wrap:balance;text-shadow:0 1px 2px rgba(0,16,50,.5)}
-.iz-status{margin:0;min-height:1.3em;font:500 clamp(15px,4.3vw,17px)/1.3 var(--f-body);color:#eef3ff;opacity:0;text-shadow:0 1px 2px rgba(0,16,50,.5)}
+/* three steps under the logo, each a little further apart (owner, Nov 23, 2026):
+   the question, then what the app gives you, then the quieter loading status */
+.iz-under{position:absolute;left:0;right:0;top:calc(100% + clamp(26px,7vw,34px));display:flex;flex-direction:column;align-items:center;gap:0;text-align:center}
+.iz-tag{margin:clamp(20px,5.6vw,26px) 0 0;font:600 clamp(17px,4.9vw,20px)/1.3 var(--f-body);color:#fff;letter-spacing:.02em;opacity:0;text-wrap:balance;text-shadow:0 1px 2px rgba(0,16,50,.5)}
+/* "Weh Play?" (owner, Nov 23, 2026): the Belizean question, stamped in after the title lands */
+.iz-weh{position:relative;margin:0;line-height:1;opacity:0;transform:rotate(-4deg)}
+.iz-weh-txt{display:inline-block;font:800 clamp(24px,7.2vw,34px)/1 var(--f-brand);letter-spacing:.015em;white-space:nowrap;color:#fff;
+  text-shadow:0 2px 0 #d99406,0 4px 10px rgba(0,16,50,.5)}
+.iz-status{margin:clamp(24px,6.6vw,32px) 0 0;min-height:1.3em;font:500 clamp(14px,4vw,16px)/1.3 var(--f-body);color:#d3def8;opacity:0;text-shadow:0 1px 2px rgba(0,16,50,.5)}
 /* tells people the screen moves on by itself, and that a tap moves on now */
 .iz-skiphint{position:absolute;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#f2f6ff;font:600 17px/1.2 var(--f-body);white-space:nowrap;opacity:0;pointer-events:none}
 .iz-glint{position:absolute;width:1px;height:1px;pointer-events:none}
@@ -868,8 +875,12 @@ html.easy .updbar{font-size:17px}
 /* crescendo: a warm light swells behind everything and peaks with the chime */
 .iz-play .iz-bloom{animation:iz-bloom 640ms cubic-bezier(.4,0,.2,1) 1000ms both}
 .iz-play .iz-w2 .iz-shine{animation:iz-shine 300ms ease-in-out 1560ms both}
-.iz-play .iz-tag{animation:iz-tag 260ms ease-out 1460ms both}
-.iz-play .iz-status{animation:iz-tag 400ms ease-out 2200ms both}
+/* one authored moment: the question lands, the logo takes the hit, the gold flare cools to a shadow */
+.iz-play .iz-weh{animation:iz-slam 380ms cubic-bezier(.16,1,.3,1) 1500ms both}
+.iz-play .iz-weh-txt{animation:iz-flare 900ms ease-out 1640ms both}
+.iz-play .iz-lockup{animation:iz-thump 240ms cubic-bezier(.16,1,.3,1) 1640ms both}
+.iz-play .iz-tag{animation:iz-tag 300ms ease-out 1950ms both}
+.iz-play .iz-status{animation:iz-tag 400ms ease-out 2350ms both}
 .iz-play .iz-skiphint{animation:iz-hint-in 400ms ease-out 1900ms both}
 .iz-play #izMainBall{animation:iz-breathe 2.4s ease-in-out 1.6s infinite}
 .iz-play.iz-short .iz-status{display:none}
@@ -897,6 +908,10 @@ html.easy .updbar{font-size:17px}
 @keyframes iz-bloom{0%{opacity:0;transform:scale(.25)}85%{opacity:.75;transform:scale(1)}100%{opacity:.35;transform:scale(1.05)}}
 @keyframes iz-shine{from{background-position:120% 0}to{background-position:-30% 0}}
 @keyframes iz-tag{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes iz-slam{0%{opacity:0;transform:rotate(-4deg) scale(1.9);filter:blur(5px)}45%{opacity:1;filter:none}100%{opacity:1;transform:rotate(-4deg) scale(1)}}
+@keyframes iz-flare{0%{text-shadow:0 0 18px rgba(255,212,81,.95),0 0 36px rgba(245,184,28,.6),0 2px 0 #d99406,0 4px 10px rgba(0,16,50,.5)}
+  100%{text-shadow:0 0 0 rgba(255,212,81,0),0 0 0 rgba(245,184,28,0),0 2px 0 #d99406,0 4px 10px rgba(0,16,50,.5)}}
+@keyframes iz-thump{0%,100%{transform:none}35%{transform:translateY(4px)}}
 @keyframes iz-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
 @keyframes iz-hint-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translateX(-50%)}}
 @keyframes iz-vanish{to{opacity:0;filter:blur(8px);transform:scale(1.05)}}
@@ -906,7 +921,7 @@ html.easy .updbar{font-size:17px}
   .iz-play *,.iz-play{animation:none!important}
   .iz-play .iz-ballgrow,.iz-play .iz-ballmove{transform:none}
   .iz-play .iz-ghost{display:none}
-  .iz-play .iz-floor,.iz-play .iz-w1 span,.iz-play .iz-w2,.iz-play .iz-tag,.iz-play .iz-status,.iz-play .iz-skiphint{opacity:1}
+  .iz-play .iz-floor,.iz-play .iz-w1 span,.iz-play .iz-w2,.iz-play .iz-weh,.iz-play .iz-tag,.iz-play .iz-status,.iz-play .iz-skiphint{opacity:1}
 }
 
 
@@ -1096,6 +1111,7 @@ html.easy #mineTitle{font-size:clamp(18px,5.4vw,24px)}
 html.easy .iz-w1{font-size:clamp(34px,10.5vw,50px)}
 html.easy .iz-w2{font-size:clamp(34px,10.5vw,50px)}
 html.easy .iz-tag{font-size:clamp(19px,5.4vw,22px)}
+html.easy .iz-weh-txt{font-size:clamp(26px,7.8vw,36px)}
 html.easy .iz-status,html.easy .iz-skiphint{font-size:18px}
 html.easy .eyehint{font-size:16px}
 html.easy .eyehint button{font-size:20px}
