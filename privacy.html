@@ -47,7 +47,7 @@ a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4
   </ul></div>
 
   <h2>What we keep and where</h2>
-  <p><b>Without an account</b>, nothing about you leaves your phone. Your settings and Lucky Numbers are saved only on your own device.</p>
+  <p><b>Without an account</b>, nothing about you leaves your phone. Your settings and Lucky Numbers are saved only on your own device. The one exception is draw alerts, if you turn them on (see below).</p>
   <p><b>With an account</b>, we keep these details in our database, which is run for us by Supabase, an online database service:</p>
   <ul>
     <li>your email address (to send your sign-in code)</li>
@@ -59,6 +59,15 @@ a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4
   </ul>
   <p>The site itself is hosted on GitHub Pages, and its fonts come from Google Fonts. Like any website, these services see your device's internet address when pages load. They don't get your account details.</p>
   <p>To count visits, we use Cloudflare Web Analytics. It tells us things like how many people visited, which pages they opened, and roughly which country they were in. It uses no cookies, doesn't follow you to other websites, and doesn't tell us who you are.</p>
+
+  <h2>Draw alerts</h2>
+  <p>Draw alerts are optional and need no account. If you tap <b>Notify me</b> and allow notifications, we save in our Supabase database:</p>
+  <ul>
+    <li>your phone's push address and keys, made by your browser (Google, Apple, Microsoft or Mozilla) so we can send it alerts. They don't include your name, number or email</li>
+    <li>which games you picked, and your Lucky Numbers for those games, so alerts can tell you when yours play</li>
+    <li>when you turned alerts on, when we last sent one, and how many alerts in a row weren't opened (after 10, we switch you to a weekly roundup)</li>
+  </ul>
+  <p>Alerts travel through your browser's own push service. Tapping <b>Alerts on</b> and then <b>Turn off alerts</b> deletes this record straight away. If you block notifications in your phone's settings instead, alerts stop and we delete the record once your phone's push service tells us it no longer works.</p>
 
   <h2>Emails</h2>
   <p>We only email you your sign-in code. If you tick the news box, we may also send occasional site news; you can stop it any time by contacting us.</p>
@@ -77,6 +86,7 @@ a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4
   <ul>
     <li>Sign-ups that never enter their code are removed after 24 hours; unfinished accounts after 7 days.</li>
     <li>Accounts not used for 2 years are deleted, with a reminder email 30 days before. Opening the site while signed in counts as using it.</li>
+    <li>Draw alert records are deleted when you turn alerts off, or as soon as your phone's push service tells us the address no longer works.</li>
     <li>When you delete your account, or we delete it for breaking our <a href="terms.html">Terms of Service</a>, your profile and saved Lucky Numbers are removed straight away.</li>
   </ul>
 

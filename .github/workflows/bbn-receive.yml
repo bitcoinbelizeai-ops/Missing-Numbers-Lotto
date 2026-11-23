@@ -24,7 +24,7 @@ concurrency:
 jobs:
   receive:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - name: Get the site files
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, pinned to its exact version
@@ -53,3 +53,18 @@ jobs:
           done
           echo "Could not save after 3 tries."
           exit 1
+
+      - name: Send draw alerts
+        # One alert per new draw to phones that tapped the bell (scripts/send_alerts.py).
+        # Never fails this job; does nothing until the two secrets are added.
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SENDER_TOKEN: ${{ secrets.PUSH_SENDER_TOKEN }}
+        run: |
+          if [ -z "$PUSH_SENDER_TOKEN" ] || [ -z "$VAPID_PRIVATE_KEY" ]; then echo "Draw alerts: secrets not set yet."; exit 0; fi
+          python3 -m venv /tmp/alerts && /tmp/alerts/bin/pip install --quiet --disable-pip-version-check pywebpush==2.0.3
+          git pull --quiet --ff-only || true   # newest draws.json
+          /tmp/alerts/bin/python scripts/send_alerts.py
