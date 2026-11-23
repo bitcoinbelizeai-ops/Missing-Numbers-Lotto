@@ -29,6 +29,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 
 DRAWS = "draws.json"
@@ -319,14 +320,47 @@ def send(sub, payload, private_key):
         return "error"
 
 
+def clean(v):
+    """Secrets pasted or piped on Windows can pick up a byte-order mark, quotes or line breaks."""
+    return v.replace("﻿", "").strip().strip('"').strip("'").strip()
+
+
+def describe(v):
+    """Safe to print: length, character types and the start of the SHA-256 hash; never the value."""
+    import hashlib
+    kinds = "".join(sorted({"a" if c.isalnum() else "-" if c in "-_" else "?" for c in v}))
+    return f"length {len(v)}, chars [{kinds}], sha256 {hashlib.sha256(v.encode()).hexdigest()[:8]}"
+
+
+def check_secrets(token, private_key):
+    """Explain a bad secret in the log instead of a bare 'HTTP Error 400'."""
+    ok = True
+    try:
+        rpc("push_due", {"p_token": token, "p_ids": []})
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")[:200]
+        print(f"Draw alerts: PUSH_SENDER_TOKEN was refused ({e.code} {body}). Token seen: {describe(token)}")
+        ok = False
+    try:
+        from py_vapid import Vapid
+        Vapid.from_string(private_key)
+    except Exception as e:
+        print(f"Draw alerts: VAPID_PRIVATE_KEY can't be read ({type(e).__name__}). Key seen: {describe(private_key)}")
+        ok = False
+    return ok
+
+
 def main():
     dry = "--dry-run" in sys.argv
     now = dt.datetime.now(BELIZE)
     if "--now" in sys.argv:
         now = dt.datetime.fromisoformat(sys.argv[sys.argv.index("--now") + 1]).replace(tzinfo=BELIZE)
-    token, private_key = os.environ.get("PUSH_SENDER_TOKEN", "").strip(), os.environ.get("VAPID_PRIVATE_KEY", "").strip()
+    token, private_key = clean(os.environ.get("PUSH_SENDER_TOKEN", "")), clean(os.environ.get("VAPID_PRIVATE_KEY", ""))
     if not dry and not (token and private_key):
         print("Draw alerts: secrets not set, nothing sent.")
+        return
+
+    if not dry and not check_secrets(token, private_key):
         return
 
     data = json.load(open(DRAWS, encoding="utf-8"))
