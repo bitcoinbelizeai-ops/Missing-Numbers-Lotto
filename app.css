@@ -524,6 +524,11 @@ body[data-enter="flip"] .dplay .topout-list li:first-child .tile.sm{animation-na
 
 /* ---------- share ---------- */
 .panel-head .sharebtn{margin-left:auto}
+/* Last Draw header (owner, Nov 23, 2026): "Weh Play?" and Share on one row, the date line tucked right under the title */
+#secLast .panel-head{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:12px;row-gap:4px}
+#secLast .panel-head h2{grid-column:1;grid-row:1}
+#secLast .panel-head .sharebtn{grid-column:2;grid-row:1;margin-left:0}
+#secLast .panel-head .when{grid-column:1/-1;grid-row:2}
 .sharebtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;cursor:pointer;font:600 13px var(--f-body);color:var(--gold-ink);
   background:rgba(254,194,7,.08);border:1px solid var(--line);transition:border-color .15s,background-color .15s,box-shadow .15s}
 .sharebtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -792,7 +797,7 @@ html.easy .updbar{font-size:17px}
 .missdates .btn{grid-column:1/-1;justify-self:start}
 
 /* keep "My Lucky Numbers" on one line on phones */
-#mineTitle{white-space:nowrap;font-size:clamp(18px,5.4vw,24px)}
+#mineTitle{white-space:nowrap;font-size:clamp(20px,6.4vw,24px)}
 
 /* ---------- opening intro: the gold 00 ball and the title, about 6.5 seconds (tap skips) ---------- */
 /* ---------- the intro ---------- */
@@ -841,8 +846,8 @@ html.easy .updbar{font-size:17px}
 .iz-tag{margin:clamp(20px,5.6vw,26px) 0 0;font:600 clamp(17px,4.9vw,20px)/1.3 var(--f-body);color:#fff;letter-spacing:.02em;opacity:0;text-wrap:balance;text-shadow:0 1px 2px rgba(0,16,50,.5)}
 /* "Weh Play?" (owner, Nov 23, 2026): the Belizean question, stamped in after the title lands */
 .iz-weh{position:relative;margin:0;line-height:1;opacity:0;transform:rotate(-4deg)}
-.iz-weh-txt{display:inline-block;font:800 clamp(24px,7.2vw,34px)/1 var(--f-brand);letter-spacing:.015em;white-space:nowrap;color:#fff;
-  text-shadow:0 2px 0 #d99406,0 4px 10px rgba(0,16,50,.5)}
+.iz-weh-txt{display:inline-block;font:800 clamp(24px,7.2vw,34px)/1 var(--f-brand);letter-spacing:.015em;white-space:nowrap;color:#ffd451;
+  text-shadow:0 2px 0 #9a6400,0 4px 10px rgba(0,16,50,.5)}
 .iz-status{margin:clamp(24px,6.6vw,32px) 0 0;min-height:1.3em;font:500 clamp(14px,4vw,16px)/1.3 var(--f-body);color:#d3def8;opacity:0;text-shadow:0 1px 2px rgba(0,16,50,.5)}
 /* tells people the screen moves on by itself, and that a tap moves on now */
 .iz-skiphint{position:absolute;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#f2f6ff;font:600 17px/1.2 var(--f-body);white-space:nowrap;opacity:0;pointer-events:none}
@@ -877,7 +882,7 @@ html.easy .updbar{font-size:17px}
 .iz-play .iz-w2 .iz-shine{animation:iz-shine 300ms ease-in-out 1560ms both}
 /* one authored moment: the question lands, the logo takes the hit, the gold flare cools to a shadow */
 .iz-play .iz-weh{animation:iz-slam 380ms cubic-bezier(.16,1,.3,1) 1500ms both}
-.iz-play .iz-weh-txt{animation:iz-flare 900ms ease-out 1640ms both}
+.iz-play .iz-weh-txt{animation:iz-weh-pulse 1.1s ease-in-out 1640ms infinite}   /* owner, Nov 23, 2026: pulses yellow while the intro is up */
 .iz-play .iz-lockup{animation:iz-thump 240ms cubic-bezier(.16,1,.3,1) 1640ms both}
 .iz-play .iz-tag{animation:iz-tag 300ms ease-out 1950ms both}
 .iz-play .iz-status{animation:iz-tag 400ms ease-out 2350ms both}
@@ -909,8 +914,8 @@ html.easy .updbar{font-size:17px}
 @keyframes iz-shine{from{background-position:120% 0}to{background-position:-30% 0}}
 @keyframes iz-tag{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes iz-slam{0%{opacity:0;transform:rotate(-4deg) scale(1.9);filter:blur(5px)}45%{opacity:1;filter:none}100%{opacity:1;transform:rotate(-4deg) scale(1)}}
-@keyframes iz-flare{0%{text-shadow:0 0 18px rgba(255,212,81,.95),0 0 36px rgba(245,184,28,.6),0 2px 0 #d99406,0 4px 10px rgba(0,16,50,.5)}
-  100%{text-shadow:0 0 0 rgba(255,212,81,0),0 0 0 rgba(245,184,28,0),0 2px 0 #d99406,0 4px 10px rgba(0,16,50,.5)}}
+@keyframes iz-weh-pulse{0%,100%{color:#ffd451;transform:scale(1);text-shadow:0 0 0 rgba(255,212,81,0),0 2px 0 #9a6400,0 4px 10px rgba(0,16,50,.5)}
+  50%{color:#fff1a8;transform:scale(1.05);text-shadow:0 0 18px rgba(255,212,81,.9),0 2px 0 #9a6400,0 4px 10px rgba(0,16,50,.5)}}
 @keyframes iz-thump{0%,100%{transform:none}35%{transform:translateY(4px)}}
 @keyframes iz-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
 @keyframes iz-hint-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translateX(-50%)}}
@@ -1107,7 +1112,7 @@ html.easy .sheet-facts b{font-size:17px}
 html.easy .sheet-none{font-size:15.5px}
 html.easy .trend-avg span{font-size:12px}
 html.easy .trend-sum{font-size:14.5px}
-html.easy #mineTitle{font-size:clamp(18px,5.4vw,24px)}
+html.easy #mineTitle{font-size:clamp(20px,6.4vw,24px)}
 html.easy .iz-w1{font-size:clamp(34px,10.5vw,50px)}
 html.easy .iz-w2{font-size:clamp(34px,10.5vw,50px)}
 html.easy .iz-tag{font-size:clamp(19px,5.4vw,22px)}
@@ -1242,9 +1247,8 @@ html.easy .ac-pickban span{font-size:15.5px}
 .showmore-btn{min-height:44px}
 
 /* ---------- Hierarchy and readable sizes (design pass, Nov 2026) ----------
-   Last Draw and Missing Numbers are the answers players come for, so they keep the big gold titles.
-   Hot, Lucky and Past Results step down one level so the page has a clear order. */
-#secHot h2,#secMine h2,#secRes h2{font-size:20px;letter-spacing:.1em;color:var(--cream)}
+   Owner, Nov 23, 2026: every section title now uses the same big gold style (Weh Play?, Missing Numbers, Hot Numbers,
+   My Lucky Numbers, Past Results); the page order alone gives the hierarchy. */
 #secMine h2 .star{color:var(--logo-yellow)}
 /* nothing outdoors-readable goes below 12.5px */
 footer{font-size:14px}
