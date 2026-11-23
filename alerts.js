@@ -53,9 +53,11 @@ const b64=s=>{const p='='.repeat((4-s.length%4)%4),raw=atob((s+p).replace(/-/g,'
 
 /* ---------- the bell ---------- */
 function paint(ring){
-  const on=!!sub;bell.classList.toggle('on',on);bell.setAttribute('aria-pressed',on);
+  // the bell shows "Alerts on" only for the game on screen if it's one of the chosen games
+  const g=curGame(),label=(GAMES.find(x=>x[0]===g)||[,'this game'])[1];
+  const on=!!sub&&myGames().includes(g);bell.classList.toggle('on',on);bell.setAttribute('aria-pressed',on);
   $('bellTxt').textContent=on?'Alerts on':'Notify me';
-  bell.setAttribute('aria-label',on?'Draw alerts are on. Change or turn off':'Notify me when draw results are in');
+  bell.setAttribute('aria-label',on?label+' alerts are on. Change or turn off':sub?'Get '+label+' alerts too':'Notify me when draw results are in');
   if(ring){bell.classList.remove('ring');void bell.offsetWidth;bell.classList.add('ring')}
 }
 function toast(t){const el=$('toast');if(!el)return;el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3200)}
@@ -150,8 +152,15 @@ async function turnOn(games){
 }
 async function update(games){
   if(busy||!sub)return;setBusy(true);
-  try{await saveRemote(sub,games);store({games});close();toast('Alerts saved: '+(games.length===4?'all games':listOf(games,1)))}
+  try{await saveRemote(sub,games);store({games});paint();close();toast('Alerts saved: '+(games.length===4?'all games':listOf(games,1)))}
   catch(e){setBusy(false);render('pick');showErr('Couldn’t save. Check your connection and try again.')}
+  busy=false;
+}
+async function addGame(g){
+  if(busy||!sub)return;busy=true;const games=myGames().concat(g).filter((x,i,a)=>a.indexOf(x)===i);
+  try{await saveRemote(sub,games);store({games});paint(true);
+    toast((GAMES.find(x=>x[0]===g)||[,g])[1]+' added. Alerts on for '+(games.length===4?'all games':listOf(games,1)))}
+  catch(e){toast('Couldn’t add it. Check your connection and try again.')}
   busy=false;
 }
 async function turnOff(){
@@ -163,6 +172,7 @@ async function turnOff(){
 
 /* ---------- the bell's tap ---------- */
 bell.addEventListener('click',()=>{
+  if(sub&&!myGames().includes(curGame())){addGame(curGame());return}
   if(sub){open('pick');return}
   if(isIOS&&!standalone){open('ios');return}
   if(!canPush){open('nosupport');return}
@@ -181,6 +191,9 @@ document.addEventListener('keydown',e=>{if(sheet.hidden)return;if(e.key==='Escap
   inn.addEventListener('touchstart',e=>{if(inn.scrollTop>0)return;y0=e.touches[0].clientY;dy=0;inn.style.transition='none'},{passive:true});
   inn.addEventListener('touchmove',e=>{if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);inn.style.transform=dy?'translateY('+dy+'px)':''},{passive:true});
   inn.addEventListener('touchend',()=>{if(y0==null)return;inn.style.transition='';if(dy>90)close();else inn.style.transform='';y0=null})})();
+
+/* the game on screen changed: show that game's alert state */
+new MutationObserver(()=>paint()).observe(document.body,{attributes:true,attributeFilter:['data-game']});
 
 /* Lucky Numbers changed: send the new list with the alerts (a moment later, in case of several taps) */
 let syncT=0;

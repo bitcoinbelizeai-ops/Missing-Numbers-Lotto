@@ -1261,7 +1261,8 @@ footer{font-size:14px}
 .bellbtn.on::before{content:"";position:absolute;left:22px;top:9px;width:9px;height:9px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 2px var(--felt-deep)}
 .bell-chev{display:none;width:7px;height:7px;margin:-4px 0 0 2px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .bellbtn.on .bell-chev{display:inline-block}
-.drawinfo .bellbtn{margin-left:auto}
+.drawinfo .bellbtn{margin-left:auto;order:2}
+.drawinfo .more{order:1}  /* More info on the left, the bell on the far right (owner, Nov 23, 2026) */
 @media (prefers-reduced-motion:no-preference){
   .bellbtn.ring svg{animation:bellring .9s ease-in-out}
   .bellbtn:not(.on):hover svg{animation:bellring .9s ease-in-out}
