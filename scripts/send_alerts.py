@@ -6,9 +6,15 @@ fails the job: any problem is printed and the job carries on.
 Rules (agreed with the owner, 22 Nov 2026):
 - One alert per draw, only to phones that picked that game. Draws that land close together
   (one run) go out as ONE alert.
-- Each alert shows the winning number(s) plus a hook only the site answers:
-  a Lucky Number that hit, a Lucky Number still out, a number that came back after a long wait,
-  or the number missing the longest.
+- Each alert shows the winning number(s) plus one hook, in this order (23 Nov 2026):
+  1. a Lucky Number that hit;
+  2. news: the same number again soon (back-to-back, or 2nd time within 5 draws; Fantasy 5 needs
+     3 repeats or 3 draws in a row; Pick 3 needs the whole number, or a digit 3 draws in a row),
+     a number back after a long break (CAME_BACK), or a new longest-wait record (only once a game
+     has RECORD_MIN_DRAWS of history);
+  3. a Lucky Number still out;
+  4. a plain fact, alternating: the longest wait, or how many numbers haven't played lately.
+  Wording reports what happened; it never says a number is "due".
 - No alerts 10:30 pm to 6:00 am Belize time: held and sent on the next run after 6:00 am.
 - Old results (more than 14 hours after the draw) are never alerted (no late or catch-up spam).
 - After 10 alerts in a row not opened, the phone gets one "paused" note and then only a
@@ -35,7 +41,13 @@ SPOTS = ["1st", "2nd", "3rd"]
 MAX_AGE_H = 14                  # don't alert results older than this (hours after the draw)
 QUIET = ((22, 30), (6, 0))      # Belize time: hold alerts in this window
 PAUSE_AFTER = 10                # alerts in a row not opened -> weekly roundup only
-CAME_BACK = {"boledo": 150, "lottery": 150, "fantasy5": 25, "pick3": 25}  # "came back after N draws" is news
+# Hook thresholds, tuned on the real results (23 Nov 2026) so each fires now and then, not every draw.
+CAME_BACK = {"boledo": 30, "lottery": 20, "fantasy5": 20, "pick3": 25}   # "came back after N draws"
+REPEAT_WINDOW = 5                 # Boledo / Sunday Jackpot / Pick 3 (whole number): "played again within 5 draws"
+# "Longest wait in our results" only once a game has enough history for a record to mean something
+# (about 3x the board), and only on the draw the record is broken.
+RECORD_MIN_DRAWS = {"boledo": 300, "lottery": 300, "fantasy5": 120, "pick3": 60}
+MISSING_WINDOW = {"boledo": 30, "lottery": 30, "fantasy5": 10, "pick3": 10}  # "N numbers haven't played in the last W draws"
 SUBJECT = "mailto:contact@missingnumbers.bz"
 
 
@@ -103,27 +115,111 @@ def plural(n):
 
 
 # ---------- building one alert ----------
+def and_list(items):
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def repeat_hook(g, seq, ks):
+    """Same number again within a short time. Stricter for Fantasy 5 and Pick 3, where small repeats are common."""
+    cur, prev = seq[-1], seq[:-1]
+    if not prev:
+        return None
+    last = set(keys(prev[-1]))
+    if g in ("boledo", "lottery"):
+        k = ks[0]
+        for back, d in enumerate(reversed(prev[-REPEAT_WINDOW:]), start=1):
+            if k in keys(d):
+                if back == 1:
+                    return f"{k} played again! Back-to-back draws →"
+                return f"{k} played again, its 2nd time in {back + 1} draws →"
+        return None
+    if g == "fantasy5":
+        three = [k for k in ks if len(prev) >= 2 and k in last and k in keys(prev[-2])]
+        if three:
+            return f"{three[0]} played 3 draws in a row! →"
+        again = [k for k in ks if k in last]
+        if len(again) >= 3:
+            return f"{and_list(again)} played again, back-to-back draws →"
+        return None
+    # pick3: the whole number again, or a digit in the same spot 3 draws in a row
+    for back, d in enumerate(reversed(prev[-REPEAT_WINDOW:]), start=1):
+        if keys(d) == ks:
+            when = "back-to-back draws" if back == 1 else f"its 2nd time in {back + 1} draws"
+            return f"{shown(cur)} again! Same number, {when} →"
+    three = [k for k in ks if len(prev) >= 2 and k in last and k in keys(prev[-2])]
+    if three:
+        return f"{label(g, three[0])}, 3 draws in a row! →"
+    return None
+
+
+def comeback_hook(g, seq, ks):
+    back = [(k, draws_out(seq, k, len(seq) - 1)) for k in ks]
+    back = sorted(((k, o) for k, o in back if o is not None and o >= CAME_BACK[g]), key=lambda x: -x[1])
+    if not back:
+        return None
+    if len(back) == 1:
+        k, o = back[0]
+        return f"{label(g, k)} came back after {plural(o)}! See what's still missing →"
+    parts = [f"{label(g, k)} ({o} draws)" for k, o in back]
+    return f"{len(back)} numbers came back after long breaks: {and_list(parts)} →"
+
+
+def record_hook(g, seq):
+    """A number has just been out longer than any number ever was in our results."""
+    if len(seq) < RECORD_MIN_DRAWS[g]:
+        return None
+    best = 0
+    for k in board(g):
+        pos = [i for i, d in enumerate(seq[:-1]) if k in keys(d)]
+        best = max([best] + [b - a - 1 for a, b in zip(pos, pos[1:])])
+    for k in board(g):
+        seen = any(k in keys(d) for d in seq[:-1])
+        if seen and draws_out(seq, k) == best + 1:
+            return f"{label(g, k)} is now out {best + 1} draws, the longest wait in all our {LABELS[g]} results →"
+    return None
+
+
+def fallback_hook(g, seq):
+    """No news this draw: alternate between two plain facts so alerts don't repeat word for word."""
+    if len(seq) % 2 == 0:
+        k, o = longest_out(seq, g)
+        more = "+" if draws_out(seq, k) is None else ""
+        return f"{label(g, k)} hasn't played in {o}{more} draws, the longest wait →"
+    if g == "pick3":
+        picks = []
+        for i in range(3):
+            k, o = max(((f"{i}:{x}", draws_out(seq, f"{i}:{x}")) for x in "0123456789"),
+                       key=lambda t: len(seq) if t[1] is None else t[1])
+            picks.append(k.split(":")[1])
+        return f"Longest out by spot: {picks[0]} (1st), {picks[1]} (2nd), {picks[2]} (3rd). See them all →"
+    w = min(MISSING_WINDOW[g], len(seq))
+    seen = {k for d in seq[-w:] for k in keys(d)}
+    n = len([k for k in board(g) if k not in seen])
+    return f"{n} numbers haven't played in the last {w} draws. See which →"
+
+
 def hook_for(d, seq, mine):
-    """One line that makes the tap worth it. Personal first."""
-    g, ks = d["game"], keys(d)
+    """One line that makes the tap worth it: your numbers first, then real news, then a plain fact."""
+    g = d["game"]
     idx = next(i for i, x in enumerate(seq) if x["id"] == d["id"])
+    seq = seq[:idx + 1]                       # only what was known when this draw came in
+    ks = keys(d)
     hit = [k for k in ks if k in mine]
     if hit:
         return "hit", f"Your Lucky Number {label(g, hit[0])} played! 🎉"
+    for kind, line in (("repeat", repeat_hook(g, seq, ks)), ("back", comeback_hook(g, seq, ks)), ("record", record_hook(g, seq))):
+        if line:
+            return kind, line
     if mine:
         outs = [(k, draws_out(seq, k)) for k in mine]
         outs = [(k, len(seq) if o is None else o, "+" if o is None else "") for k, o in outs]
         k, o, more = max(outs, key=lambda x: x[1])
         if o >= 3:
             return "mine", f"Your {label(g, k)} is still out: {o}{more} draws →"
-    back = [(k, draws_out(seq, k, idx)) for k in ks]
-    back = [(k, o) for k, o in back if o is not None and o >= CAME_BACK[g]]
-    if back:
-        k, o = max(back, key=lambda x: x[1])
-        return "back", f"{label(g, k)} came back after {plural(o)}! See what's still missing →"
-    k, o = longest_out(seq, g)
-    more = "+" if draws_out(seq, k) is None else ""
-    return "out", f"{label(g, k)} hasn't played in {o}{more} draws, the longest wait →"
+    return "out", fallback_hook(g, seq)
+
+
+RANK = {"hit": 0, "repeat": 1, "back": 1, "record": 1, "mine": 2, "out": 3}
 
 
 def message(new, histories, sub):
@@ -136,7 +232,7 @@ def message(new, histories, sub):
     scored = []
     for d in mine_draws:
         kind, line = hook_for(d, histories[d["game"]], [str(x) for x in mine.get(d["game"], [])])
-        scored.append((0 if kind == "hit" else 1, d, kind, line))
+        scored.append((RANK[kind], d, kind, line))
     scored.sort(key=lambda x: (x[0], x[1]["date"], AT[x[1]["game"]]))
     top = scored[0]
     d = top[1]
