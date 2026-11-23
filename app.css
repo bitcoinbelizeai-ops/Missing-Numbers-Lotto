@@ -1250,16 +1250,16 @@ footer{font-size:14px}
 /* ---------- Draw alerts: "Notify me" bell (Nov 22, 2026) ----------
    Off: gold outline pill "Notify me". On: solid gold pill "Alerts on" with a small chevron (tap to change).
    It sits beside "More info" under the countdown in the Last Draw box. */
-.bellbtn{flex:none;display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:6px 14px 6px 11px;border-radius:999px;cursor:pointer;
-  border:1.5px solid var(--gold);background:rgba(254,194,7,.10);color:var(--gold-ink);font:700 15px var(--f-label);letter-spacing:.06em;text-transform:uppercase;
-  transition:background-color .15s,box-shadow .15s,transform .1s}
-.bellbtn svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;transform-origin:50% 8%}
-.bellbtn:hover,.bellbtn:focus-visible{background:rgba(254,194,7,.2);box-shadow:0 0 12px rgba(254,194,7,.4);outline:none}
-.bellbtn:focus-visible{box-shadow:0 0 0 2px var(--felt-deep),0 0 0 4px var(--gold)}
-.bellbtn:active{transform:scale(.96)}
-.bellbtn.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold) 45%,var(--gold-deep));color:#2a1d00;border-color:var(--gold-hi)}
-.bellbtn.on svg .bell-body{fill:currentColor}
-.bell-chev{display:none;width:7px;height:7px;margin:-3px 0 0 1px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.bellbtn{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 6px;margin:0 -6px 0 0;border:0;border-radius:12px;background:none;cursor:pointer;
+  color:var(--gold-ink);font:700 15px var(--f-label);letter-spacing:.06em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;transition:color .15s,transform .1s}
+.bellbtn svg{width:24px;height:24px;flex:none;fill:var(--logo-yellow);filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45));transform-origin:50% 10%}
+.bellbtn:hover{color:var(--gold-hi)}
+.bellbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.bellbtn:active{transform:scale(.95)}
+/* on: a small green dot on the bell, and a chevron to show it can be changed */
+.bellbtn{position:relative}
+.bellbtn.on::before{content:"";position:absolute;left:22px;top:9px;width:9px;height:9px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 2px var(--felt-deep)}
+.bell-chev{display:none;width:7px;height:7px;margin:-4px 0 0 2px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .bellbtn.on .bell-chev{display:inline-block}
 .drawinfo .bellbtn{margin-left:auto}
 @media (prefers-reduced-motion:no-preference){
