@@ -67,3 +67,18 @@ jobs:
             git pull --rebase --quiet || true   # in case files were uploaded while it ran
             git push
           fi
+
+      - name: Send draw alerts
+        # One alert per new draw to phones that tapped the bell (scripts/send_alerts.py).
+        # Never fails this job; does nothing until the two secrets are added.
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SENDER_TOKEN: ${{ secrets.PUSH_SENDER_TOKEN }}
+        run: |
+          if [ -z "$PUSH_SENDER_TOKEN" ] || [ -z "$VAPID_PRIVATE_KEY" ]; then echo "Draw alerts: secrets not set yet."; exit 0; fi
+          python3 -m venv /tmp/alerts && /tmp/alerts/bin/pip install --quiet --disable-pip-version-check pywebpush==2.0.3
+          git pull --quiet --ff-only || true   # newest draws.json
+          /tmp/alerts/bin/python scripts/send_alerts.py

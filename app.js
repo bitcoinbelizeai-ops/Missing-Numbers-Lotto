@@ -91,8 +91,10 @@ const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},pr
 const curHot=()=>{const G=GAMES[state.game],w=state.hotWins[state.game];return G.hotWins.includes(w)?w:G.hotDef};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
 const savePrefs=(quiet)=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,hotWins:state.hotWins,mine:prefs.mine||{}}))}catch(e){}
+  { const m=JSON.stringify(prefs.mine||{});if(m!==savePrefs.mine){savePrefs.mine=m;try{document.dispatchEvent(new Event('bz-lucky'))}catch(e){}} }  // draw alerts (alerts.js) send the new Lucky Numbers
   if(!quiet&&window.bzLucky&&typeof window.bzLucky.onChange==='function'){try{window.bzLucky.onChange()}catch(e){}}};
 /* hooks used by the free-accounts feature in the phone app (unused in the tracker page) */
+savePrefs.mine=JSON.stringify(prefs.mine||{});
 window.bzLucky={get:()=>JSON.parse(JSON.stringify(prefs.mine||{})),
   set(m){prefs.mine=m&&typeof m==='object'?m:{};savePrefs(true);if(state.loaded||state.sample)render()},onChange:null};
 

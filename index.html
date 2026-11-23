@@ -28,7 +28,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap">
-<link rel="stylesheet" href="app.css?v=f0367c0a">
+<link rel="stylesheet" href="app.css?v=d41a8b27">
 <script src="supabase-config.js?v=1"></script>
 <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 </head>
@@ -56,7 +56,7 @@
     </div>
     <div class="hub">
       <div class="lastdraw" id="lastDraw"></div>
-      <div class="drawinfo"><p id="drawNext"></p><button type="button" class="more" data-more="drawFine" aria-expanded="false" aria-controls="drawFine">More info</button></div>
+      <div class="drawinfo"><p id="drawNext"></p><button type="button" class="bellbtn" id="bellBtn" hidden aria-pressed="false" aria-label="Notify me when draw results are in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4c-.9 0-1.6.7-1.6 1.6v.5A6.6 6.6 0 0 0 5.4 11v4.4l-1.9 2.5c-.3.4 0 .9.5.9h16c.5 0 .8-.5.5-.9l-1.9-2.5V11a6.6 6.6 0 0 0-5-6.5V4c0-.9-.7-1.6-1.6-1.6z"/><path d="M9.4 20.1h5.2a2.6 2.6 0 0 1-5.2 0z"/></svg><span id="bellTxt">Notify me</span><span class="bell-chev" aria-hidden="true"></span></button><button type="button" class="more" data-more="drawFine" aria-expanded="false" aria-controls="drawFine">More info</button></div>
     </div>
     <p class="fine" id="drawFine" hidden></p>
   </section>
@@ -244,6 +244,17 @@
       </div>
     </div>
   </div>
+  <div class="sheet bell-sheet" id="bellSheet" hidden role="dialog" aria-modal="true" aria-labelledby="bsTitle">
+    <div class="sheet-in">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <span class="bs-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg></span>
+        <div class="sheet-txt"><h2 id="bsTitle">Draw alerts</h2><p id="bsSub"></p></div>
+        <button type="button" class="sheet-x" id="bsClose" aria-label="Close">×</button>
+      </div>
+      <div class="bs-body" id="bsBody"></div>
+    </div>
+  </div>
   <div class="sheet" id="ballSheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet-in">
       <span class="sheet-grab" aria-hidden="true"></span>
@@ -321,8 +332,9 @@
   </svg>
 </template>
 </div>
-<div class="toast" id="toast" hidden></div>
-<script src="app.js?v=5a4cfcd3"></script>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="app.js?v=b3e11a70"></script>
+<script src="alerts.js?v=1"></script>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "2d68bb40cc3649e2bfbaef4248ad0dd8"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
