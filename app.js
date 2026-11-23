@@ -714,8 +714,23 @@ function startCountdown(){clearInterval(cdTimer);tickCountdown();cdTimer=setInte
 /* ---------- bottom tab bar (phones) ---------- */
 const TABS=[['tabGames','secGames'],['tabMiss','secMiss'],['tabHot','secHot'],['tabLucky','secMine'],['tabRes','secRes']];
 TABS.forEach(([b,sec])=>{const btn=$(b);if(!btn)return;btn.addEventListener('click',()=>{
-  const el=$(sec);
+  const el=$(sec);tabbarHold();
   el.scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'});setTab(b)})});
+/* hide on scroll (owner, Nov 23, 2026): the bottom menu slides away while reading down and comes back on any scroll up,
+   near the top or bottom of the page, and when keyboard focus moves into it. A menu tap keeps it shown while the page glides. */
+let tabbarHoldUntil=0;
+function tabbarHold(){tabbarHoldUntil=performance.now()+1200;const bar=document.querySelector('.tabbar');if(bar)bar.classList.remove('away')}
+(()=>{const bar=document.querySelector('.tabbar');if(!bar)return;
+  let last=scrollY,run=0,ticking=false;
+  const show=()=>bar.classList.remove('away');
+  const check=()=>{ticking=false;const y=scrollY,d=y-last;last=y;
+    if(performance.now()<tabbarHoldUntil||y<120||innerHeight+y>=document.documentElement.scrollHeight-80){show();run=0;return}
+    run=(d>0)===(run>0)?run+d:d;
+    if(run>24)bar.classList.add('away');else if(run<-12)show()};
+  addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(check)}},{passive:true});
+  bar.addEventListener('focusin',tabbarHold);   // keyboard focus: show it and ignore the scroll the browser makes to reach it
+  addEventListener('resize',show,{passive:true});
+})();
 function setTab(id){TABS.forEach(([b])=>{const x=$(b);if(x){x.classList.toggle('on',b===id);x.setAttribute('aria-current',b===id?'true':'false')}})}
 try{const seen=new Map();const io=new IntersectionObserver(es=>{es.forEach(e=>seen.set(e.target.id,e.isIntersecting?e.intersectionRatio:0));
   let best=null,br=0;TABS.forEach(([b,sec])=>{const r=seen.get(sec)||0;if(r>br){br=r;best=b}});if(best)setTab(best)},{threshold:[0,.15,.3,.5,.75,1],rootMargin:'-10% 0px -35% 0px'});
