@@ -101,7 +101,45 @@
     ],
     "letter": null
    }
+  },
+  "boledo-2026-11-23": {
+   "tries": 1,
+   "checked": "2026-11-24T07:35-06:00",
+   "status": "match",
+   "magayo": {
+    "nums": [
+     "91"
+    ],
+    "letter": null
+   },
+   "bbn": {
+    "nums": [
+     "91"
+    ],
+    "letter": null
+   }
+  },
+  "pick3-2026-11-23": {
+   "tries": 1,
+   "checked": "2026-11-24T07:35-06:00",
+   "status": "match",
+   "magayo": {
+    "nums": [
+     "9",
+     "7",
+     "5"
+    ],
+    "letter": null
+   },
+   "bbn": {
+    "nums": [
+     "9",
+     "7",
+     "5"
+    ],
+    "letter": null
+   }
   }
  },
- "updated": "2026-11-23T07:41-06:00"
+ "updated": "2026-11-24T07:35-06:00"
 }
