@@ -292,7 +292,34 @@
    },
    "status": "only-bbn",
    "published": true
+  },
+  {
+   "received": "2026-11-24T02:45:34Z",
+   "post_id": "300184130690312_2109285106690944",
+   "post_time": "2026-11-24T02:31:09.000Z",
+   "game": "pick3",
+   "date": "2026-11-23",
+   "read_as": {
+    "nums": [
+     "9",
+     "7",
+     "5"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "pick3-2026-11-23",
+    "game": "pick3",
+    "date": "2026-11-23",
+    "nums": [
+     "9",
+     "7",
+     "5"
+    ]
+   },
+   "status": "only-bbn",
+   "published": true
   }
  ],
- "updated": "2026-11-22T16:15:40Z"
+ "updated": "2026-11-24T02:45:34Z"
 }
