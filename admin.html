@@ -137,11 +137,35 @@ details.fold-help p{margin-top:8px}
 @media (prefers-reduced-motion:reduce){details.fold>summary::after{transition:none}}
 @media (max-width:700px){.list.all{max-height:none;overflow:visible}}
 @media (max-width:420px){.hol-form{grid-template-columns:1fr}}
+
+/* ---------- readability pass (24 Nov 2026) ----------
+   Roles: page title 30 · section heading 18 · row heading 17 · body 16 · secondary 15 (never smaller).
+   Section headings keep the gold condensed caps but with less letter-spacing, so words read as words. */
+header .sub-title{margin:4px 0 0;font-size:15px;color:var(--muted)}
+h2{font-size:18px;letter-spacing:.08em}
+.attn .sub{font-size:15px;letter-spacing:.08em}
+.item{font-size:16px;line-height:1.45;padding:12px 14px}
+.item small{font-size:15px;color:#d3ddec;line-height:1.4}
+.item .why{font-size:15.5px}
+.plan ul,.opt,.hol-form label{font-size:15.5px}
+.tabs button{font-size:15px}
+.item .bbnrow{gap:6px}
+.item .bbnrow .head{font-size:17px}
+.item .bbnrow .nums b{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.item.mine{border:1px dashed rgba(233,196,106,.6)}
+.chip{font-size:15px;padding:4px 12px}
+.chip.admin{background:rgba(120,170,255,.18);border-color:rgba(150,190,255,.7)}
+.speed{margin:0;padding-left:20px;font-size:15.5px;color:var(--cream);display:flex;flex-direction:column;gap:4px}
+.speed:empty{display:none}
+.speed b{color:#fff}
+h3.week{margin:10px 0 2px;font:700 15px Barlow,sans-serif;letter-spacing:.02em;color:var(--gold-hi);padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3.week:first-child{margin-top:0}
+::selection{background:rgba(246,205,92,.35);color:#fff}
 </style>
 </head>
 <body data-g="boledo">
 <div class="wrap">
-  <header><small>Belize Lottery · private</small><h1>Results <em>Admin</em></h1></header>
+  <header><h1>Results <em>Admin</em></h1><p class="sub-title">Missing Numbers · private page</p></header>
 
   <!-- step 1: connect (only once per device) -->
   <section class="panel" id="connect" hidden>
@@ -193,8 +217,10 @@ details.fold-help p{margin-top:8px}
     <p class="help">Results read from BBN Belize's Facebook posts. A good result for a draw the site doesn't have yet is <b>added to the site automatically</b> within about a minute. It never replaces a result already on the site: anything that doesn't fit stays here with "Add to site", and disagreements show in red at the top. magayo is the backup and double-checks BBN overnight.</p>
     </details>
     <div class="bbnsum" id="bbnSum"></div>
+    <ul class="speed" id="bbnSpeed"></ul>
     <div class="row"><button class="btn ghost" id="bbnRefresh">Refresh</button></div>
-    <div class="list all" id="bbnList"></div>
+    <div class="list" id="bbnList"></div>
+    <div class="row"><button class="btn ghost" id="bbnMore" hidden>Show earlier week</button></div>
     <div class="msg" id="bbnMsg" role="status"></div>
   </section>
 
@@ -260,7 +286,7 @@ details.fold-help p{margin-top:8px}
   </section>
 </div>
 
-<script src="admin.js?v=1"></script>
+<script src="admin.js?v=2"></script>
 
 </body>
 </html>

@@ -227,7 +227,7 @@ function drawEnd(game,date){const t=DRAW_END[game];if(!t||!/^\d{4}-\d{2}-\d{2}$/
 function minsAfter(game,date,iso){const e=drawEnd(game,date),a=Date.parse(iso||'');if(e==null||isNaN(a))return null;return Math.round((a-e)/60000)}
 function dur(m){if(m==null)return'';if(m<0)return'before the draw time?';if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h<48?h+' h'+(r?' '+r+' min':''):Math.round(h/24)+' days'}
 const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
-const STATUS={'match':'Matches the site','differs':'Differs from the site','only-bbn':'Only BBN has it','unreadable':'Picture unclear','invalid':'Read wrongly'};
+const STATUS={'match':'Matches the site','differs':'Differs from the site','only-bbn':'Only BBN has it','unreadable':'Picture unclear','invalid':'Read wrongly','admin':'Posted by you'};
 async function loadBbn(){
   const box=$('bbnList');
   try{
@@ -244,15 +244,49 @@ async function loadBbn(){
       const same=JSON.stringify(s.nums)===JSON.stringify(e.draw.nums)&&(e.draw.game!=='fantasy5'||(s.letter||null)===(e.draw.letter||null));
       return Object.assign({},e,{now:same?'match':'differs',siteNow:s})});
     const count=k=>live.filter(e=>e.now===k).length,checked=count('match')+count('differs');
-    $('bbnSum').innerHTML=['match','differs','only-bbn','unreadable','invalid'].map(k=>'<span class="chip '+k+'">'+STATUS[k]+': '+count(k)+'</span>').join('')+
-      (checked?'<span class="chip">Accuracy where both have it: '+Math.round(count('match')/checked*100)+'%</span>':'')+speedChips(live,site);
-    box.innerHTML='';
-    live.slice(0,60).forEach(e=>{const it=document.createElement('div');it.className='item';
-      const lbl=LABEL[e.game]||e.game,bbn=e.draw?e.draw.nums.join(' ')+(e.draw.letter?' '+e.draw.letter:''):(e.read_as&&e.read_as.nums?[].concat(e.read_as.nums).join(' '):'?');
-      const siteTxt=e.siteNow?e.siteNow.nums.join(' ')+(e.siteNow.letter?' '+e.siteNow.letter:''):'';
-      it.innerHTML='<div class="bbnrow"><span><b>'+esc(lbl)+'</b> · '+(/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')?fmtDay(e.date):esc(e.date||'no date'))+'</span>'+
-        '<span>BBN: <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
-        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.published?' <small>added to the site automatically</small>':'')+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
+    // zero counts are left out, except "Differs" (0 there is good news worth seeing)
+    $('bbnSum').innerHTML=['match','differs','only-bbn','unreadable','invalid'].filter(k=>k==='differs'||count(k)).map(k=>'<span class="chip '+k+'">'+STATUS[k]+': '+count(k)+'</span>').join('')+
+      (checked?'<span class="chip">Accuracy: '+Math.round(count('match')/checked*100)+'%</span>':'');
+    $('bbnSpeed').innerHTML=speedLines(live,site);
+    // results you posted by hand that BBN never sent: shown in the log too, so the day isn't a gap
+    const bbnIds=new Set(list.filter(e=>e.draw).map(e=>e.draw.id));
+    const mine=[...site.values()].filter(d=>d.source==='admin'&&!d.nodraw&&d.nums&&!bbnIds.has(d.id)&&d.date>=BBN_TEST_FROM)
+      .map(d=>({manual:true,game:d.game,date:d.date,received:d.added||'',now:'admin',siteNow:d}));
+    bbnRows=live.concat(mine).map(e=>Object.assign(e,{day:/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')?e.date:(e.received||'').slice(0,10)}))
+      .sort((a,b)=>a.day!==b.day?(a.day<b.day?1:-1):(SCHED[a.game]&&SCHED[b.game]?(SCHED[b.game].h*60+SCHED[b.game].m)-(SCHED[a.game].h*60+SCHED[a.game].m):0));
+    bbnWeeks=1;renderBbnWeeks();
+  }catch(err){msg($('bbnMsg'),err.message,'err')}
+}
+let bbnRows=[],bbnWeeks=1;
+const weekStart=n=>addDays(bz().iso,-7*n-6),weekEnd=n=>addDays(bz().iso,-7*n);
+const shortDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString(undefined,{day:'numeric',month:'short',timeZone:'UTC'});
+function renderBbnWeeks(){
+  const box=$('bbnList');box.innerHTML='';
+  const oldest=weekStart(bbnWeeks-1);let shown=0;
+  for(let w=0;w<bbnWeeks;w++){
+    const from=weekStart(w),to=weekEnd(w),rows=bbnRows.filter(e=>e.day>=from&&e.day<=to);
+    const h=document.createElement('h3');h.className='week';h.textContent=(w===0?'This week · ':'')+shortDay(from)+' – '+shortDay(to);box.appendChild(h);
+    if(!rows.length){const p=document.createElement('p');p.className='help';p.textContent='Nothing from BBN this week.';box.appendChild(p)}
+    rows.forEach(e=>{box.appendChild(bbnItem(e));shown++})}
+  const older=bbnRows.filter(e=>e.day<oldest).length,more=$('bbnMore');
+  more.hidden=!older;if(older)more.textContent='Show earlier week ('+shortDay(weekStart(bbnWeeks))+' – '+shortDay(weekEnd(bbnWeeks))+')';
+  msg($('bbnMsg'),bbnRows.length?'Showing '+shown+' of '+bbnRows.length+(older?'. '+older+' older below the button.':'.'):'No BBN results yet.','info');
+}
+$('bbnMore').onclick=()=>{bbnWeeks++;renderBbnWeeks();const hs=$('bbnList').querySelectorAll('h3.week');if(hs.length)hs[hs.length-1].scrollIntoView({behavior:'smooth',block:'start'})};
+function bbnItem(e){
+    const it=document.createElement('div');it.className='item'+(e.manual?' mine':'');
+    const lbl=LABEL[e.game]||e.game,dayTxt=/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')?fmtDay(e.date):esc(e.date||'no date');
+    const siteTxt=e.siteNow?e.siteNow.nums.join(' ')+(e.siteNow.letter?' '+e.siteNow.letter:''):'';
+    if(e.manual){
+      it.innerHTML='<div class="bbnrow"><span class="head"><b>'+esc(lbl)+'</b> · '+dayTxt+'</span>'+
+        '<span class="nums">You posted: <b>'+esc(siteTxt)+'</b></span>'+
+        '<span><span class="chip admin">'+STATUS.admin+'</span> <small>BBN didn\'t send this draw</small></span>'+
+        (e.received&&minsAfter(e.game,e.date,e.received)!=null?'<small>Posted '+esc(dur(minsAfter(e.game,e.date,e.received)))+' after the draw</small>':'')+'</div>';
+      return it}
+    const bbn=e.draw?e.draw.nums.join(' ')+(e.draw.letter?' '+e.draw.letter:''):(e.read_as&&e.read_as.nums?[].concat(e.read_as.nums).join(' '):'?');
+    it.innerHTML='<div class="bbnrow"><span class="head"><b>'+esc(lbl)+'</b> · '+dayTxt+'</span>'+
+        '<span class="nums">BBN: <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
+        '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.published?' <small>added automatically</small>':e.siteNow&&e.siteNow.source==='admin'?' <small>you posted it first</small>':'')+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
       if(e.now==='only-bbn'&&e.draw){const b=document.createElement('button');b.textContent='Add to site';
         b.onclick=async()=>{
           if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to add';setTimeout(()=>{b.dataset.sure='';b.textContent='Add to site'},5000);return}
@@ -261,28 +295,25 @@ async function loadBbn(){
             await loadBbn();msg($('bbnMsg'),'Added '+lbl+' '+e.date+' to the site.','ok')}
           catch(err){msg($('bbnMsg'),err.message,'err');b.disabled=false}};
         it.appendChild(b)}
-      box.appendChild(it)});
-    msg($('bbnMsg'),list.length?'Showing the newest '+Math.min(60,list.length)+' of '+list.length+'.':'No BBN results yet.','info');
-  }catch(err){msg($('bbnMsg'),err.message,'err')}
-}
+    return it}
 $('bbnRefresh').onclick=loadBbn;
 // speed: how long after the draw each source delivered (only draws recorded since timing was added)
 function timingLine(e){
   if(!e.draw)return'';const g=e.draw.game,dt=e.draw.date,parts=[];
   const b=minsAfter(g,dt,e.received);if(b!=null)parts.push('BBN arrived '+dur(b)+' after the draw');
   const p=minsAfter(g,dt,e.post_time);if(p!=null&&p>=0)parts.push('posted on Facebook after '+dur(p));
-  if(e.siteNow&&e.siteNow.added){const m=minsAfter(g,dt,e.siteNow.added);if(m!=null)parts.push((e.siteNow.source||'site')+' after '+dur(m))}
+  if(e.siteNow&&e.siteNow.added){const m=minsAfter(g,dt,e.siteNow.added);if(m!=null)parts.push(({admin:'you posted it',bbn:'on the site',magayo:'magayo'}[e.siteNow.source]||'site')+' after '+dur(m))}
   return parts.length?'<small>'+esc(parts.join(' · '))+'</small>':'';
 }
-function speedChips(live,site){
+function speedLines(live,site){
   // BBN's speed = when BBN posted it on Facebook (Make picks it up within its 15-minute check); manual tests left out
   const bbnWhen=e=>{const p=minsAfter(e.draw.game,e.draw.date,e.post_time);return p!=null&&p>=0?p:minsAfter(e.draw.game,e.draw.date,e.received)};
   const bbn=live.filter(e=>e.draw&&!String(e.post_id||'').startsWith('manual-test')).map(bbnWhen).filter(m=>m!=null&&m>=0&&m<72*60);
   const mag=[...site.values()].filter(d=>d.source==='magayo'&&d.added&&!d.nodraw).map(d=>minsAfter(d.game,d.date,d.added)).filter(m=>m!=null&&m>=0&&m<72*60);
   let first=0,both=0;live.forEach(e=>{if(!e.draw||!e.siteNow||e.siteNow.source!=='magayo'||!e.siteNow.added)return;if(String(e.post_id||'').startsWith('manual-test'))return;const b=bbnWhen(e),g=minsAfter(e.draw.game,e.draw.date,e.siteNow.added);if(b==null||g==null)return;both++;if(b<g)first++});
-  return (bbn.length?'<span class="chip">BBN posts on average '+dur(avg(bbn))+' after the draw ('+bbn.length+')</span>':'')+
-    (mag.length?'<span class="chip">magayo average: '+dur(avg(mag))+' after the draw ('+mag.length+')</span>':'<span class="chip">magayo timing: recorded from its next update</span>')+
-    (both?'<span class="chip">BBN first: '+first+' of '+both+'</span>':'');
+  return (bbn.length?'<li>BBN posts on average <b>'+dur(avg(bbn))+'</b> after the draw ('+bbn.length+' draws)</li>':'')+
+    (mag.length?'<li>magayo average: <b>'+dur(avg(mag))+'</b> after the draw ('+mag.length+')</li>':'<li>magayo timing: recorded from its next update</li>')+
+    (both?'<li>BBN was first <b>'+first+' of '+both+'</b> times</li>':'');
 }
 
 /* ---------- Needs attention (Nov 20, 2026) ----------
@@ -400,7 +431,7 @@ function otherWarnings(){
       else if(!e.draw&&(e.status==='unreadable'||e.status==='invalid')&&(e.received||'').slice(0,10)>=recent)
         out.push([false,'BBN picture '+(e.status==='unreadable'?'unclear':'read wrongly')+(e.date?': '+(LABEL[e.game]||e.game||'')+' '+e.date:''),'See the BBN test box below.'])});
     const missing=[];for(let i=0;i<3;i++){const iso=addDays(today,-i);if(iso<BBN_TEST_FROM)continue;
-      Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;const s=site.get(id);if(s&&s.nodraw)return;
+      Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;const s=site.get(id);if(s&&(s.nodraw||s.source==='admin'))return; // posted by hand: not a gap
         if(now-drawStart(g,iso)>=BBN_LATE_MIN*60000&&!(bbnData.results||[]).some(e=>e.draw&&e.draw.id===id))missing.push(LABEL[g]+' '+fmtDay(iso))})}
     if(missing.length)out.push([false,'BBN sent nothing for '+missing.length+' draw'+(missing.length===1?'':'s'),missing.join(', ')+'. Check Make.com → "BBN results test" → History (and whether BBN posted them on Facebook).'])}
   return out}
