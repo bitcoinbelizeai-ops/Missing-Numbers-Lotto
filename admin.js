@@ -373,7 +373,7 @@ function otherWarnings(){
   // GitHub jobs: the newest run of each job
   if(runs){const seen={};runs.forEach(r=>{if(seen[r.name]||r.status!=='completed')return;seen[r.name]=1;
     if(['failure','timed_out','startup_failure'].includes(r.conclusion)){
-      const nice={'Update Belize results':'magayo backup job','pages build and deployment':'Website update (GitHub Pages)','Receive BBN result (test)':'BBN receiving job','Receive BBN result':'BBN receiving job (main source)'}[r.name]||r.name;
+      const nice={'Update Belize results':'magayo backup job','pages build and deployment':'Website update (GitHub Pages)','Receive BBN result (test)':'BBN receiving job','Receive BBN result':'BBN receiving job (main source)','Send alerts after Admin save':'Alerts for results you post'}[r.name]||r.name;
       out.push([true,nice+' failed',bzClock(Date.parse(r.created_at))+'. Open GitHub → Actions to see why'+(r.name==='pages build and deployment'?'. Until it works, phones don\'t get new results.':'.')])}})}
   // magayo calls left this month
   if(usage&&usage.limit){const left=usage.limit-(usage.calls||0);

@@ -1,0 +1,41 @@
+# Sends draw alerts right after a result is posted on the Admin page (added 24 Nov 2026).
+# Before this, a hand-posted result only went out with the next BBN (Make.com) or magayo run.
+# Runs only for Admin saves of draws.json (commit message starts with "Admin:"). The results
+# bots save with the built-in GitHub key, which never starts this job, and send their own alerts.
+# scripts/send_alerts.py remembers every draw it has alerted, so a draw is never alerted twice
+# by different jobs (quiet hours, the 14-hour limit and the other rules all still apply).
+name: Send alerts after Admin save
+
+on:
+  push:
+    branches: [main]
+    paths: [draws.json]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-alerts
+  cancel-in-progress: false
+
+jobs:
+  alerts:
+    if: startsWith(github.event.head_commit.message, 'Admin:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Get the site files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, pinned to its exact version
+
+      - name: Send draw alerts
+        # Never fails the job (same as the alert step in the results jobs).
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SENDER_TOKEN: ${{ secrets.PUSH_SENDER_TOKEN }}
+        run: |
+          if [ -z "$PUSH_SENDER_TOKEN" ] || [ -z "$VAPID_PRIVATE_KEY" ]; then echo "Draw alerts: secrets not set yet."; exit 0; fi
+          python3 -m venv /tmp/alerts && /tmp/alerts/bin/pip install --quiet --disable-pip-version-check pywebpush==2.0.3
+          git pull --quiet --ff-only || true   # newest draws.json
+          /tmp/alerts/bin/python scripts/send_alerts.py
