@@ -227,7 +227,8 @@ function drawEnd(game,date){const t=DRAW_END[game];if(!t||!/^\d{4}-\d{2}-\d{2}$/
 function minsAfter(game,date,iso){const e=drawEnd(game,date),a=Date.parse(iso||'');if(e==null||isNaN(a))return null;return Math.round((a-e)/60000)}
 function dur(m){if(m==null)return'';if(m<0)return'before the draw time?';if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h<48?h+' h'+(r?' '+r+' min':''):Math.round(h/24)+' days'}
 const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
-const STATUS={'match':'Matches the site','differs':'Differs from the site','only-bbn':'Only BBN has it','unreadable':'Picture unclear','invalid':'Read wrongly','admin':'Posted by you'};
+const srcName=e=>e&&e.source==='lovefm'?'Love FM':'BBN'; // Love FM = second Facebook source since 25 Nov 2026 (Boledo only)
+const STATUS={'match':'Matches the site','differs':'Differs from the site','only-bbn':'Not on the site','unreadable':'Picture unclear','invalid':'Read wrongly','admin':'Posted by you'};
 async function loadBbn(){
   const box=$('bbnList');
   try{
@@ -285,13 +286,13 @@ function bbnItem(e){
       return it}
     const bbn=e.draw?e.draw.nums.join(' ')+(e.draw.letter?' '+e.draw.letter:''):(e.read_as&&e.read_as.nums?[].concat(e.read_as.nums).join(' '):'?');
     it.innerHTML='<div class="bbnrow"><span class="head"><b>'+esc(lbl)+'</b> · '+dayTxt+'</span>'+
-        '<span class="nums">BBN: <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
+        '<span class="nums">'+srcName(e)+': <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
         '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.published?' <small>added automatically</small>':e.siteNow&&e.siteNow.source==='admin'?' <small>you posted it first</small>':'')+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
       if(e.now==='only-bbn'&&e.draw){const b=document.createElement('button');b.textContent='Add to site';
         b.onclick=async()=>{
           if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to add';setTimeout(()=>{b.dataset.sure='';b.textContent='Add to site'},5000);return}
           b.disabled=true;
-          try{await commit(d=>{if(d.draws.some(x=>x.id===e.draw.id))throw new Error('The site already has '+lbl+' '+e.date+'.');d.draws.push(Object.assign({},e.draw,{source:'bbn',added:new Date().toISOString().slice(0,19)+'Z'}))},'Admin: add '+lbl+' '+e.date+' from BBN test');
+          try{await commit(d=>{if(d.draws.some(x=>x.id===e.draw.id))throw new Error('The site already has '+lbl+' '+e.date+'.');d.draws.push(Object.assign({},e.draw,{source:e.source||'bbn',added:new Date().toISOString().slice(0,19)+'Z'}))},'Admin: add '+lbl+' '+e.date+' from BBN test');
             await loadBbn();msg($('bbnMsg'),'Added '+lbl+' '+e.date+' to the site.','ok')}
           catch(err){msg($('bbnMsg'),err.message,'err');b.disabled=false}};
         it.appendChild(b)}
@@ -300,7 +301,7 @@ $('bbnRefresh').onclick=loadBbn;
 // speed: how long after the draw each source delivered (only draws recorded since timing was added)
 function timingLine(e){
   if(!e.draw)return'';const g=e.draw.game,dt=e.draw.date,parts=[];
-  const b=minsAfter(g,dt,e.received);if(b!=null)parts.push('BBN arrived '+dur(b)+' after the draw');
+  const b=minsAfter(g,dt,e.received);if(b!=null)parts.push(srcName(e)+' arrived '+dur(b)+' after the draw');
   const p=minsAfter(g,dt,e.post_time);if(p!=null&&p>=0)parts.push('posted on Facebook after '+dur(p));
   if(e.siteNow&&e.siteNow.added){const m=minsAfter(g,dt,e.siteNow.added);if(m!=null)parts.push(({admin:'you posted it',bbn:'on the site',magayo:'magayo'}[e.siteNow.source]||'site')+' after '+dur(m))}
   return parts.length?'<small>'+esc(parts.join(' · '))+'</small>':'';
@@ -308,9 +309,9 @@ function timingLine(e){
 function speedLines(live,site){
   // BBN's speed = when BBN posted it on Facebook (Make picks it up within its 15-minute check); manual tests left out
   const bbnWhen=e=>{const p=minsAfter(e.draw.game,e.draw.date,e.post_time);return p!=null&&p>=0?p:minsAfter(e.draw.game,e.draw.date,e.received)};
-  const bbn=live.filter(e=>e.draw&&!String(e.post_id||'').startsWith('manual-test')).map(bbnWhen).filter(m=>m!=null&&m>=0&&m<72*60);
+  const bbn=live.filter(e=>e.draw&&e.source!=='lovefm'&&!String(e.post_id||'').startsWith('manual-test')).map(bbnWhen).filter(m=>m!=null&&m>=0&&m<72*60);
   const mag=[...site.values()].filter(d=>d.source==='magayo'&&d.added&&!d.nodraw).map(d=>minsAfter(d.game,d.date,d.added)).filter(m=>m!=null&&m>=0&&m<72*60);
-  let first=0,both=0;live.forEach(e=>{if(!e.draw||!e.siteNow||e.siteNow.source!=='magayo'||!e.siteNow.added)return;if(String(e.post_id||'').startsWith('manual-test'))return;const b=bbnWhen(e),g=minsAfter(e.draw.game,e.draw.date,e.siteNow.added);if(b==null||g==null)return;both++;if(b<g)first++});
+  let first=0,both=0;live.forEach(e=>{if(!e.draw||!e.siteNow||e.siteNow.source!=='magayo'||!e.siteNow.added)return;if(e.source==='lovefm'||String(e.post_id||'').startsWith('manual-test'))return;const b=bbnWhen(e),g=minsAfter(e.draw.game,e.draw.date,e.siteNow.added);if(b==null||g==null)return;both++;if(b<g)first++});
   return (bbn.length?'<li>BBN posts on average <b>'+dur(avg(bbn))+'</b> after the draw ('+bbn.length+' draws)</li>':'')+
     (mag.length?'<li>magayo average: <b>'+dur(avg(mag))+'</b> after the draw ('+mag.length+')</li>':'<li>magayo timing: recorded from its next update</li>')+
     (both?'<li>BBN was first <b>'+first+' of '+both+'</b> times</li>':'');
@@ -376,12 +377,12 @@ function waitRow(w,compact){
   const late=w.mins>=LATE_MIN?'<b class="tag">'+ago(w.mins)+' late</b>':'<b class="tag">waiting '+ago(w.mins)+'</b>';
   it.innerHTML='<div class="stack"><span><b>'+LABEL[w.game]+'</b> · '+fmtDay(w.date)+' · '+late+'</span>'+
     (compact?'':'<span class="why">'+esc(w.mag)+'</span>')+
-    (w.bbn&&!compact?'<span class="why">BBN has it: <b>'+esc(numTxt(w.bbn.draw))+'</b></span>':'')+'</div>';
+    (w.bbn&&!compact?'<span class="why">'+srcName(w.bbn)+' has it: <b>'+esc(numTxt(w.bbn.draw))+'</b></span>':'')+'</div>';
   const btns=document.createElement('div');btns.className='btns';
-  if(w.bbn&&!compact)btns.appendChild(tapTwice('Add BBN result','Tap again to add',async()=>{
+  if(w.bbn&&!compact)btns.appendChild(tapTwice('Add '+srcName(w.bbn)+' result','Tap again to add',async()=>{
     await commit(d=>{if(d.draws.some(x=>x.id===w.id))throw new Error('The site already has '+LABEL[w.game]+' '+fmtDay(w.date)+'.');
-      d.draws.push(Object.assign({},w.bbn.draw,{source:'bbn',added:new Date().toISOString().slice(0,19)+'Z'}))},'Admin: add '+w.id+' from BBN');
-    msg($('msg'),'Added '+LABEL[w.game]+' '+fmtDay(w.date)+' from BBN: '+numTxt(w.bbn.draw)+'.','ok')}));
+      d.draws.push(Object.assign({},w.bbn.draw,{source:w.bbn.source||'bbn',added:new Date().toISOString().slice(0,19)+'Z'}))},'Admin: add '+w.id+' from BBN');
+    msg($('msg'),'Added '+LABEL[w.game]+' '+fmtDay(w.date)+' from '+srcName(w.bbn)+': '+numTxt(w.bbn.draw)+'.','ok')}));
   const enter=document.createElement('button');enter.className='go';enter.textContent='Enter';enter.setAttribute('aria-label','Enter the '+LABEL[w.game]+' result for '+w.date);
   enter.onclick=()=>enterFor(w.game,w.date);btns.appendChild(enter);
   if(!compact)btns.appendChild(tapTwice('No draw','Tap again: no draw',async()=>{
@@ -427,12 +428,12 @@ function otherWarnings(){
   if(bbnData&&current){const site=new Map((current.data.draws||[]).map(d=>[d.id,d])),from=addDays(today,-WAIT_DAYS),recent=addDays(today,-3);
     (bbnData.results||[]).forEach(e=>{
       if(e.draw&&e.draw.date>=from){const s=site.get(e.draw.id);if(s&&!s.nodraw&&numTxt(s)!==numTxt(e.draw))
-        out.push([true,'BBN and the site disagree: '+LABEL[e.draw.game]+' '+fmtDay(e.draw.date),'BBN read '+numTxt(e.draw)+', the site has '+numTxt(s)+'. Check which is right; fix it with "Post a result" if the site is wrong.'])}
+        out.push([true,srcName(e)+' and the site disagree: '+LABEL[e.draw.game]+' '+fmtDay(e.draw.date),srcName(e)+' read '+numTxt(e.draw)+', the site has '+numTxt(s)+'. Check which is right; fix it with "Post a result" if the site is wrong.'])}
       else if(!e.draw&&(e.status==='unreadable'||e.status==='invalid')&&(e.received||'').slice(0,10)>=recent)
-        out.push([false,'BBN picture '+(e.status==='unreadable'?'unclear':'read wrongly')+(e.date?': '+(LABEL[e.game]||e.game||'')+' '+e.date:''),'See the BBN test box below.'])});
+        out.push([false,(e.source==='lovefm'?'Love FM post ':'BBN picture ')+(e.status==='unreadable'?'unclear':'read wrongly')+(e.date?': '+(LABEL[e.game]||e.game||'')+' '+e.date:''),'See the BBN & Love FM box below.'])});
     const missing=[];for(let i=0;i<3;i++){const iso=addDays(today,-i);if(iso<BBN_TEST_FROM)continue;
       Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;const s=site.get(id);if(s&&(s.nodraw||s.source==='admin'))return; // posted by hand: not a gap
-        if(now-drawStart(g,iso)>=BBN_LATE_MIN*60000&&!(bbnData.results||[]).some(e=>e.draw&&e.draw.id===id))missing.push(LABEL[g]+' '+fmtDay(iso))})}
+        if(now-drawStart(g,iso)>=BBN_LATE_MIN*60000&&!(bbnData.results||[]).some(e=>e.draw&&e.draw.id===id&&e.source!=='lovefm'))missing.push(LABEL[g]+' '+fmtDay(iso))})}
     if(missing.length)out.push([false,'BBN sent nothing for '+missing.length+' draw'+(missing.length===1?'':'s'),missing.join(', ')+'. Check Make.com → "BBN results (main)" → History (and whether BBN posted them on Facebook).'])}
   return out}
 

@@ -1,4 +1,6 @@
 """Receive one lottery result read from a BBN Belize Facebook post (sent by Make.com).
+Since 25 Nov 2026 also Love FM's Facebook text posts (Boledo only): payload {"source": "lovefm", "text": ...};
+they go through exactly the same safety rules and are saved with source "lovefm".
 
 MAIN SOURCE since Nov 20, 2026: every result is saved to data/bbn-results.json, and a
 good result for a draw the site doesn't have yet is ADDED to draws.json at once
@@ -151,13 +153,40 @@ def publish_problem(draw, post_time, manual, site):
     return None
 
 
+SOURCES = {"bbn": "BBN", "lovefm": "Love FM"}
+MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+# Love FM's Facebook text post (same wording since at least Feb 2025):
+#   "The Winning Boledo Number for Tuesday November 24, 2026 is: 02"
+LOVEFM_BOLEDO = re.compile(
+    r"Winning\s+Boledo\s+Number\s+for\s+(?:[A-Za-z]+day,?\s+)?([A-Za-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\s*(?:is)?\s*:?\s*(\d{1,2})\b",
+    re.IGNORECASE)
+
+
+def parse_lovefm(text):
+    """Turn a Love FM post into the same answer shape the BBN picture reader gives.
+    Added 25 Nov 2026 (Love FM = second source, Boledo only). Anything else is 'not a result'."""
+    m = LOVEFM_BOLEDO.search(str(text or ""))
+    if not m:
+        return {"is_result": False, "game": "none"}
+    month = MONTHS.get(m.group(1)[:3].lower())
+    if not month:
+        return {"is_result": True, "game": "boledo", "date": "", "nums": [m.group(4)], "readable": True,
+                "notes": f"unknown month {m.group(1)!r}"}
+    return {"is_result": True, "game": "boledo", "date": f"{m.group(3)}-{month:02d}-{int(m.group(2)):02d}",
+            "nums": [m.group(4)], "letter": None, "readable": True, "notes": ""}
+
+
 def main():
     payload = as_obj(os.environ.get("PAYLOAD_JSON") or "{}")
     test = os.environ.get("TEST_ANSWER", "").strip()
     if test:
         payload = {"answer": test, "post_id": "manual-test-" + dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S"), "post_time": ""}
+    source = str(payload.get("source") or "bbn").strip().lower()
+    if source not in SOURCES:
+        print(f"Unknown source {source!r}. Nothing saved.")
+        return 0
     try:
-        ans = as_obj(payload.get("answer", payload))
+        ans = parse_lovefm(payload.get("text")) if source == "lovefm" else as_obj(payload.get("answer", payload))
     except json.JSONDecodeError as e:
         print(f"Could not read the answer: {e}")
         return 0
@@ -171,7 +200,7 @@ def main():
         return 0
 
     store = load(RESULTS, {"results": []})
-    store["note"] = "Results read from BBN Belize Facebook posts. Good new results are added to the site automatically (main source since Nov 20, 2026)."
+    store["note"] = "Results read from BBN Belize (pictures) and Love FM (text, Boledo only) Facebook posts. Good new results are added to the site automatically (BBN main source since Nov 20, 2026; Love FM backup since Nov 25, 2026)."
     results = store.setdefault("results", [])
     if post_id and any(r.get("post_id") == post_id for r in results):
         print(f"Post {post_id} was already received. Nothing saved.")
@@ -179,6 +208,7 @@ def main():
 
     entry = {
         "received": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source": source,
         "post_id": post_id,
         "post_time": post_time,
         "game": str(ans.get("game", ""))[:20],
@@ -202,7 +232,7 @@ def main():
                 entry.pop("site")
             why = publish_problem(draw, post_time, manual, site)
             if why is None:
-                site.append(dict(draw, source="bbn", added=entry["received"]))
+                site.append(dict(draw, source=source, added=entry["received"]))
                 site.sort(key=lambda d: (d["date"], d["game"]))
                 site_data["updated"] = dt.datetime.now(BELIZE).date().isoformat()
                 save(DRAWS, site_data)
@@ -215,13 +245,13 @@ def main():
     store["updated"] = entry["received"]
     save(RESULTS, store)
     label = LABELS.get(entry["game"], entry["game"])
-    print(f"Saved: {label} {entry['date']} -> {entry['status']}" + (" -> ADDED TO THE SITE" if entry.get("published") else "") + (f" ({entry.get('detail')})" if entry.get("detail") else ""))
+    print(f"Saved ({SOURCES[source]}): {label} {entry['date']} -> {entry['status']}" + (" -> ADDED TO THE SITE" if entry.get("published") else "") + (f" ({entry.get('detail')})" if entry.get("detail") else ""))
     out = os.environ.get("GITHUB_STEP_SUMMARY")
     if out:
         with open(out, "a", encoding="utf-8") as f:
-            f.write(f"### BBN result\n\n**{label} {entry['date']}**: {entry['status']}{' (added to the site)' if entry.get('published') else ''}\n\n")
+            f.write(f"### {SOURCES[source]} result\n\n**{label} {entry['date']}**: {entry['status']}{' (added to the site)' if entry.get('published') else ''}\n\n")
             if entry.get("draw"):
-                f.write(f"- BBN: {' '.join(entry['draw']['nums'])} {entry['draw'].get('letter', '')}\n")
+                f.write(f"- {SOURCES[source]}: {' '.join(entry['draw']['nums'])} {entry['draw'].get('letter', '')}\n")
             if entry.get("site"):
                 f.write(f"- Site: {' '.join(entry['site']['nums'] or [])} {entry['site'].get('letter') or ''}\n")
             if entry.get("detail"):
