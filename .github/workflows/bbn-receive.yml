@@ -37,6 +37,8 @@ jobs:
         run: |
           git config user.name "results-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # name the source in the commit message: "Love FM result ..." or "BBN result ..."
+          src=$(python3 -c 'import json,os; p=json.loads(os.environ.get("PAYLOAD_JSON") or "null") or {}; print("Love FM" if str(p.get("source","")).strip().lower()=="lovefm" else "BBN")' 2>/dev/null || echo BBN)
           for i in 1 2 3; do
             python3 scripts/receive_bbn.py
             git add data/bbn-results.json draws.json 2>/dev/null || true
@@ -44,7 +46,7 @@ jobs:
               echo "Nothing new to save."
               exit 0
             fi
-            if git diff --cached --quiet -- draws.json; then msg="BBN result (saved, not added)"; else msg="BBN result added to the site"; fi
+            if git diff --cached --quiet -- draws.json; then msg="$src result (saved, not added)"; else msg="$src result added to the site"; fi
             git commit -q -m "$msg"
             git push -q && exit 0
             # Someone else saved first (e.g. the Admin page): start again from the newest files
