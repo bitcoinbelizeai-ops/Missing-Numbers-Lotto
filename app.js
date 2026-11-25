@@ -87,7 +87,11 @@ const ERR={boledo:'Type a number from 00 to 99.',lottery:'Type at least the 1st 
 const PREF='bz-prefs-v1';
 let prefs={game:'boledo',wins:{}};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(PREF)||'{}'))}catch(e){}
-const state={game:GAMES[prefs.game]?prefs.game:'boledo',wins:Object.assign({},prefs.wins||{}),hotWins:Object.assign({},prefs.hotWins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:'',missRange:{}};
+/* game pages (Nov 25, 2026): /boledo/, /fantasy-5/, /pick-3/, /sunday-jackpot/ set <html data-page-game="...">
+   and open on that game; tapping another game there goes to that game's page */
+const PAGE_GAME=GAMES[document.documentElement.dataset.pageGame]?document.documentElement.dataset.pageGame:'';
+const SLUG={boledo:'boledo',fantasy5:'fantasy-5',pick3:'pick-3',lottery:'sunday-jackpot'};
+const state={game:PAGE_GAME||(GAMES[prefs.game]?prefs.game:'boledo'),wins:Object.assign({},prefs.wins||{}),hotWins:Object.assign({},prefs.hotWins||{}),draws:[],sample:null,canWrite:true,loaded:false,resW:1,resFrom:'',missRange:{}};
 const curHot=()=>{const G=GAMES[state.game],w=state.hotWins[state.game];return G.hotWins.includes(w)?w:G.hotDef};
 const curWin=()=>{const G=GAMES[state.game],w=state.wins[state.game];return G.wins.includes(w)?w:G.def};
 const savePrefs=(quiet)=>{try{localStorage.setItem(PREF,JSON.stringify({game:state.game,wins:state.wins,hotWins:state.hotWins,mine:prefs.mine||{}}))}catch(e){}
@@ -103,7 +107,9 @@ const seg=$('gameSeg');
 const BALL={boledo:'00',lottery:'1st',fantasy5:'5',pick3:'3'};
 ORDER.forEach(g=>{const b=document.createElement('button');b.type='button';b.dataset.g=g;
   b.innerHTML='<span class="tile gball" data-game="'+g+'"><span>'+BALL[g]+'</span></span><span class="gtxt"><b>'+esc(GAMES[g].label).replace(/ (\d)$/,'&nbsp;$1')+'</b><small id="gl-'+g+'">&nbsp;</small></span>';
-  b.onclick=()=>{state.game=g;savePrefs();setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render();
+  b.onclick=()=>{
+    if(PAGE_GAME&&g!==PAGE_GAME){state.game=g;savePrefs();try{sessionStorage.setItem('bz-skip-intro','1')}catch(e){}location.href='/'+SLUG[g]+'/';return}
+    state.game=g;savePrefs();setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render();
     // bring the Last Draw box to the middle of the screen so the new game's result is in view
     requestAnimationFrame(()=>$('secLast').scrollIntoView({block:'center',behavior:reduceMotion()?'auto':'smooth'}))};seg.appendChild(b)});
 function setup(){
@@ -948,6 +954,21 @@ function missingSorted(winSeq,allSeq,board){
 }
 
 /* ---------- render ---------- */
+/* game pages: the "Latest result" sentence (written into the page by scripts/build_game_pages.py; same wording) */
+function latestSentence(d){
+  const [y,m,dd]=d.date.split('-').map(Number),t=new Date(Date.UTC(y,m-1,dd));
+  const day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][t.getUTCDay()]+' '+dd+' '+
+    ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1]+' '+y;
+  const n=d.nums.map(String);
+  const val=d.game==='boledo'?pad(n[0],2):d.game==='pick3'?n.join('-'):d.game==='fantasy5'?n.map(x=>pad(x,2)).join(' ')+(d.letter?', letter '+d.letter:'')
+    :'1st prize '+pad(n[0],4)+(n[1]?', 2nd '+pad(n[1],4):'')+(n[2]?', 3rd '+pad(n[2],4):'');
+  return 'Latest result: <b>'+esc(val)+'</b>, drawn '+day+'.';
+}
+function renderPageLatest(src){
+  const el=document.getElementById('gaLatest');if(!el||!PAGE_GAME||state.sample)return;
+  const d=src.filter(x=>x.game===PAGE_GAME&&x.nums&&x.nums.length).reduce((m,x)=>!m||x.date>m.date?x:m,null);
+  if(d){const h=latestSentence(d);if(el.innerHTML!==h)el.innerHTML=h}
+}
 function render(){
   const G=GAMES[state.game],W=curWin();
   seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===state.game));
@@ -963,6 +984,7 @@ function render(){
   ORDER.forEach(g=>{const l=src.filter(d=>d.game===g).reduce((m,d)=>d.date>m?d.date:m,'');
     const el=$('gl-'+g);if(el)el.textContent=l?'Last draw '+fmtDate(l).replace(/,? \d{4}$/,''):'No results yet'});
   $('fresh').innerHTML=newest?'Latest results: <b>'+esc(fmtDate(newest))+'</b>':'';
+  renderPageLatest(src);
 
   const all=drawsFor();
   const win=RANGE?all.filter(d=>d.date>=RANGE.from&&d.date<=RANGE.to):W==='all'?all:all.slice(-Number(W));
@@ -1490,7 +1512,7 @@ const INTRO=(()=>{
   return{play};
 })();
 // tap the "Missing Numbers" title to watch the intro again, with sound
-(()=>{const h=document.querySelector('.brand h1');if(!h)return;
+(()=>{const h=document.querySelector('.brand h1,.brand .bname');if(!h)return;
   h.classList.add('iz-title-btn');h.tabIndex=0;h.title='Tap to play the intro';
   const go=()=>{SND.init();setTimeout(()=>INTRO.play(true),30)};
   h.addEventListener('click',go);
@@ -1498,7 +1520,9 @@ const INTRO=(()=>{
   // a small sparkle on the title hints that it can be tapped
   setTimeout(()=>h.classList.add('iz-hint'),reduceMotion()?600:2300);
 })();
-INTRO.play(false);
+// coming from another game page (tapped a game): no opening splash again
+(()=>{let skip=false;try{skip=sessionStorage.getItem('bz-skip-intro')==='1';sessionStorage.removeItem('bz-skip-intro')}catch(e){}
+  if(!skip)INTRO.play(false)})();
 /* always open at the top: browsers otherwise jump back to where you were last time.
    A phone app that comes back after 15+ minutes away also returns to the top. */
 try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
