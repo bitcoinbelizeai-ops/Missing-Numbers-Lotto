@@ -433,7 +433,7 @@ function otherWarnings(){
     const missing=[];for(let i=0;i<3;i++){const iso=addDays(today,-i);if(iso<BBN_TEST_FROM)continue;
       Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;const s=site.get(id);if(s&&(s.nodraw||s.source==='admin'))return; // posted by hand: not a gap
         if(now-drawStart(g,iso)>=BBN_LATE_MIN*60000&&!(bbnData.results||[]).some(e=>e.draw&&e.draw.id===id))missing.push(LABEL[g]+' '+fmtDay(iso))})}
-    if(missing.length)out.push([false,'BBN sent nothing for '+missing.length+' draw'+(missing.length===1?'':'s'),missing.join(', ')+'. Check Make.com → "BBN results test" → History (and whether BBN posted them on Facebook).'])}
+    if(missing.length)out.push([false,'BBN sent nothing for '+missing.length+' draw'+(missing.length===1?'':'s'),missing.join(', ')+'. Check Make.com → "BBN results (main)" → History (and whether BBN posted them on Facebook).'])}
   return out}
 
 function renderAttention(){
