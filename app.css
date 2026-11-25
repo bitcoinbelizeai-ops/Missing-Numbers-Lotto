@@ -417,6 +417,20 @@ body[data-enter="flip"] .bwrap.reveal.reveal-star{animation-name:flipin,starglow
 .cd.live .cd-dot{background:#ff5a5a;animation-duration:1s}
 .cd.live b{color:#ffd0d0;font-size:15px;letter-spacing:.04em}
 .cd-when{font-size:14px;color:var(--muted)}
+/* Fantasy 5 next jackpot (Nov 25, 2026; owner picked the gold ticket, then the quiet outline version): thin gold line, notched ends,
+   label and amount kept together and centred. On wider screens (narrow side column) the label sits above the amount. */
+.jp{width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;padding:10px 26px;
+  border-radius:10px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(246,205,92,.75);
+  -webkit-mask:radial-gradient(circle 9px at 0 50%,transparent 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,transparent 98%,#000) right/51% 100% no-repeat;
+  mask:radial-gradient(circle 9px at 0 50%,transparent 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,transparent 98%,#000) right/51% 100% no-repeat}
+.jp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.jp-lbl{font:700 14px/1.1 var(--f-label);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-ink);width:5.2em;text-align:left}
+.drawinfo .jp .jp-amt{font:700 36px/1 var(--f-label);letter-spacing:.02em;text-transform:none;font-variant-numeric:tabular-nums;color:var(--cream);text-shadow:0 1px 2px rgba(0,10,40,.45)}
+@media (min-width:640px){
+  .jp{flex-direction:column;gap:4px;padding:10px 22px}
+  .jp-lbl{width:auto;text-align:center}
+  .drawinfo .jp .jp-amt{font-size:32px}
+}
 .cd-holiday{flex-basis:100%;font:600 15.5px/1.35 var(--f-body);color:var(--gold-hi)}
 
 /* ---------- loading skeletons ---------- */
@@ -1060,6 +1074,7 @@ html.easy .cd b{font-size:18px}
 html.easy .cd.live b{font-size:16px}
 html.easy .cd-when{font-size:15.5px}
 html.easy .cd-holiday{font-size:15.5px}
+html.easy .jp-lbl{font-size:15.5px}
 @media (max-width:700px){html.easy .tabbar button{font-size:13.5px}}
 html.easy .mine-hint{font-size:16px}
 html.easy .mine-item .tile span{font-size:18px}
@@ -1377,3 +1392,28 @@ footer{font-size:14px}
 @media (max-width:700px){.eyehint{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 @keyframes eyehint-up{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 @media (prefers-reduced-motion:reduce){.eyehint{animation:none}}
+
+/* ---------- Next-draw actions row (25 Nov 2026, impeccable + ui-ux-pro-max) ----------
+   Owner: "More info" and "Notify me" looked out of place under the jackpot ticket. They become one matching pair:
+   same outlined pill, same height, side by side, edges lined up with the ticket and countdown.
+   Order kept from Nov 23 (More info left, bell right). Bell states (green dot + chevron when on) unchanged. */
+.drawinfo .more,.drawinfo .bellbtn{flex:1 1 0;justify-content:center;min-height:42px;margin:0;padding:0 12px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(255,255,255,.04);box-sizing:border-box}
+.drawinfo .more{font:600 14px var(--f-body)}
+.drawinfo .bellbtn{font-size:15px}
+.drawinfo .bellbtn svg{width:20px;height:20px}
+.drawinfo .more,.drawinfo .bellbtn{white-space:nowrap}
+/* green "on" dot rides on the bell's top-right corner wherever the centred content lands */
+.drawinfo .bellbtn svg{order:0}
+.drawinfo .bellbtn>span{order:2}
+.drawinfo .bellbtn.on::before{position:relative;left:auto;top:auto;order:1;flex:none;width:8px;height:8px;margin:-14px 0 0 -14px}
+.drawinfo .more:hover,.drawinfo .bellbtn:hover{border-color:var(--gold);background:rgba(254,194,7,.1)}
+.drawinfo .bellbtn.on{border-color:var(--gold)}
+.drawinfo .bellbtn[hidden]{display:none}
+@media (min-width:640px){
+  .hub .drawinfo{flex-direction:row;flex-wrap:wrap;align-content:center;gap:10px 8px;width:240px;box-sizing:border-box}
+  .hub .drawinfo #drawNext{flex-basis:100%}
+  .drawinfo .more,.drawinfo .bellbtn{padding:0 8px;min-height:40px}
+  .drawinfo .more{font-size:13px}
+  .drawinfo .bellbtn{font-size:14px;gap:5px;letter-spacing:.03em}
+}

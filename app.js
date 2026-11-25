@@ -683,6 +683,8 @@ function lastHeldDate(g){const n=bzNow();let iso=n.iso;for(let i=0;i<8;i++){if(i
 const WAIT_MAX_H=36;let lastPoll=0;
 function tickCountdown(){
   const el=$('cdTime');if(!el){clearInterval(cdTimer);return}
+  const jpEl=document.querySelector('.jp');  // next draw just started: the jackpot is no longer known, take it down
+  if(jpEl&&!jackpotDraw(drawsFor())){jpEl.remove();$('drawFine').textContent=$('drawFine').textContent.replace(/ Next jackpot as shown.*$/,'')}
   const g=state.game,chip=$('cdChip'),when=chip.parentNode.querySelector('.cd-when');
   if(when&&when.dataset.next===undefined)when.dataset.next=when.textContent;
   // Hold the "next draw" timer until the result of the draw that just happened is posted
@@ -705,6 +707,44 @@ function tickCountdown(){
   $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
   chip.classList.toggle('soon',left<3600e3);
 }
+/* Fantasy 5 "Next jackpot" (Nov 25, 2026): BBN prints it on every Fantasy 5 result picture; receive_bbn.py saves it
+   on that draw as "jackpot" (whole dollars). Shown only on Fantasy 5, only from the newest draw. */
+function jackpotDraw(all){
+  if(state.game!=='fantasy5'||state.sample)return null;
+  const d=all.filter(x=>!x.nodraw).pop();const v=d&&Number(d.jackpot);
+  if(!d||!Number.isInteger(v)||v<10000||v>10000000)return null;
+  // The amount is only known until the NEXT draw starts (it may be won then). From that moment until BBN posts
+  // the new result (with its new amount), show nothing (owner, Nov 25, 2026). Holidays are skipped, so a
+  // holiday Thursday carries the amount to Saturday.
+  let nx=d.date;for(let i=0;i<8;i++){nx=isoAdd(nx,1);if(isDrawDay('fantasy5',nx))break}
+  return nx===nextDrawDate('fantasy5')?d:null}
+function jackpotLine(all){const d=jackpotDraw(all);if(!d)return'';
+  const amt='$'+Number(d.jackpot).toLocaleString('en-US');
+  return '<span class="jp"><span class="jp-sr">Next jackpot '+amt+'</span><span class="jp-lbl" aria-hidden="true">Next jackpot</span>'+
+    '<b class="jp-amt" aria-hidden="true" data-v="'+Number(d.jackpot)+'" data-k="'+d.id+'">'+amt+'</b></span>'}
+/* Count-up: from $0 to the jackpot in ~1 s, fast then settling. */
+let jpAnimKey='',jpWait=0,jpIO=null;
+/* Count-up rules (owner, Nov 25, 2026): only once per new amount, and only where it can be seen:
+   after the opening splash, with the page showing, and with most of the ticket on screen.
+   Until then the ticket waits at $0; reduced motion shows the amount straight away. */
+function jackpotRoll(){const el=document.querySelector('.jp-amt');if(!el)return;
+  const k=el.dataset.k+'|'+el.dataset.v,v=+el.dataset.v,f=n=>'$'+Math.round(n).toLocaleString('en-US');
+  if(k===jpAnimKey){el.textContent=f(v);return}                       // already counted: just show it
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){jpAnimKey=k;el.textContent=f(v);return}
+  el.textContent=f(0);
+  let busy=false;try{busy=introRunning()}catch(e){}  // declared further down the file
+  clearTimeout(jpWait);
+  if(busy||document.hidden||performance.now()-lastScrollAt<180){jpWait=setTimeout(jackpotRoll,250);return}
+  if('IntersectionObserver' in window){
+    const r=el.closest('.jp').getBoundingClientRect(),vh=innerHeight||document.documentElement.clientHeight;
+    const shown=Math.max(0,Math.min(r.bottom,vh)-Math.max(r.top,0))/Math.max(1,r.height);
+    if(shown<0.6){
+      if(jpIO)jpIO.disconnect();
+      jpIO=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){jpIO.disconnect();jpIO=null;jackpotRoll()}},{threshold:0.6});
+      jpIO.observe(el.closest('.jp'));return}
+  }
+  jpAnimKey=k;const t0=performance.now(),D=1100;
+  (function step(t){if(!el.isConnected)return;const x=Math.min(1,(t-t0)/D),e=1-Math.pow(2,-10*x);el.textContent=f(x>=1?v:v*e);if(x<1)requestAnimationFrame(step)})(t0)}
 /* "No draw today · Happy Garifuna Settlement Day! 🪘" on a holiday, "No draw tomorrow · …" the day before */
 function holidayLine(g){
   const td=bzNow().iso,tm=isoAdd(td,1),h1=SCHED[g].includes(isoDow(td))&&holidayOn(g,td),h2=!h1&&SCHED[g].includes(isoDow(tm))&&holidayOn(g,tm);
@@ -747,6 +787,15 @@ function pickEnter(){
   const pool=ENTER_STYLES.filter(x=>x!==cur);
   document.body.dataset.enter=pool[Math.floor(Math.random()*pool.length)];
 }
+
+/* ---------- wait for the page to stop moving (owner, Nov 25, 2026) ----------
+   Tapping a game glides the page to the top, passing Missing and Hot on the way. Animations wait until the
+   page has been still for a moment and then check they are really on screen, so nothing plays while flying past. */
+var lastScrollAt=0;
+addEventListener('scroll',()=>{lastScrollAt=performance.now()},{passive:true});
+function afterScrollSettles(fn){const w=()=>{if(performance.now()-lastScrollAt<180)setTimeout(w,90);else fn()};w()}
+function onScreen(el,need){if(!el||document.hidden)return false;const r=el.getBoundingClientRect(),vh=innerHeight||document.documentElement.clientHeight;
+  if(!r.height)return true;return Math.max(0,Math.min(r.bottom,vh)-Math.max(r.top,0))/Math.min(r.height,vh)>=need}
 
 /* ---------- drama for Missing and Hot Numbers ----------
    A wave that always lasts about 0.8 s however many balls there are, then a
@@ -792,7 +841,8 @@ function drama(key,ids){
     if(!box.querySelector('.bwrap')){st.played=true;return}
     box.classList.add('dpending');
     if(!('IntersectionObserver' in window)){playDrama(id);return}
-    if(!dramaIO)dramaIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){dramaIO.unobserve(e.target);playDrama(e.target.id)}}),{threshold:0,rootMargin:'0px 0px -15% 0px'});
+    if(!dramaIO)dramaIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const t=e.target;
+      afterScrollSettles(()=>{if(dramaState[t.id].played||!onScreen(t,.3))return;dramaIO.unobserve(t);playDrama(t.id)})}}),{threshold:[0,.3,.6],rootMargin:'0px 0px -15% 0px'});
     dramaIO.unobserve(box);dramaIO.observe(box);
   });
 }
@@ -960,9 +1010,10 @@ function render(){
   }else{ldSig=ldNew;last.classList.remove('roll','hold');last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
     $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
-      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>'+holidayLine(state.game);
-    startCountdown();
-    $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:''); }
+      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>'+jackpotLine(all)+holidayLine(state.game);
+    startCountdown();jackpotRoll();
+    const jd=jackpotDraw(all);
+    $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:'')+(jd?' Next jackpot as shown on BBN Belize\'s '+fmtDay(jd.date).replace(/,? \d{4}$/,'')+' result.':''); }
 
   const say=$('say');say.removeAttribute('aria-busy');
   if(!state.loaded&&!state.sample){say.innerHTML='<span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span>';say.setAttribute('aria-busy','true');
@@ -1126,7 +1177,20 @@ function shadeColumns(){
 }
 let lastAnim='',ldSig='',ldPending=false;
 /* start the Last Draw entrance: winning balls roll in, then the earlier results from the right, with sounds */
+/* Roll in only where it can be seen (owner, Nov 25, 2026): page showing and at least a third of the
+   Last Draw on screen. Until then the balls wait hidden (.hold), like during the opening splash. */
+let ldIO=null;
+function lastDrawShown(){const el=$('lastDraw');if(!el||document.hidden)return false;if(!('IntersectionObserver' in window))return true;
+  const r=el.getBoundingClientRect(),vh=innerHeight||document.documentElement.clientHeight;if(!r.height)return true;
+  return Math.max(0,Math.min(r.bottom,vh)-Math.max(r.top,0))/Math.min(r.height,vh)>=.35}
+function waitLastRoll(){const last=$('lastDraw');last.classList.add('hold');ldPending=true;
+  if(ldIO)ldIO.disconnect();
+  if('IntersectionObserver' in window){ldIO=new IntersectionObserver(()=>{if(ldPending&&lastDrawShown()){ldIO.disconnect();ldIO=null;startLastRoll()}},{threshold:[0,.35,.6,1]});ldIO.observe(last)}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ldPending&&!introRunning()&&lastDrawShown())startLastRoll()});
 function startLastRoll(){
+  if(!lastDrawShown()){waitLastRoll();return}
+  if(performance.now()-lastScrollAt<180){$('lastDraw').classList.add('hold');ldPending=true;afterScrollSettles(()=>{if(ldPending)startLastRoll()});return}
+  if(ldIO){ldIO.disconnect();ldIO=null}
   const last=$('lastDraw');ldPending=false;
   last.classList.remove('hold','roll');void last.offsetWidth;last.classList.add('roll');
   if(reduceMotion())return;

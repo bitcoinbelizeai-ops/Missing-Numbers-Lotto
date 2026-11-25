@@ -150,7 +150,8 @@ function checkDraw(d){
   if(d.game==='boledo'){if(n.length<1||!/^\d{1,2}$/.test(n[0]))return null;out.nums=[pad(n[0],2)]}
   else if(d.game==='lottery'){if(n.length<3||n.slice(0,3).some(x=>!/^\d{1,4}$/.test(x)))return null;out.nums=n.slice(0,3).map(x=>pad(x,4))}
   else if(d.game==='fantasy5'){const v=[...new Set(n.map(Number))];if(v.length!==5||v.some(x=>!(x>=1&&x<=39)))return null;out.nums=v.sort((a,b)=>a-b).map(x=>pad(x,2));
-    if(d.letter){if(!/^[A-Za-z]$/.test(d.letter))return null;out.letter=d.letter.toUpperCase()}}
+    if(d.letter){if(!/^[A-Za-z]$/.test(d.letter))return null;out.letter=d.letter.toUpperCase()}
+    if(Number.isInteger(d.jackpot)&&d.jackpot>=10000&&d.jackpot<=10000000)out.jackpot=d.jackpot}  // BBN's "Next Jackpot" (Nov 25, 2026)
   else{if(n.length<3||n.slice(0,3).some(x=>!/^\d$/.test(x)))return null;out.nums=n.slice(0,3)}
   return out;
 }
@@ -286,7 +287,7 @@ function bbnItem(e){
       return it}
     const bbn=e.draw?e.draw.nums.join(' ')+(e.draw.letter?' '+e.draw.letter:''):(e.read_as&&e.read_as.nums?[].concat(e.read_as.nums).join(' '):'?');
     it.innerHTML='<div class="bbnrow"><span class="head"><b>'+esc(lbl)+'</b> · '+dayTxt+'</span>'+
-        '<span class="nums">'+srcName(e)+': <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+'</span>'+
+        '<span class="nums">'+srcName(e)+': <b>'+esc(bbn)+'</b>'+(siteTxt?' · Site: <b>'+esc(siteTxt)+'</b>':'')+(e.draw&&e.draw.jackpot?' · Next jackpot <b>$'+Number(e.draw.jackpot).toLocaleString('en-US')+'</b>'+(e.jackpot_added?' <small>(added to the site)</small>':''):'')+'</span>'+
         '<span><span class="chip '+e.now+'">'+STATUS[e.now]+'</span>'+(e.published?' <small>added automatically</small>':e.siteNow&&e.siteNow.source==='admin'?' <small>you posted it first</small>':'')+(e.detail?' <small>'+esc(e.detail)+'</small>':'')+'</span>'+timingLine(e)+'</div>';
       if(e.now==='only-bbn'&&e.draw){const b=document.createElement('button');b.textContent='Add to site';
         b.onclick=async()=>{
