@@ -25,8 +25,8 @@ self.addEventListener('push', e => {
   const title = d.title || 'Missing Numbers';
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || 'New results are in.',
-    icon: 'icons/icon-192.png',
-    badge: 'icons/icon-192.png',
+    icon: 'icons/notify-icon.png',      // big ball, see-through background (Nov 24)
+    badge: 'icons/notify-badge.png',    // status-bar shape: ball outline
     tag: d.tag || 'mn-draw',
     renotify: true,
     data: { url: d.url || '/?alert=1' }
