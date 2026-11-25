@@ -404,7 +404,7 @@ const EASY=(()=>{
   let on=saved==='on'||(saved===null&&window.matchMedia&&matchMedia('(prefers-contrast: more)').matches);
   function apply(){root.classList.toggle('easy',on);if(btn){btn.setAttribute('aria-pressed',String(on));btn.title=on?'Easy reading on':'Easy reading'}}
   apply();
-  function hideHint(){const h=$('eyeHint');if(h)h.remove();put(HINT,'1')}
+  function hideHint(){const h=$('eyeHint');if(h)h.remove();if(btn)btn.classList.remove('hinting');put(HINT,'1')}
   if(btn)btn.addEventListener('click',e=>{e.stopPropagation();on=!on;put(KEY,on?'on':'off');apply();hideHint();
     try{SND.select()}catch(_){}
     toast(on?'Easy reading on: larger, clearer text. Tap the magnifier again to switch it off.':'Easy reading off.',false,3200)});
@@ -414,9 +414,11 @@ const EASY=(()=>{
     // let people read the title first: the tip waits 2.5 s after the opening splash ends, so it never covers the title as the app appears
     const sp=$('izSplash'),since=sp&&sp.dataset.endedAt?Date.now()-(+sp.dataset.endedAt):1e9;if(since<2500){setTimeout(maybeHint,2500-since);return}
     const h=document.createElement('div');h.className='eyehint';h.id='eyeHint';h.setAttribute('role','status');
-    h.innerHTML='Easier to read? Tap the magnifier for larger, clearer text.<button type="button" aria-label="Close tip">×</button>';
+    // Nov 24, 2026: the tip sits near the bottom (CSS) so it never covers the title; the icon and the ring on the button show where to tap
+    const ico=btn.querySelector('svg');
+    h.innerHTML=(ico?'<span class="eh-ico">'+ico.outerHTML+'</span>':'')+'<span class="eh-txt">Easier to read? Tap the magnifier at the top for larger, clearer text.</span><button type="button" aria-label="Close tip">×</button>';
     h.querySelector('button').onclick=ev=>{ev.stopPropagation();hideHint()};
-    btn.parentElement.appendChild(h);setTimeout(()=>{if($('eyeHint'))hideHint()},9000);
+    btn.parentElement.appendChild(h);btn.classList.add('hinting');setTimeout(()=>{if($('eyeHint'))hideHint()},9000);
   }
   setTimeout(maybeHint,4200);
   return {isOn:()=>on};
