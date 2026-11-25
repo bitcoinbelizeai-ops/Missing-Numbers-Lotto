@@ -1340,3 +1340,40 @@ footer{font-size:14px}
 .bs-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .bs-steps.plain li{padding:10px 12px}
 @media (max-width:360px){.bs-games{grid-template-columns:1fr}}
+
+/* ---------- Readability pass 2 (24 Nov 2026, impeccable + ui-ux-pro-max) ----------
+   Refinement only: same colours, fonts and layout. The smallest everyday labels move from 12-13px to 13.5-14px,
+   and the widest letter-spacing is eased so capital words read as words. Easy reading (html.easy) still wins. */
+.gtxt small{font-size:14px}
+.recent-cap{font-size:13px;letter-spacing:.08em}
+.recent-day{font-size:13px}
+.lookback-lbl,.label{font-size:14px;letter-spacing:.08em}
+.tag{font-size:13.5px}
+.note,.hint{font-size:14px}
+.more{font-size:14px}
+.showmore-btn{font-size:14px}
+.showmore-btn .cnt{font-size:13.5px}
+.resdate b{font-size:14px;letter-spacing:.08em}
+.resdate span{font-size:14.5px}
+.addgame-txt small{font-size:14px}
+.topout-h{font-size:14px;letter-spacing:.1em}
+.pick-title{letter-spacing:.16em}
+.winbadge{letter-spacing:.12em}
+@media (min-width:360px){.brand .eyebrow{font-size:13px;letter-spacing:.26em}}
+@media (max-width:700px){.tabbar button{font-size:13px}}
+
+/* ---------- Magnifier tip (24 Nov 2026) ----------
+   It used to hang from the magnifier and cover the "Missing Numbers" title (phone and desktop). It now sits as a card
+   near the bottom of the screen (just above the bottom menu on phones), shows the magnifier icon, and the magnifier
+   button wears a soft gold ring while the tip is up. */
+.eyehint{display:flex;align-items:center;gap:10px;position:fixed;top:auto;right:auto;left:50%;transform:translateX(-50%);
+  bottom:calc(24px + env(safe-area-inset-bottom,0px));width:min(440px,calc(100% - 32px));max-width:none;padding:12px 40px 12px 12px;z-index:60;
+  box-shadow:0 10px 26px rgba(0,0,0,.45),0 0 0 2px var(--gold);animation-name:eyehint-up}
+.eyehint::before{display:none}
+.eyehint button{top:50%;transform:translateY(-50%);right:6px;width:32px;height:32px}
+.eh-ico{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;background:#13233f;color:var(--logo-yellow)}
+.eh-ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.eyebtn.hinting{box-shadow:0 0 0 3px var(--logo-yellow),0 4px 12px rgba(0,0,0,.4)}
+@media (max-width:700px){.eyehint{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+@keyframes eyehint-up{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.eyehint{animation:none}}
