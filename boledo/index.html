@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en" data-page-game="boledo">
+<head>
+<meta charset="utf-8">
+<!-- Built by scripts/build_game_pages.py from index.html. Do not edit by hand: change index.html, then run the script. -->
+<base href="/">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Belize Boledo Results: Today's Winning Number | Missing Numbers</title>
+<meta name="description" content="Latest Belize Boledo result, drawn Monday to Friday at 9:00 pm. See the winning number within minutes of the draw, past results and which numbers haven't played lately.">
+<meta name="theme-color" content="#094692">
+<link rel="canonical" href="https://missingnumbers.bz/boledo/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Missing Numbers">
+<meta property="og:title" content="Belize Boledo Results">
+<meta property="og:description" content="Latest Belize Boledo result, drawn Monday to Friday at 9:00 pm. See the winning number within minutes of the draw, past results and which numbers haven't played lately.">
+<meta property="og:url" content="https://missingnumbers.bz/boledo/">
+<meta property="og:image" content="https://missingnumbers.bz/icons/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Missing Numbers: Belize lottery results for Boledo, Sunday Jackpot, Fantasy 5 and Pick 3">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@graph": [{"@type": "WebPage", "@id": "https://missingnumbers.bz/boledo/#page", "url": "https://missingnumbers.bz/boledo/", "name": "Belize Boledo Results: Today's Winning Number | Missing Numbers", "description": "Latest Belize Boledo result, drawn Monday to Friday at 9:00 pm. See the winning number within minutes of the draw, past results and which numbers haven't played lately.", "inLanguage": "en", "isPartOf": {"@id": "https://missingnumbers.bz/#site"}, "about": "Boledo (Belize lottery)"}, {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Missing Numbers", "item": "https://missingnumbers.bz/"}, {"@type": "ListItem", "position": 2, "name": "Belize Boledo Results", "item": "https://missingnumbers.bz/boledo/"}]}]}
+</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boledo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="app.css?v=3748bc8f">
+<script src="supabase-config.js?v=1"></script>
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+
+
+  <div class="top" id="secGames">
+    <button type="button" class="acctbtn" id="acctBtn" hidden aria-label="Sign up or sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 19.5c1.2-3.6 4-5.4 7.2-5.4s6 1.8 7.2 5.4"/></svg><span id="acctBtnTxt">Sign up</span></button>
+    <button type="button" class="eyebtn" id="eyeBtn" aria-pressed="false" aria-label="Easy reading: larger, clearer text"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.4 15.4 20.6 20.6"/><path d="M7.9 10.5h5.2"/><path class="zv" d="M10.5 7.9v5.2"/></svg></button>
+    <button type="button" class="sndbtn" id="sndBtn" aria-pressed="false" aria-label="Mute sound"></button>
+    <header class="brand">
+      <div class="brand-txt"><p class="eyebrow">Belize Lottery</p><p class="bname">Missing <em>Numbers</em></p></div>
+    </header>
+    <div class="game-hd"><h1>Belize Boledo Results</h1><p>Drawn Monday to Friday at 9:00 pm, Belize time</p></div>
+    <h2 class="pick-title" id="pickTitle">Choose Your Game</h2>
+    <div class="games" role="group" aria-labelledby="pickTitle" id="gameSeg"></div>
+    <p class="fresh" id="fresh"></p>
+  </div>
+
+  <section class="panel" id="secLast" aria-labelledby="lastTitle">
+    <div class="panel-head">
+      <h2 id="lastTitle">Weh Play?</h2>
+      <span class="when" id="lastDate"></span>
+      <button type="button" class="sharebtn" id="shareBtn" hidden aria-label="Share this result as a picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Share</button>
+    </div>
+    <div class="hub">
+      <div class="lastdraw" id="lastDraw"></div>
+      <div class="drawinfo"><p id="drawNext"></p><button type="button" class="bellbtn" id="bellBtn" hidden aria-pressed="false" aria-label="Notify me when draw results are in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4c-.9 0-1.6.7-1.6 1.6v.5A6.6 6.6 0 0 0 5.4 11v4.4l-1.9 2.5c-.3.4 0 .9.5.9h16c.5 0 .8-.5.5-.9l-1.9-2.5V11a6.6 6.6 0 0 0-5-6.5V4c0-.9-.7-1.6-1.6-1.6z"/><path d="M9.4 20.1h5.2a2.6 2.6 0 0 1-5.2 0z"/></svg><span id="bellTxt">Notify me</span><span class="bell-chev" aria-hidden="true"></span></button><button type="button" class="more" data-more="drawFine" aria-expanded="false" aria-controls="drawFine">More info</button></div>
+    </div>
+    <p class="fine" id="drawFine" hidden></p>
+  </section>
+
+  <section class="panel" id="secMiss" aria-labelledby="missTitle">
+    <div class="panel-head">
+      <h2 id="missTitle">Missing Numbers</h2>
+      <div class="lookback"><span class="lookback-lbl" id="lookLbl">Last</span><div class="seg" role="group" aria-labelledby="lookLbl" id="winSeg"></div></div>
+    </div>
+    <div class="missdates" id="missDates" hidden>
+      <label class="label" for="missFrom">From</label><input type="date" id="missFrom">
+      <label class="label" for="missTo">To</label><input type="date" id="missTo">
+      <button type="button" class="btn ghost small" id="missClear">Use the slider</button>
+    </div>
+    <p class="say" id="say" aria-live="polite" aria-busy="true"><span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span></p>
+    <div id="tiles" class="answer-body"></div>
+    <div class="notebar"><p class="note" id="note"></p><button type="button" class="more" data-more="noteFine" aria-expanded="false" aria-controls="noteFine">More info</button></div>
+    <p class="fine" id="noteFine" hidden></p>
+  </section>
+
+  <section class="panel" id="secHot" aria-labelledby="hotTitle">
+    <div class="panel-head">
+      <h2 id="hotTitle">Hot Numbers</h2>
+      <div class="lookback"><span class="lookback-lbl" id="hotLbl">Last</span><div class="seg" role="group" aria-labelledby="hotLbl" id="hotSeg"></div></div>
+    </div>
+    <p class="say" id="hotSay"></p>
+    <div id="hot" class="answer-body"></div>
+  </section>
+
+  <section class="panel minepanel" id="secMine" aria-labelledby="mineTitle" hidden>
+    <div class="panel-head"><h2 id="mineTitle"><span class="star" aria-hidden="true">★</span> My Lucky Numbers</h2>
+      <div class="mixwrap" id="mixWrap" hidden><small class="mixcap">Ways to play</small><button type="button" class="mixbtn" id="mixBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 1-8.5 6"/><path d="M12 7a5 5 0 1 1-4.6 3"/><circle cx="12" cy="12" r="1.6"/></svg>Mixer</button></div></div>
+    <p class="mine-hint" id="mineHint">Keep an eye on your favourite numbers. Tap <b>＋ Add</b> to pick them, or tap any ball above and choose <b>☆ Add to My Lucky Numbers</b>. They're saved on this device.</p>
+    <p class="mine-tip" id="mineTip" hidden>Double-tap a number to remove it.</p>
+    <div class="mine" id="mine"></div>
+    <div class="acct-strip" id="acctStrip" hidden><span class="acct-ico" aria-hidden="true">☁</span><p class="acct-txt" id="acctTxt"></p><div class="acct-btns" id="acctBtns"></div></div>
+  </section>
+
+
+  <details class="nudge" id="nudge" open hidden aria-live="polite">
+    <summary><h2 id="nudgeTitle">Results are waiting</h2></summary>
+    <div class="nudge-body">
+      <ul id="nudgeList"></ul>
+      <p class="nudge-more" id="nudgeMore"></p>
+    </div>
+  </details>
+
+  <section class="panel" id="secRes" aria-labelledby="resTitle">
+    <div class="panel-head">
+      <h2 id="resTitle">Past Results</h2>
+      <div class="lookback"><span class="lookback-lbl" id="resLbl">Show</span><div class="seg" role="group" aria-labelledby="resLbl" id="resSeg"></div></div>
+    </div>
+    <p class="say" id="resSay"></p>
+    <div class="reslist" id="resList"></div>
+    <div class="showmore" id="resMoreWrap" hidden><button type="button" class="showmore-btn" id="resMore"></button></div>
+    <div class="resfrom">
+      <label class="label" for="resFrom">Start from a date</label>
+      <div class="resfrom-row"><input type="date" id="resFrom"><button type="button" class="btn ghost small" id="resLatest" hidden>Back to latest</button></div>
+    </div>
+  </section>
+
+  <details id="addFold">
+    <summary>Add a result by hand</summary>
+    <div class="fold">
+      <div class="addgame" id="addGame">
+        <span class="tile gball" id="addBall"><span id="addBallTxt">00</span></span>
+        <div class="addgame-txt"><small>Adding winning numbers for</small><b id="addGameName">Boledo</b></div>
+      </div>
+      <div class="slots" id="slots" aria-hidden="true"></div>
+      <form id="addForm" class="quick">
+        <div class="field"><label class="label" for="dDate">Date</label><input type="date" id="dDate" required></div>
+        <div class="field grow"><label class="label" for="quickNums" id="quickLabel">Numbers</label><input id="quickNums" autocomplete="off" required></div>
+        <button class="btn" type="submit">Add</button>
+      </form>
+      <div class="hint" id="dateHint" aria-live="polite"></div>
+      <div class="notebar"><div class="hint" id="addHint"></div><button type="button" class="more" data-more="addFine" aria-expanded="false" aria-controls="addFine">More info</button></div>
+      <div class="fine" id="addFine" hidden><span id="addSched"></span> Adding the same date again replaces it.</div>
+      <div class="msg" id="addMsg"></div>
+      
+      <div class="hint" id="storeNote"></div>
+    </div>
+  </details>
+
+  <nav class="tabbar" aria-label="Sections">
+    <button type="button" id="tabGames" class="on" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/></svg>Games</button>
+    <button type="button" id="tabMiss"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke-dasharray="3.2 3"/></svg>Missing</button>
+    <button type="button" id="tabHot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 4 6 5 6 10a6 6 0 0 1-12 0c0-3 2-4 2-7 2 1 3 2 4-3z"/></svg>Hot</button>
+    <button type="button" id="tabLucky"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>Lucky</button>
+    <button type="button" id="tabRes"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Results</button>
+  </nav>
+  <div class="mixbox" id="mixBox" hidden role="dialog" aria-modal="true" aria-labelledby="mixTitle">
+    <button type="button" class="mixmute" id="mixMute" aria-pressed="false" aria-label="Mute sound"></button>
+    <div class="mixbox-in">
+      <h2 id="mixTitle">Mixer</h2>
+      <div class="mixstage" id="mixStage" aria-hidden="true"></div>
+      <div class="mixout" id="mixOut" aria-live="polite"></div>
+      <p class="mixnote" id="mixNote" hidden>These are ways to play your numbers. No pattern improves your odds.</p>
+      <div class="mixbtns" id="mixBtns" hidden><button type="button" class="btn" id="mixAgain">Mix again</button><button type="button" class="btn ghost" id="mixShare">Share</button><button type="button" class="btn ghost" id="mixClose">Close</button></div>
+    </div>
+  </div>
+  <div class="mixbox resbox" id="resBox" hidden role="dialog" aria-modal="true" aria-labelledby="resBoxTitle">
+    <div class="mixbox-in resbox-in">
+      <h2 id="resBoxTitle">Past Results</h2>
+      <p class="resbox-sub" id="resBoxSub"></p>
+      <div class="reslist" id="resBoxList"></div>
+      <button type="button" class="btn ghost" id="resClose">Close</button>
+    </div>
+  </div>
+  <div class="mixbox pickbox" id="pickBox" hidden role="dialog" aria-modal="true" aria-labelledby="pickBoxTitle">
+    <div class="mixbox-in pickbox-in">
+      <h2 id="pickBoxTitle">Add numbers</h2>
+      <p class="pick-sub"><span id="pickRange"></span> · <span id="pickCount"></span></p>
+      <div class="pickgrid" id="pickGrid"></div>
+      <div class="pickdots" id="pickDots" aria-hidden="true"></div>
+      <div class="pickbtns"><button type="button" class="btn ghost" id="pickBack">Back</button><button type="button" class="btn" id="pickNext">Continue</button></div>
+      <button type="button" class="pickdone" id="pickDone">Done</button>
+    </div>
+  </div>
+  <div class="sheet acct-sheet" id="acctSheet" hidden role="dialog" aria-modal="true" aria-labelledby="acTitle">
+    <div class="sheet-in">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <div class="sheet-txt"><h2 id="acTitle">Free account</h2><p id="acSub">Keep your Lucky Numbers on every device.</p></div>
+        <button type="button" class="sheet-x" id="acClose" aria-label="Close">×</button>
+      </div>
+
+      <div class="ac-tabs" id="acTabs" role="tablist">
+        <button type="button" role="tab" id="acTabUp" aria-selected="true">Create account</button>
+        <button type="button" role="tab" id="acTabIn" aria-selected="false">Sign in</button>
+      </div>
+
+      <!-- create account -->
+      <form class="ac-form" id="acUp" novalidate>
+        <label class="ac-f" for="acNick">Nickname <span class="ac-hint">Shown instead of your name. 3–16 letters, numbers or _. Don't use your real name.</span></label>
+        <div class="ac-row"><input type="text" id="acNick" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="16"><button type="button" class="btn ghost small" id="acSuggest">Suggest</button></div>
+        <p class="ac-msg" id="acNickMsg" aria-live="polite"></p>
+        <label class="ac-f" for="acFirst">First name <span class="ac-hint">Optional. Never shown; only used to say hello.</span></label>
+        <input type="text" id="acFirst" autocomplete="given-name" maxlength="40">
+        <label class="ac-f" for="acAge">Age <span class="ac-hint">You must be 18 or older.</span></label>
+        <select id="acAge"><option value="">Choose…</option><option>18-24</option><option>25-34</option><option>35-44</option><option>45-54</option><option>55-64</option><option>65+</option></select>
+        <label class="ac-f" for="acDist">District</label>
+        <select id="acDist"><option value="">Choose…</option><option>Belize</option><option>Cayo</option><option>Corozal</option><option>Orange Walk</option><option>Stann Creek</option><option>Toledo</option><option>Outside Belize</option></select>
+        <label class="ac-f" for="acEmail">Email <span class="ac-hint">We send your code here. Never shown or shared.</span></label>
+        <input type="email" id="acEmail" autocomplete="email" inputmode="email">
+        <label class="ac-check"><input type="checkbox" id="acAgree"> <span>I am 18 or older and agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <label class="ac-check"><input type="checkbox" id="acNews"> <span>Send me occasional news about the site (optional).</span></label>
+        <p class="ac-msg bad" id="acUpMsg" aria-live="polite"></p>
+        <button type="submit" class="btn" id="acUpBtn">Send my code</button>
+      </form>
+
+      <!-- sign in -->
+      <form class="ac-form" id="acIn" novalidate hidden>
+        <label class="ac-f" for="acInEmail">Email</label>
+        <input type="email" id="acInEmail" autocomplete="email" inputmode="email">
+        <p class="ac-msg bad" id="acInMsg" aria-live="polite"></p>
+        <button type="submit" class="btn" id="acInBtn">Send my code</button>
+      </form>
+
+      <!-- code -->
+      <form class="ac-form" id="acCode" novalidate hidden>
+        <p class="ac-lead">We sent a code to <b id="acCodeTo"></b>. It works for 10 minutes.</p>
+        <input class="ac-code" id="acCodeIn" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" aria-label="Code from the email">
+        <p class="ac-msg" id="acCodeMsg" aria-live="polite"></p>
+        <button type="submit" class="btn" id="acCodeBtn">Confirm</button>
+        <p class="ac-links"><button type="button" class="linkbtn" id="acResend" disabled>Send a new code (60)</button> · <button type="button" class="linkbtn" id="acBack">Use a different email</button></p>
+      </form>
+
+      <!-- signed in -->
+      <div class="ac-form" id="acMe" hidden>
+        <dl class="ac-dl">
+          <dt>Nickname</dt><dd id="acMeNick"></dd>
+          <dt>Age</dt><dd id="acMeAge"></dd>
+          <dt>District</dt><dd id="acMeDist"></dd>
+          <dt>Email</dt><dd id="acMeEmail"></dd>
+          <dt>Member since</dt><dd id="acMeSince"></dd>
+        </dl>
+        <p class="ac-sync" id="acMeSync"></p>
+        <div class="ac-btns"><button type="button" class="btn ghost small" id="acOut">Sign out</button></div>
+        <div class="ac-btns ac-end"><button type="button" class="linkbtn" id="acDel">Delete my account</button></div>
+        <div class="ac-confirm" id="acDelBox" hidden>
+          <p>Delete your account <b id="acDelNick"></b> and the Lucky Numbers saved to it? This can't be undone. The numbers on this device stay.</p>
+          <div class="ac-btns"><button type="button" class="btn small ac-danger" id="acDelGo">Double-tap to delete</button><button type="button" class="btn ghost small" id="acDelNo">Keep my account</button></div>
+        </div>
+        <p class="ac-msg" id="acMeMsg" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+  <div class="sheet bell-sheet" id="bellSheet" hidden role="dialog" aria-modal="true" aria-labelledby="bsTitle">
+    <div class="sheet-in">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <span class="bs-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg></span>
+        <div class="sheet-txt"><h2 id="bsTitle">Draw alerts</h2><p id="bsSub"></p></div>
+        <button type="button" class="sheet-x" id="bsClose" aria-label="Close">×</button>
+      </div>
+      <div class="bs-body" id="bsBody"></div>
+    </div>
+  </div>
+  <div class="sheet" id="ballSheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-in">
+      <span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-head">
+        <div class="sheet-ball" id="sheetBall"></div>
+        <div class="sheet-txt"><h2 id="sheetTitle"></h2><p id="sheetSub"></p></div>
+        <button type="button" class="sheet-x" id="sheetClose" aria-label="Close">×</button>
+      </div>
+      <p class="sheet-facts" id="sheetFacts"></p>
+      <div id="sheetTrend"></div>
+      <div class="sheet-star" id="sheetStar"></div>
+    </div>
+  </div>
+  <div class="sharebox" id="shareBox" hidden role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <div class="sharebox-in">
+      <h2 id="shareTitle">Share this result</h2>
+      <img id="shareImg" alt="">
+      <p class="sharebox-tip" id="shareTip">Press and hold the picture to save or share it.</p>
+      <div class="sharebox-btns"><button type="button" class="btn" id="shareGo">Share</button><button type="button" class="btn ghost" id="shareClose">Close</button></div>
+    </div>
+  </div>
+  <section class="panel gameabout" aria-labelledby="gaTitle">
+    <div class="panel-head"><h2 id="gaTitle">About Boledo results</h2></div>
+    <p id="gaLatest">Latest result: <b>02</b>, drawn Tuesday 24 November 2026.</p>
+    <p>Boledo is drawn Monday to Friday at 9:00 pm, Belize time. There is normally no draw on public holidays.</p><p>This page shows each winning number within minutes of the draw, the past results, and which numbers from 00 to 99 haven't played lately.</p>
+  </section>
+
+  <footer><nav class="gamelinks" aria-label="Results by game"><span class="gamelinks-lbl">Results by game</span><a href="/">All games</a><a href="/boledo/" aria-current="page">Boledo</a><a href="/fantasy-5/">Fantasy 5</a><a href="/pick-3/">Pick 3</a><a href="/sunday-jackpot/">Sunday Jackpot</a></nav><span>Every draw is random. A number that hasn't played for a while is not more likely to play next.</span><button type="button" class="more" data-label="About this tracker" data-more="footFine" aria-expanded="false" aria-controls="footFine">About this tracker</button><span class="disclaimer fine" id="footFine" hidden>Draw days &amp; times come from Belize Government Lotteries Ltd. &amp; Game Operators. This Independent tracker is not affiliated with Belize Government Lotteries Ltd. or Game Operators.</span></footer>
+<div class="iz-splash" id="izSplash" hidden aria-hidden="true">
+  <div class="iz-bloom"></div>
+  <div class="iz-lockup" id="izLockup">
+    <div class="iz-shower iz-fx" id="izShower"></div>
+    <div class="iz-ballslot" id="izBallslot">
+      <div class="iz-fx"><div class="iz-ring" id="izRing"></div></div>
+      <div class="iz-fx iz-trail" id="izTrail"></div>
+      <div class="iz-ghost iz-k1"><div class="iz-ballgrow"><div class="iz-ball"></div></div></div>
+      <div class="iz-ghost iz-k2"><div class="iz-ballgrow"><div class="iz-ball"></div></div></div>
+      <div class="iz-ghost iz-k3"><div class="iz-ballgrow"><div class="iz-ball"></div></div></div>
+      <div class="iz-ballmove"><div class="iz-floor"></div><div class="iz-halo"></div><div class="iz-ballgrow"><div class="iz-ball" id="izMainBall"></div></div></div>
+      <div class="iz-fx iz-pop" id="izPop"></div>
+    </div>
+    <div class="iz-title">
+      <div class="iz-w1" aria-label="Missing">
+        <span style="--i:0" aria-hidden="true">M</span><span class="iz-gap" style="--d:1100ms" aria-hidden="true">I</span><span style="--i:1" aria-hidden="true">S</span><span style="--i:2" aria-hidden="true">S</span><span class="iz-gap" style="--d:1180ms" aria-hidden="true">I</span><span style="--i:3" aria-hidden="true">N</span><span style="--i:4" aria-hidden="true">G</span>
+        <div class="iz-glint" id="izG1"><i style="--a:-60deg;--d:1290ms"></i><i style="--a:0deg;--d:1290ms"></i><i style="--a:60deg;--d:1290ms"></i></div>
+        <div class="iz-glint" id="izG2"><i style="--a:-60deg;--d:1370ms"></i><i style="--a:0deg;--d:1370ms"></i><i style="--a:60deg;--d:1370ms"></i></div>
+      </div>
+      <div class="iz-w2">Numbers<span class="iz-shine" aria-hidden="true">Numbers</span></div>
+    </div>
+    <div class="iz-under">
+      <p class="iz-weh"><span class="iz-weh-txt">Weh Play?</span></p>
+      <p class="iz-tag">results &amp; missing numbers</p>
+      <p class="iz-status" id="izStatus"></p>
+    </div>
+  </div>
+  <p class="iz-skiphint">Tap anywhere to continue</p>
+</div>
+<template id="izBallTpl">
+  <svg viewBox="0 0 100 100" aria-hidden="true">
+    <defs>
+      <radialGradient id="body" cx="36%" cy="30%" r="78%">
+        <stop offset="0" stop-color="#fff7d1"/><stop offset=".16" stop-color="#ffe385"/><stop offset=".42" stop-color="#f6bd25"/>
+        <stop offset=".72" stop-color="#cf8d05"/><stop offset=".92" stop-color="#8a5600"/><stop offset="1" stop-color="#5c3800"/>
+      </radialGradient>
+      <radialGradient id="rim" cx="50%" cy="50%" r="50%"><stop offset=".78" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#2b1700" stop-opacity=".45"/></radialGradient>
+      <radialGradient id="disc" cx="44%" cy="38%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f7f3e8"/><stop offset="1" stop-color="#e2d9c2"/></radialGradient>
+      <linearGradient id="spec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <radialGradient id="bounce" cx="70%" cy="88%" r="40%"><stop offset="0" stop-color="#ffe9a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a0" stop-opacity="0"/></radialGradient>
+    </defs>
+    <circle cx="50" cy="50" r="48" fill="url(#body)"/>
+    <circle cx="50" cy="50" r="48" fill="url(#bounce)"/>
+    <g class="iz-spin">
+      <circle cx="50" cy="50" r="25.5" fill="#b07400" opacity=".35" transform="translate(.6 1.4)"/>
+      <circle cx="50" cy="50" r="25" fill="url(#disc)"/>
+      <circle cx="50" cy="50" r="25" fill="none" stroke="#c99a2e" stroke-opacity=".55" stroke-width="1"/>
+      <text x="50" y="58.5" text-anchor="middle" font-family="Outfit, Barlow, sans-serif" font-weight="800" font-size="24" fill="#0b2a5b" letter-spacing=".5">00</text>
+    </g>
+    <circle cx="50" cy="50" r="48" fill="url(#rim)"/>
+    <ellipse cx="35" cy="24" rx="20" ry="10" fill="url(#spec)" transform="rotate(-28 35 24)" opacity=".85"/>
+    <circle cx="29" cy="21" r="3.2" fill="#fff" opacity=".9"/>
+    <circle cx="50" cy="50" r="47.5" fill="none" stroke="#fff3c0" stroke-opacity=".35" stroke-width="1"/>
+  </svg>
+</template>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="app.js?v=1410f4df"></script>
+<script src="alerts.js?v=2"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "2d68bb40cc3649e2bfbaef4248ad0dd8"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
