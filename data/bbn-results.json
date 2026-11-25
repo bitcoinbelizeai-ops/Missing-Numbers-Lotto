@@ -401,7 +401,35 @@
    },
    "status": "only-bbn",
    "published": true
+  },
+  {
+   "received": "2026-11-25T03:30:39Z",
+   "post_id": "300184130690312_2110643526555102",
+   "post_time": "2026-11-25T03:18:09.000Z",
+   "game": "boledo",
+   "date": "2026-11-24",
+   "read_as": {
+    "nums": [
+     "02"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "boledo-2026-11-24",
+    "game": "boledo",
+    "date": "2026-11-24",
+    "nums": [
+     "02"
+    ]
+   },
+   "status": "match",
+   "site": {
+    "nums": [
+     "02"
+    ],
+    "letter": null
+   }
   }
  ],
- "updated": "2026-11-25T02:37:15Z"
+ "updated": "2026-11-25T03:30:39Z"
 }
