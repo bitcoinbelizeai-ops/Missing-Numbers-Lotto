@@ -342,7 +342,39 @@
    },
    "status": "only-bbn",
    "published": true
+  },
+  {
+   "received": "2026-11-25T02:07:15Z",
+   "post_id": "300184130690312_2110580966561358",
+   "post_time": "2026-11-25T02:06:16.000Z",
+   "game": "fantasy5",
+   "date": "2026-11-24",
+   "read_as": {
+    "nums": [
+     "26",
+     "05",
+     "08",
+     "16",
+     "13"
+    ],
+    "letter": "V"
+   },
+   "draw": {
+    "id": "fantasy5-2026-11-24",
+    "game": "fantasy5",
+    "date": "2026-11-24",
+    "nums": [
+     "05",
+     "08",
+     "13",
+     "16",
+     "26"
+    ],
+    "letter": "V"
+   },
+   "status": "only-bbn",
+   "published": true
   }
  ],
- "updated": "2026-11-24T03:15:33Z"
+ "updated": "2026-11-25T02:07:15Z"
 }
