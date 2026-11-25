@@ -405,7 +405,7 @@ def main():
                 del chk[k]
             first_chk = (now.date() - timedelta(days=CHECK_DAYS)).isoformat()
             for d in sorted(draws, key=lambda x: x["date"], reverse=True):
-                if d.get("source") != "bbn" or d.get("nodraw") or d["date"] < first_chk:
+                if d.get("source") not in ("bbn", "lovefm") or d.get("nodraw") or d["date"] < first_chk:
                     continue
                 c = chk.get(d["id"], {})
                 if c.get("status") in ("match", "differs") or c.get("tries", 0) >= CHECK_MAX_TRIES:
