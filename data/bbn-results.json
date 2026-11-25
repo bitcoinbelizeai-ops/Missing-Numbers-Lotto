@@ -1,5 +1,5 @@
 {
- "note": "Results read from BBN Belize Facebook posts. Good new results are added to the site automatically (main source since Nov 20, 2026).",
+ "note": "Results read from BBN Belize (pictures) and Love FM (text, Boledo only) Facebook posts. Good new results are added to the site automatically (BBN main source since Nov 20, 2026; Love FM backup since Nov 25, 2026).",
  "results": [
   {
    "received": "2026-11-17T13:32:52Z",
@@ -429,7 +429,36 @@
     ],
     "letter": null
    }
+  },
+  {
+   "received": "2026-11-25T05:48:01Z",
+   "source": "lovefm",
+   "post_id": "114262182112994_1784002647089904",
+   "post_time": "2026-11-25T03:11:47.000Z",
+   "game": "boledo",
+   "date": "2026-11-24",
+   "read_as": {
+    "nums": [
+     "02"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "boledo-2026-11-24",
+    "game": "boledo",
+    "date": "2026-11-24",
+    "nums": [
+     "02"
+    ]
+   },
+   "status": "match",
+   "site": {
+    "nums": [
+     "02"
+    ],
+    "letter": null
+   }
   }
  ],
- "updated": "2026-11-25T03:30:39Z"
+ "updated": "2026-11-25T05:48:01Z"
 }
