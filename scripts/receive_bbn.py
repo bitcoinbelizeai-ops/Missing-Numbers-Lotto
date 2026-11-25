@@ -64,6 +64,18 @@ def as_obj(v):
     return v or {}
 
 
+def jackpot_value(v):
+    """BBN's Fantasy 5 picture says "Next Jackpot: $332,000". Return whole dollars, or None if missing/odd.
+    Added 25 Nov 2026; a bad amount never blocks the numbers, it is just left out."""
+    if v is None or isinstance(v, bool):
+        return None
+    digits = re.sub(r"[^0-9.]", "", str(v)).split(".")[0]
+    if not digits:
+        return None
+    n = int(digits)
+    return n if 10_000 <= n <= 10_000_000 else None
+
+
 def check(ans):
     """Return (draw, problem). The same rules as the Admin page."""
     game = str(ans.get("game", "")).strip().lower()
@@ -106,6 +118,9 @@ def check(ans):
             if not re.fullmatch(r"[A-Z]", letter):
                 return None, f"free ticket letter {letter!r} is not a single letter"
             draw["letter"] = letter
+        jp = jackpot_value(ans.get("jackpot"))
+        if jp:
+            draw["jackpot"] = jp
     else:  # pick3
         if len(nums) == 1 and re.fullmatch(r"\d{3}", nums[0]):
             nums = list(nums[0])
@@ -251,6 +266,13 @@ def main():
                 site_data["updated"] = dt.datetime.now(BELIZE).date().isoformat()
                 save(DRAWS, site_data)
                 entry["published"] = True
+            elif why == "the site already has this draw" and entry["status"] == "match" and draw.get("jackpot"):
+                # Same numbers as the site (e.g. magayo or Love FM got there first): only add BBN's next jackpot amount.
+                have = next(d for d in site if d.get("id") == draw["id"])
+                if have.get("jackpot") != draw["jackpot"]:
+                    have["jackpot"] = draw["jackpot"]
+                    save(DRAWS, site_data)
+                    entry["jackpot_added"] = True
             elif entry["status"] != "match":
                 entry["detail"] = why
 
@@ -259,7 +281,7 @@ def main():
     store["updated"] = entry["received"]
     save(RESULTS, store)
     label = LABELS.get(entry["game"], entry["game"])
-    print(f"Saved ({SOURCES[source]}): {label} {entry['date']} -> {entry['status']}" + (" -> ADDED TO THE SITE" if entry.get("published") else "") + (f" ({entry.get('detail')})" if entry.get("detail") else ""))
+    print(f"Saved ({SOURCES[source]}): {label} {entry['date']} -> {entry['status']}" + (" -> ADDED TO THE SITE" if entry.get("published") else "") + (f" (next jackpot ${entry['draw']['jackpot']:,})" if entry.get("draw", {}).get("jackpot") else "") + (" -> jackpot added to the site" if entry.get("jackpot_added") else "") + (f" ({entry.get('detail')})" if entry.get("detail") else ""))
     out = os.environ.get("GITHUB_STEP_SUMMARY")
     if out:
         with open(out, "a", encoding="utf-8") as f:
