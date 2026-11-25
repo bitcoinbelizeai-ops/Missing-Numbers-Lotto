@@ -1,5 +1,5 @@
 """Receive one lottery result read from a BBN Belize Facebook post (sent by Make.com).
-Since 25 Nov 2026 also Love FM's Facebook text posts (Boledo only): payload {"source": "lovefm", "text": ...};
+Since 25 Nov 2026 also Love FM's Facebook text posts (Boledo only): payload {"source": "lovefm", "text_b64": <base64 of the post text>} (or "text");
 they go through exactly the same safety rules and are saved with source "lovefm".
 
 MAIN SOURCE since Nov 20, 2026: every result is saved to data/bbn-results.json, and a
@@ -18,6 +18,8 @@ Input (from the GitHub job):
                 {"answer": {...GPT answer...}, "post_id": "...", "post_time": "..."}
   TEST_ANSWER   (manual test runs only) an answer JSON pasted into the Run workflow form
 """
+import base64
+import binascii
 import datetime as dt
 import json
 import os
@@ -176,6 +178,18 @@ def parse_lovefm(text):
             "nums": [m.group(4)], "letter": None, "readable": True, "notes": ""}
 
 
+def lovefm_text(payload):
+    """Make sends the post text base64-encoded ("text_b64") so line breaks or quotes can't break the JSON;
+    a plain "text" field also works (tests)."""
+    b64 = str(payload.get("text_b64") or "").strip()
+    if b64:
+        try:
+            return base64.b64decode(b64 + "=" * (-len(b64) % 4)).decode("utf-8", "replace")
+        except (ValueError, binascii.Error):
+            return ""
+    return payload.get("text") or ""
+
+
 def main():
     payload = as_obj(os.environ.get("PAYLOAD_JSON") or "{}")
     test = os.environ.get("TEST_ANSWER", "").strip()
@@ -186,7 +200,7 @@ def main():
         print(f"Unknown source {source!r}. Nothing saved.")
         return 0
     try:
-        ans = parse_lovefm(payload.get("text")) if source == "lovefm" else as_obj(payload.get("answer", payload))
+        ans = parse_lovefm(lovefm_text(payload)) if source == "lovefm" else as_obj(payload.get("answer", payload))
     except json.JSONDecodeError as e:
         print(f"Could not read the answer: {e}")
         return 0

@@ -2,7 +2,7 @@
 # MAIN SOURCE since Nov 20, 2026: saves it to data/bbn-results.json and, if it passes the
 # safety rules in scripts/receive_bbn.py, adds it to draws.json (the site) at once.
 # Manual "Run workflow" tests are saved but never added to the site.
-# Since Nov 25, 2026 the same job also takes Love FM text posts (Boledo only): client_payload {"source":"lovefm","text":...}.
+# Since Nov 25, 2026 the same job also takes Love FM text posts (Boledo only): client_payload {"source":"lovefm","text_b64":...}.
 # Paste this file into GitHub at .github/workflows/bbn-receive.yml
 name: Receive BBN result
 
