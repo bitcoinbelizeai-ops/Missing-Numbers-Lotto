@@ -1,5 +1,5 @@
 # Sends draw alerts right after a result is posted on the Admin page (added 24 Nov 2026).
-# Before this, a hand-posted result only went out with the next BBN (Make.com) or magayo run.
+# Before this, a hand-posted result only went out with the next BBN (Make.com) run.
 # Runs only for Admin saves of draws.json (commit message starts with "Admin:"). The results
 # bots save with the built-in GitHub key, which never starts this job, and send their own alerts.
 # scripts/send_alerts.py remembers every draw it has alerted, so a draw is never alerted twice

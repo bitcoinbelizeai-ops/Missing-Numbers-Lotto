@@ -11,7 +11,6 @@ good result for a draw the site doesn't have yet is ADDED to draws.json at once
 - the site has nothing for that draw yet: an existing result (or a "no draw" marker)
   is NEVER changed; a disagreement is only recorded (red warning on the Admin page);
 - manual test runs (Run workflow button) are never published.
-magayo (update_results.py) is the backup and double-checks BBN's results overnight.
 
 Input (from the GitHub job):
   PAYLOAD_JSON  the repository_dispatch client_payload:
@@ -267,7 +266,7 @@ def main():
                 save(DRAWS, site_data)
                 entry["published"] = True
             elif why == "the site already has this draw" and entry["status"] == "match" and draw.get("jackpot"):
-                # Same numbers as the site (e.g. magayo or Love FM got there first): only add BBN's next jackpot amount.
+                # Same numbers as the site (e.g. Love FM or the Admin page got there first): only add BBN's next jackpot amount.
                 have = next(d for d in site if d.get("id") == draw["id"])
                 if have.get("jackpot") != draw["jackpot"]:
                     have["jackpot"] = draw["jackpot"]

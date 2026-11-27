@@ -16,7 +16,7 @@ Boledo Missing Numbers (branded on-page as "Missing Numbers") is an independent 
 
 ## Positioning
 
-Results arrive within minutes of a draw (BBN Belize posts as the main source since Nov 20, 2026; magayo API as backup), and the site is built around the "missing numbers" question players actually ask, while staying honest that every draw is random.
+Results arrive within minutes of a draw (BBN Belize posts as the main source since Nov 20, 2026; Love FM as backup for Boledo), and the site is built around the "missing numbers" question players actually ask, while staying honest that every draw is random.
 
 ## Operating Context
 
