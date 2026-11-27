@@ -223,7 +223,70 @@
     ],
     "letter": null
    }
+  },
+  "boledo-2026-11-26": {
+   "tries": 1,
+   "checked": "2026-11-27T07:36-06:00",
+   "status": "match",
+   "magayo": {
+    "nums": [
+     "03"
+    ],
+    "letter": null
+   },
+   "bbn": {
+    "nums": [
+     "03"
+    ],
+    "letter": null
+   }
+  },
+  "fantasy5-2026-11-26": {
+   "tries": 1,
+   "checked": "2026-11-27T07:36-06:00",
+   "status": "match",
+   "magayo": {
+    "nums": [
+     "07",
+     "30",
+     "34",
+     "38",
+     "39"
+    ],
+    "letter": "K"
+   },
+   "bbn": {
+    "nums": [
+     "07",
+     "30",
+     "34",
+     "38",
+     "39"
+    ],
+    "letter": "K"
+   }
+  },
+  "pick3-2026-11-26": {
+   "tries": 1,
+   "checked": "2026-11-27T07:36-06:00",
+   "status": "match",
+   "magayo": {
+    "nums": [
+     "3",
+     "4",
+     "7"
+    ],
+    "letter": null
+   },
+   "bbn": {
+    "nums": [
+     "3",
+     "4",
+     "7"
+    ],
+    "letter": null
+   }
   }
  },
- "updated": "2026-11-26T07:40-06:00"
+ "updated": "2026-11-27T07:36-06:00"
 }
