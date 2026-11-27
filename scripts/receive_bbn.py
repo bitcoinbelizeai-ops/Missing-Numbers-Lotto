@@ -263,6 +263,7 @@ def main():
                 site.append(dict(draw, source=source, added=entry["received"]))
                 site.sort(key=lambda d: (d["date"], d["game"]))
                 site_data["updated"] = dt.datetime.now(BELIZE).date().isoformat()
+                site_data["source"] = "BBN Belize"  # file label; the old backup source was cancelled 27 Nov 2026
                 save(DRAWS, site_data)
                 entry["published"] = True
             elif why == "the site already has this draw" and entry["status"] == "match" and draw.get("jackpot"):
