@@ -539,7 +539,41 @@
     ],
     "letter": null
    }
+  },
+  {
+   "received": "2026-11-27T02:06:13Z",
+   "source": "bbn",
+   "post_id": "300184130690312_2113106429642145",
+   "post_time": "2026-11-27T02:05:38.000Z",
+   "game": "fantasy5",
+   "date": "2026-11-26",
+   "read_as": {
+    "nums": [
+     "34",
+     "38",
+     "39",
+     "07",
+     "30"
+    ],
+    "letter": "K"
+   },
+   "draw": {
+    "id": "fantasy5-2026-11-26",
+    "game": "fantasy5",
+    "date": "2026-11-26",
+    "nums": [
+     "07",
+     "30",
+     "34",
+     "38",
+     "39"
+    ],
+    "letter": "K",
+    "jackpot": 334000
+   },
+   "status": "only-bbn",
+   "published": true
   }
  ],
- "updated": "2026-11-26T03:14:11Z"
+ "updated": "2026-11-27T02:06:13Z"
 }
