@@ -625,7 +625,36 @@
    },
    "status": "only-bbn",
    "published": true
+  },
+  {
+   "received": "2026-11-27T03:14:13Z",
+   "source": "lovefm",
+   "post_id": "114262182112994_1786442983512537",
+   "post_time": "2026-11-27T03:11:04.000Z",
+   "game": "boledo",
+   "date": "2026-11-26",
+   "read_as": {
+    "nums": [
+     "03"
+    ],
+    "letter": null
+   },
+   "draw": {
+    "id": "boledo-2026-11-26",
+    "game": "boledo",
+    "date": "2026-11-26",
+    "nums": [
+     "03"
+    ]
+   },
+   "status": "match",
+   "site": {
+    "nums": [
+     "03"
+    ],
+    "letter": null
+   }
   }
  ],
- "updated": "2026-11-27T03:12:12Z"
+ "updated": "2026-11-27T03:14:13Z"
 }
