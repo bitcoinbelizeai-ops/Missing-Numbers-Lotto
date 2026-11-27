@@ -17,10 +17,14 @@ function addDays(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTC
 function dowOf(iso){return new Date(iso+'T12:00:00Z').getUTCDay()}
 function lastDraw(g){const n=bz(),s=SCHED[g];let iso=n.iso;for(let i=0;i<8;i++){if(s.days.includes(dowOf(iso))&&(iso<n.iso||n.min>=s.h*60+s.m))return iso;iso=addDays(iso,-1)}return n.iso}
 const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+// Open at the top (27 Nov 2026): the BBN box's background "Loading…" note used to pull the page
+// down on first open. Notes only scroll into view after the owner has tapped or typed.
+let acted=false;['pointerdown','keydown'].forEach(t=>addEventListener(t,()=>{acted=true},{capture:true,passive:true}));
+try{history.scrollRestoration='manual'}catch(e){}
 function msg(el,text,kind){el.textContent=text;el.className='msg '+(kind||'info');
   // design pass: make sure the message is seen (open its folded section, bring it into view)
   const fold=el.closest('details');if(fold)fold.open=true;
-  const r=el.getBoundingClientRect();if(text&&(r.top<0||r.bottom>innerHeight))el.scrollIntoView({block:'nearest',behavior:'smooth'})}
+  const r=el.getBoundingClientRect();if(acted&&text&&(r.top<0||r.bottom>innerHeight))el.scrollIntoView({block:'nearest',behavior:'smooth'})}
 const toks=()=>$('nums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
 const digits=t=>t.map(x=>x.replace(/\D/g,'')).filter(Boolean);
 function make(g,t){
@@ -531,7 +535,7 @@ $('holSave').onclick=async()=>{
 };
 
 async function start(){
-  token=getTok();
+  token=getTok();if(!acted)scrollTo(0,0);
   if(!token){$('attnBox').hidden=true;$('holBox').hidden=true;document.title=BASE_TITLE;$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=true;return}
   $('connect').hidden=true;$('holBox').hidden=$('attnBox').hidden=$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=false;loadBbn();setGame(game);
   $('keyExp').value=getExp();
