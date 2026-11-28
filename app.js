@@ -1269,8 +1269,8 @@ function fitRecent(last){
   const list=box.querySelector('.recent-list'),items=[...list.children];
   box.classList.remove('below');items.forEach(x=>x.classList.remove('off'));
   if(state.game==='pick3'){
-    const it=items[0],big=[...last.querySelectorAll(':scope>.tile')];
-    const used=big.reduce((s,t)=>s+t.offsetWidth+12,0),need=it.offsetWidth+parseFloat(getComputedStyle(box).paddingLeft)+2;
+    const it=items[0],big=[...last.querySelectorAll(':scope>.ldball,:scope>.tile')];  // big balls sit in tap buttons (.ldball) since Nov 2026
+    const gap=parseFloat(getComputedStyle(last).columnGap)||12,used=big.reduce((s,t)=>s+t.offsetWidth+gap,0),need=it.offsetWidth+parseFloat(getComputedStyle(box).paddingLeft)+2;
     box.classList.toggle('below',last.clientWidth-used<need);return;
   }
   const W=list.clientWidth,vw=document.documentElement.clientWidth,cap=vw<360?3:vw<600?4:6;let n=0;
