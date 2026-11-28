@@ -17,10 +17,14 @@ function addDays(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTC
 function dowOf(iso){return new Date(iso+'T12:00:00Z').getUTCDay()}
 function lastDraw(g){const n=bz(),s=SCHED[g];let iso=n.iso;for(let i=0;i<8;i++){if(s.days.includes(dowOf(iso))&&(iso<n.iso||n.min>=s.h*60+s.m))return iso;iso=addDays(iso,-1)}return n.iso}
 const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+// Open at the top (27 Nov 2026): the BBN box's background "Loading…" note used to pull the page
+// down on first open. Notes only scroll into view after the owner has tapped or typed.
+let acted=false;['pointerdown','keydown'].forEach(t=>addEventListener(t,()=>{acted=true},{capture:true,passive:true}));
+try{history.scrollRestoration='manual'}catch(e){}
 function msg(el,text,kind){el.textContent=text;el.className='msg '+(kind||'info');
   // design pass: make sure the message is seen (open its folded section, bring it into view)
   const fold=el.closest('details');if(fold)fold.open=true;
-  const r=el.getBoundingClientRect();if(text&&(r.top<0||r.bottom>innerHeight))el.scrollIntoView({block:'nearest',behavior:'smooth'})}
+  const r=el.getBoundingClientRect();if(acted&&text&&(r.top<0||r.bottom>innerHeight))el.scrollIntoView({block:'nearest',behavior:'smooth'})}
 const toks=()=>$('nums').value.trim().split(/[\s,;\-\/.]+/).filter(Boolean);
 const digits=t=>t.map(x=>x.replace(/\D/g,'')).filter(Boolean);
 function make(g,t){
@@ -222,7 +226,7 @@ $('undoRestore').onclick=async()=>{
 };
 
 /* ---------- BBN test results (read-only unless "Add to site") ---------- */
-// when each draw is finished (Belize time, UTC-6, no daylight saving): the same times the magayo job uses
+// when each draw is finished (Belize time, UTC-6, no daylight saving): the same times the server jobs use
 const DRAW_END={boledo:[21,0],pick3:[20,30],fantasy5:[20,0],lottery:[10,30]};
 function drawEnd(game,date){const t=DRAW_END[game];if(!t||!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return null;const [y,m,d]=date.split('-').map(Number);return Date.UTC(y,m-1,d,t[0]+6,t[1])}
 function minsAfter(game,date,iso){const e=drawEnd(game,date),a=Date.parse(iso||'');if(e==null||isNaN(a))return null;return Math.round((a-e)/60000)}
@@ -304,18 +308,14 @@ function timingLine(e){
   if(!e.draw)return'';const g=e.draw.game,dt=e.draw.date,parts=[];
   const b=minsAfter(g,dt,e.received);if(b!=null)parts.push(srcName(e)+' arrived '+dur(b)+' after the draw');
   const p=minsAfter(g,dt,e.post_time);if(p!=null&&p>=0)parts.push('posted on Facebook after '+dur(p));
-  if(e.siteNow&&e.siteNow.added){const m=minsAfter(g,dt,e.siteNow.added);if(m!=null)parts.push(({admin:'you posted it',bbn:'on the site',magayo:'magayo'}[e.siteNow.source]||'site')+' after '+dur(m))}
+  if(e.siteNow&&e.siteNow.added){const m=minsAfter(g,dt,e.siteNow.added);if(m!=null)parts.push(({admin:'you posted it',bbn:'on the site',lovefm:'on the site'}[e.siteNow.source]||'site')+' after '+dur(m))}
   return parts.length?'<small>'+esc(parts.join(' · '))+'</small>':'';
 }
 function speedLines(live,site){
   // BBN's speed = when BBN posted it on Facebook (Make picks it up within its 15-minute check); manual tests left out
   const bbnWhen=e=>{const p=minsAfter(e.draw.game,e.draw.date,e.post_time);return p!=null&&p>=0?p:minsAfter(e.draw.game,e.draw.date,e.received)};
   const bbn=live.filter(e=>e.draw&&e.source!=='lovefm'&&!String(e.post_id||'').startsWith('manual-test')).map(bbnWhen).filter(m=>m!=null&&m>=0&&m<72*60);
-  const mag=[...site.values()].filter(d=>d.source==='magayo'&&d.added&&!d.nodraw).map(d=>minsAfter(d.game,d.date,d.added)).filter(m=>m!=null&&m>=0&&m<72*60);
-  let first=0,both=0;live.forEach(e=>{if(!e.draw||!e.siteNow||e.siteNow.source!=='magayo'||!e.siteNow.added)return;if(e.source==='lovefm'||String(e.post_id||'').startsWith('manual-test'))return;const b=bbnWhen(e),g=minsAfter(e.draw.game,e.draw.date,e.siteNow.added);if(b==null||g==null)return;both++;if(b<g)first++});
-  return (bbn.length?'<li>BBN posts on average <b>'+dur(avg(bbn))+'</b> after the draw ('+bbn.length+' draws)</li>':'')+
-    (mag.length?'<li>magayo average: <b>'+dur(avg(mag))+'</b> after the draw ('+mag.length+')</li>':'<li>magayo timing: recorded from its next update</li>')+
-    (both?'<li>BBN was first <b>'+first+' of '+both+'</b> times</li>':'');
+  return bbn.length?'<li>BBN posts on average <b>'+dur(avg(bbn))+'</b> after the draw ('+bbn.length+' draws)</li>':'';
 }
 
 /* ---------- Needs attention (Nov 20, 2026) ----------
@@ -323,17 +323,12 @@ function speedLines(live,site){
    Waiting rule = the app's rule: a scheduled draw in the last 14 days, 30 min after its draw time, with nothing on the site. */
 const BASE_TITLE='Results Admin';
 const WAIT_DAYS=14,RESULT_LAG=30,LATE_MIN=60;         // red once a result is more than 1 hour late
-// magayo is the BACKUP since Nov 20, 2026 (BBN adds results automatically). Same rules as scripts/update_results.py:
-const MAGAYO_FIRST=45,MAGAYO_GAP=40,MAGAYO_EVENING=3,MAGAYO_MAX_TRIES=4,MAGAYO_MORNING_H=6,CALLS_LOW=10; // red at 10 calls left or fewer
 const BBN_USUAL_MIN=45; // BBN normally posts within minutes; before this, a waiting draw just says "waiting for BBN"
 const BBN_LATE_MIN=180,BBN_TEST_FROM='2026-11-17';     // "BBN sent nothing" after 3 hours, only for draws since the BBN feed began (Nov 17, 2026)
 const KEY_RED_DAYS=14,KEY_GOLD_DAYS=30;
 const OTHER_KEYS=[{name:'Make.com GitHub key "Make BBN test"',exp:'2027-02-15',fix:'make a new one and paste it into Make\'s HTTP module (Authorization header)'}];
-// when the magayo job runs (UTC minute, hour, weekdays): copied from .github/workflows/update-results.yml
-const EVE=[0,2,3,4,5,6],ALL=[0,1,2,3,4,5,6];
-const CRONS=[[45,2,EVE],[15,3,EVE],[45,3,EVE],[15,4,EVE],[45,4,EVE],[15,5,EVE],[45,5,EVE],[15,17,[0]],[15,18,[0]],[45,17,[1]],[23,20,[0,1]],[23,12,ALL]];
 const EXP_KEY='bz-admin-key-exp';
-let holidays=null,checks=null,usageFailed=false,usage=null,bbnData=null,runs=null,runsAt=0,loadErr='',attnTimer=0,headerExp='',sideErr='';
+let holidays=null,bbnData=null,runs=null,runsAt=0,loadErr='',attnTimer=0,headerExp='',sideErr='';
 
 const HOLIDAY_GAMES=['boledo','pick3','fantasy5'];
 const holidayOn=(g,iso)=>(HOLIDAY_GAMES.includes(g)&&holidays&&holidays.days&&holidays.days[iso])||null;
@@ -345,36 +340,22 @@ function bzClock(ms){const d=new Date(ms-6*3600e3),h=d.getUTCHours(),m=d.getUTCM
   const t=(h%12||12)+':'+pad(m,2)+(h<12?' am':' pm'),iso=d.toISOString().slice(0,10),today=bz().iso;
   return iso===today?t:iso===addDays(today,1)?'tomorrow '+t:fmtDay(iso)+' '+t}
 function ago(mins){if(mins<60)return mins+' min';const h=Math.floor(mins/60);return h<48?h+' h'+(mins%60?' '+pad(mins%60,2)+' m':''):Math.floor(h/24)+' days'}
-function nextCron(after){let best=null;const base=new Date(after);
-  for(let i=0;i<9;i++){const day=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth(),base.getUTCDate()+i));
-    CRONS.forEach(([mi,h,dows])=>{if(!dows.includes(day.getUTCDay()))return;const t=Date.UTC(day.getUTCFullYear(),day.getUTCMonth(),day.getUTCDate(),h,mi);if(t>after&&(best==null||t<best))best=t})}
-  return best}
 
 function waitingDraws(){
   if(!current)return[];const have=new Set((current.data.draws||[]).map(d=>d.id)),now=Date.now(),today=bz().iso,out=[];
   for(let i=0;i<WAIT_DAYS;i++){const iso=addDays(today,-i);
     Object.keys(SCHED).forEach(g=>{if(!SCHED[g].days.includes(dowOf(iso))||holidayOn(g,iso))return;const id=g+'-'+iso;if(have.has(id))return;
       const start=drawStart(g,iso),mins=Math.floor((now-start)/60000);if(mins<RESULT_LAG)return;
-      out.push(Object.assign({id,game:g,date:iso,mins},magayoInfo(g,iso,id,start,now),{bbn:bbnFor(id)}))})}
+      out.push(Object.assign({id,game:g,date:iso,mins},waitInfo(start,now,bbnFor(id)),{bbn:bbnFor(id)}))})}
   return out.sort((a,b)=>b.mins-a.mins)}
-function magayoInfo(g,iso,id,start,now){
-  const tries=(usage&&usage.tries&&usage.tries[id])||0,last=usage&&usage.last_try&&Date.parse(usage.last_try[id]||'');
-  const bbnTxt=now-start<BBN_USUAL_MIN*60000?'Waiting for BBN (usually posts within minutes). ':'BBN hasn\'t sent it. ';
-  if(!usage)return{tries,mag:bbnTxt+(usageFailed?'magayo status unknown (couldn\'t read data/api-usage.json)':'Checking magayo…')};
-  if(iso<addDays(bz().iso,-13))return{tries,mag:'Too old for the automatic job: add it by hand.',gaveUp:true};
-  if(tries>=MAGAYO_MAX_TRIES)return{tries,gaveUp:true,mag:bbnTxt+'magayo (backup) asked '+tries+' times with no answer. The job has stopped trying: add it by hand.'};
-  let ready=start+MAGAYO_FIRST*60000;
-  if(tries>=MAGAYO_EVENING)ready=start+MAGAYO_MORNING_H*3600e3;
-  else if(tries&&last)ready=last+MAGAYO_GAP*60000;
-  const next=nextCron(Math.max(now,ready)-1);
-  const nextTxt=next?'magayo (backup) next try about '+bzClock(next):'no automatic magayo try scheduled';
-  return{tries,mag:bbnTxt+(tries?'magayo asked '+tries+' time'+(tries===1?'':'s')+', not posted yet · ':'')+nextTxt};
-}
+// BBN (Make.com) and Love FM are the only automatic sources since 27 Nov 2026 (the old backup source was cancelled)
+function waitInfo(start,now,bbn){
+  return{mag:bbn?'Not on the site yet: add it below, or enter it by hand.':now-start<BBN_USUAL_MIN*60000?'Waiting for BBN (usually posts within minutes).':'BBN hasn\'t sent it. Enter it by hand, or check Make.com → "BBN results (main)" → History.'}}
 function bbnFor(id){if(!bbnData)return null;const r=(bbnData.results||[]).filter(e=>e.draw&&e.draw.id===id);return r.length?r[r.length-1]:null}
 const numTxt=d=>d.nums.join(' ')+(d.letter?' '+d.letter:'');
 
 function waitRow(w,compact){
-  const red=w.mins>=LATE_MIN||w.gaveUp,it=document.createElement('div');it.className='item '+(red?'red':'gold');
+  const red=w.mins>=LATE_MIN,it=document.createElement('div');it.className='item '+(red?'red':'gold');
   const late=w.mins>=LATE_MIN?'<b class="tag">'+ago(w.mins)+' late</b>':'<b class="tag">waiting '+ago(w.mins)+'</b>';
   it.innerHTML='<div class="stack"><span><b>'+LABEL[w.game]+'</b> · '+fmtDay(w.date)+' · '+late+'</span>'+
     (compact?'':'<span class="why">'+esc(w.mag)+'</span>')+
@@ -406,11 +387,8 @@ function otherWarnings(){
   // GitHub jobs: the newest run of each job
   if(runs){const seen={};runs.forEach(r=>{if(seen[r.name]||r.status!=='completed')return;seen[r.name]=1;
     if(['failure','timed_out','startup_failure'].includes(r.conclusion)){
-      const nice={'Update Belize results':'magayo backup job','pages build and deployment':'Website update (GitHub Pages)','Receive BBN result (test)':'BBN receiving job','Receive BBN result':'BBN receiving job (main source)','Send alerts after Admin save':'Alerts for results you post'}[r.name]||r.name;
+      const nice={'Mark public holidays':'Public holiday job','pages build and deployment':'Website update (GitHub Pages)','Receive BBN result (test)':'BBN receiving job','Receive BBN result':'BBN receiving job (main source)','Send alerts after Admin save':'Alerts for results you post'}[r.name]||r.name;
       out.push([true,nice+' failed',bzClock(Date.parse(r.created_at))+'. Open GitHub → Actions to see why'+(r.name==='pages build and deployment'?'. Until it works, phones don\'t get new results.':'.')])}})}
-  // magayo calls left this month
-  if(usage&&usage.limit){const left=usage.limit-(usage.calls||0);
-    if(left<=CALLS_LOW)out.push([true,'magayo calls running low: '+Math.max(0,left)+' of '+usage.limit+' left','The automatic job stops asking when it runs out. Calls reset on day '+(usage.reset_day||'?')+' of the month. Enter results by hand until then.'])}
   // keys
   const keys=[];const mine=headerExp||getExp();if(mine)keys.push({name:'This page\'s GitHub key ("Results admin")',exp:mine,fix:'make a new one on GitHub (same steps as when you connected), then Disconnect and connect with the new key'});
   keys.concat(OTHER_KEYS).forEach(k=>{const days=Math.round((Date.parse(k.exp+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5);
@@ -419,12 +397,6 @@ function otherWarnings(){
   if(holidays&&holidays.days){const y=Number(today.slice(0,4)),m=Number(today.slice(5,7));
     if(m>=10&&!Object.keys(holidays.days).some(k=>k.startsWith((y+1)+'-')))
       out.push([false,'Add the '+(y+1)+' public holidays','No '+(y+1)+' holidays are in the list yet. When the government publishes them (Belize Press Office, usually October or November), add them in the "Public holidays" box, or ask Claude to load them.'])}
-  // magayo's overnight double-check of BBN results (never changes the site)
-  if(checks&&checks.checks&&current){const site=new Map((current.data.draws||[]).map(d=>[d.id,d])),from=addDays(today,-WAIT_DAYS);
-    Object.entries(checks.checks).forEach(([id,c])=>{if(c.status!=='differs')return;const [g,...r]=id.split('-'),iso=r.join('-');if(iso<from)return;
-      const s=site.get(id);const m=c.magayo||{};const mt=(m.nums||[]).join(' ')+(m.letter?' '+m.letter:'');
-      if(s&&!s.nodraw&&mt&&numTxt(s)===mt)return; // already fixed on the site
-      out.push([true,'magayo disagrees with BBN: '+(LABEL[g]||g)+' '+fmtDay(iso),'The site shows '+(s&&!s.nodraw?numTxt(s):'?')+' (from BBN), magayo has '+mt+'. Check which is right; fix it with "Post a result" if the site is wrong.'])})}
   // BBN: disagreements, bad reads, and draws BBN never sent
   if(bbnData&&current){const site=new Map((current.data.draws||[]).map(d=>[d.id,d])),from=addDays(today,-WAIT_DAYS),recent=addDays(today,-3);
     (bbnData.results||[]).forEach(e=>{
@@ -442,7 +414,7 @@ function renderAttention(){
   const box=$('attnBox'),list=$('attnList');if(!box||box.hidden&&!token)return;
   const waits=waitingDraws(),warns=otherWarnings();
   list.innerHTML='';
-  const redCount=waits.filter(w=>w.mins>=LATE_MIN||w.gaveUp).length+warns.filter(w=>w[0]).length,total=waits.length+warns.length;
+  const redCount=waits.filter(w=>w.mins>=LATE_MIN).length+warns.filter(w=>w[0]).length,total=waits.length+warns.length;
   if(waits.length){const h=document.createElement('p');h.className='sub';h.textContent=waits.length+' result'+(waits.length===1?' is':'s are')+' waiting';list.appendChild(h);
     waits.forEach(w=>list.appendChild(waitRow(w,false)))}
   if(warns.length){const h=document.createElement('p');h.className='sub';h.textContent='Other warnings';list.appendChild(h);
@@ -466,9 +438,7 @@ async function refreshAttention(first){
   const errs=[];
   await Promise.all([
     first?null:load().then(()=>{loadErr=''}).catch(e=>{loadErr=e.message}),
-    ghJson('data/api-usage.json').then(j=>{usage=j;usageFailed=!j}).catch(e=>{usageFailed=true;errs.push(e.message)}),
     ghJson('data/bbn-results.json').then(j=>{bbnData=j}).catch(e=>errs.push(e.message)),
-    ghJson('data/magayo-checks.json').then(j=>{checks=j}).catch(e=>errs.push(e.message)),
     ghJson('data/holidays.json').then(j=>{holidays=j||{days:{}};showHolidays()}).catch(e=>errs.push(e.message)),
     Date.now()-runsAt>10*60000?loadRuns().catch(e=>errs.push(e.message)):null]);
   sideErr=errs.length?'Couldn\'t read: '+errs.join(', ')+'.':'';
@@ -531,7 +501,7 @@ $('holSave').onclick=async()=>{
 };
 
 async function start(){
-  token=getTok();
+  token=getTok();if(!acted)scrollTo(0,0);
   if(!token){$('attnBox').hidden=true;$('holBox').hidden=true;document.title=BASE_TITLE;$('connect').hidden=false;$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=true;return}
   $('connect').hidden=true;$('holBox').hidden=$('attnBox').hidden=$('entry').hidden=$('recentBox').hidden=$('allBox').hidden=$('bbnBox').hidden=$('backupBox').hidden=$('deviceBox').hidden=false;loadBbn();setGame(game);
   $('keyExp').value=getExp();

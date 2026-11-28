@@ -19,7 +19,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: results-write   # shared with the magayo job, so the two never write draws.json at the same time
+  group: results-write   # shared with the public holiday job, so the two never write draws.json at the same time
   cancel-in-progress: false
 
 jobs:

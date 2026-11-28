@@ -1,6 +1,6 @@
 """Send draw alerts (web push) for new results in draws.json. Added 22 Nov 2026.
 
-Runs at the end of both results jobs (BBN and magayo). It never changes draws.json and never
+Runs at the end of both results jobs (BBN and Admin saves). It never changes draws.json and never
 fails the job: any problem is printed and the job carries on.
 
 Rules (agreed with the owner, 22 Nov 2026):
