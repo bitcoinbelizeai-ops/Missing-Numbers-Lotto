@@ -1,0 +1,49 @@
+# Keeps the game pages (/boledo/, /fantasy-5/, /pick-3/, /sunday-jackpot/) up to date (added 28 Nov 2026).
+# Those pages carry the latest result in their HTML so Google shows today's numbers, and they are
+# built from index.html by scripts/build_game_pages.py.
+# Runs when draws.json changes from an Admin save, and when index.html or the build script changes
+# (so a home-page change can never leave the game pages behind).
+# The BBN/Love FM job rebuilds the pages itself; pushes made by the results bots never start this job,
+# so the two can't loop.
+name: Refresh game pages
+
+on:
+  push:
+    branches: [main]
+    paths: [draws.json, index.html, scripts/build_game_pages.py]
+  workflow_dispatch:      # adds a "Run workflow" button on the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: results-write   # shared with the other jobs that write to main, so they never collide
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get the site files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, pinned to its exact version
+
+      - name: Rebuild the game pages and save
+        run: |
+          git config user.name "results-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3; do
+            git fetch -q origin main && git reset -q --hard origin/main   # newest files (another job may have saved meanwhile)
+            python3 scripts/build_game_pages.py
+            git add boledo fantasy-5 pick-3 sunday-jackpot
+            if git diff --cached --quiet; then
+              echo "Game pages already up to date."
+              exit 0
+            fi
+            git commit -q -m "Game pages: latest results"
+            git push -q && exit 0
+            echo "Push refused, trying again with the newest files ($i)"
+            sleep 5
+          done
+          echo "Could not save after 3 tries."
+          exit 1
