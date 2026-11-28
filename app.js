@@ -687,12 +687,15 @@ function fmtLeft(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/8640
 /* the latest scheduled draw whose draw time has passed (Belize time) */
 function lastHeldDate(g){const n=bzNow();let iso=n.iso;for(let i=0;i<8;i++){if(isDrawDay(g,iso)&&(iso<n.iso||n.min>=atMin(g)))return iso;iso=isoAdd(iso,-1)}return null}
 const WAIT_MAX_H=36;let lastPoll=0;
+/* right half of the next-draw box: short day on top ("Today", "Tomorrow" or "Sat, Nov 28"), draw time under it */
+const cdDay=iso=>{const t=bzNow().iso;return iso===t?'Today':iso===isoAdd(t,1)?'Tomorrow':fmtDay(iso).replace(/,? \d{4}$/,'')};
+const cdWhen=(iso,g)=>'<span class="cd-day">'+esc(cdDay(iso))+'</span><b class="cd-at">'+fmtTime(g)+'</b>';
 function tickCountdown(){
   const el=$('cdTime');if(!el){clearInterval(cdTimer);return}
   const jpEl=document.querySelector('.jp');  // next draw just started: the jackpot is no longer known, take it down
   if(jpEl&&!jackpotDraw(drawsFor())){jpEl.remove();$('drawFine').textContent=$('drawFine').textContent.replace(/ Next jackpot as shown.*$/,'')}
   const g=state.game,chip=$('cdChip'),when=chip.parentNode.querySelector('.cd-when');
-  if(when&&when.dataset.next===undefined)when.dataset.next=when.textContent;
+  if(when&&when.dataset.next===undefined)when.dataset.next=when.innerHTML;
   // Hold the "next draw" timer until the result of the draw that just happened is posted
   const held=lastHeldDate(g),since=held?Date.now()-drawEpoch(g,held):Infinity;
   const posted=held&&drawsFor().some(d=>d.date===held);
@@ -700,14 +703,14 @@ function tickCountdown(){
   chip.classList.toggle('live',!!waiting);chip.classList.remove(waiting?'soon':'x');
   if(waiting){
     const mins=Math.floor(since/60000);
-    $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Waiting for results';
+    $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Results soon';
     el.textContent=mins<1?'just drawn':mins<60?mins+' min ago':Math.floor(mins/60)+' h '+pad(mins%60,2)+' m ago';
-    if(when)when.textContent=(held===bzNow().iso?'Today':fmtDay(held).replace(/,? \d{4}$/,''))+' · '+fmtTime(g)+' draw';
+    if(when)when.innerHTML=cdWhen(held,g);
     // the phone app re-checks for new results every minute for the first 45 minutes after the draw (when BBN posts), then every 3 minutes (Nov 21, 2026)
     if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>(since<45*60e3?60e3:180e3)){lastPoll=Date.now();window.bzRefresh()}
     return;
   }
-  if(when&&when.dataset.next!==undefined)when.textContent=when.dataset.next;
+  if(when&&when.dataset.next!==undefined&&when.innerHTML!==when.dataset.next)when.innerHTML=when.dataset.next;
   const left=drawEpoch(g,nextDrawDate(g))-Date.now();
   if(left<=0){render();return}
   $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
@@ -1031,8 +1034,9 @@ function render(){
     }
   }else{ldSig=ldNew;last.classList.remove('roll','hold');last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
-    $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
-      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>'+jackpotLine(all)+holidayLine(state.game);
+    // one box, two equal halves (owner, Nov 27, 2026): countdown on the left, the draw's day and time on the right
+    $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-main"><span class="cd-lbl"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span></span> <b id="cdTime">--:--:--</b></span>'+
+      ' <span class="cd-when">'+cdWhen(nx,state.game)+'</span></span>'+jackpotLine(all)+holidayLine(state.game);
     startCountdown();jackpotRoll();
     const jd=jackpotDraw(all);
     $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:'')+(jd?' Next jackpot as shown on BBN Belize\'s '+fmtDay(jd.date).replace(/,? \d{4}$/,'')+' result.':''); }
@@ -1217,7 +1221,7 @@ function startLastRoll(){
   last.classList.remove('hold','roll');void last.offsetWidth;last.classList.add('roll');
   if(reduceMotion())return;
   const rec=last.querySelector('.recent'),rs=rec?parseFloat(rec.style.getPropertyValue('--rs'))*1000:0;
-  [...last.querySelectorAll('.recent .tile')].filter(t=>!t.closest('.off')).forEach((t,r)=>SND.later(rs+r*220,()=>SND.rollIn(4+r,.55,.45)));
+  [...last.querySelectorAll('.recent .tile')].filter(t=>!t.closest('.off')).forEach((t,r)=>SND.later(rs+r*(state.game==='pick3'?120:220),()=>SND.rollIn(4+Math.min(r,5),.55,.45)));
   const ts=[...last.querySelectorAll('.tile,.letter')].filter(t=>!t.closest('.recent'));ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
     if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
     else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
@@ -1229,27 +1233,29 @@ function introFading(){introOn=false;if(ldPending)startLastRoll()}
 
 /* Last Draw: earlier results beside the winning ball.
    Boledo: up to 6 smaller balls, newest first, as many as fit ("Past 4 Draws"); tap one for its ball card.
-   Pick 3: the one draw before, as three mini balls ("Yesterday" only when it really was yesterday, counted from today; otherwise its weekday). */
+   Pick 3: up to 3 earlier draws, each as three mini balls with its day under them ("Past 3 Draws"), as many as fit. */
 const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WKD_LONG=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const isoDay=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
 function addRecent(last,all,nBig){
   const d=all[all.length-1],prev=all.slice(0,-1).filter(x=>!x.nodraw).reverse();
   if(!prev.length)return;
-  const box=document.createElement('div');box.className='recent';
+  const box=document.createElement('div');box.className=state.game==='pick3'?'recent p3':'recent';
   box.style.setProperty('--rs',(.2+(nBig-1)*.38+1.05).toFixed(2)+'s');   // start after the winning balls land
   const cap=document.createElement('p');cap.className='recent-cap';
   const list=document.createElement('div');list.className='recent-list';
   const dayLab=iso=>{const t=isoDay(iso);return WKD[t.getDay()]+' '+t.getDate()};
   if(state.game==='pick3'){
-    const p=prev[0];
-    // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
-    const it=document.createElement('div');it.className='recent-item';
-    it.setAttribute('role','group');it.setAttribute('aria-label','Draw before, '+fmtDay(p.date)+': '+p.nums.join(' '));
-    const chips=document.createElement('div');chips.className='p3chips';const pf=ldFactsFn(all);
-    p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);const key=r+':'+n;
-      chips.appendChild(tapBall(t,key,String(n),pf(key),'Digit '+n+', '+SPOTS[r]+' spot, draw before'))});
-    const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
-    it.append(chips,lab);list.appendChild(it);
+    // up to 3 earlier draws, newest first (owner, Nov 27, 2026); fitRecent shows as many as fit without cutting a ball
+    const pf=ldFactsFn(all);
+    prev.slice(0,3).forEach(p=>{
+      // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
+      const it=document.createElement('div');it.className='recent-item';
+      it.setAttribute('role','group');it.setAttribute('aria-label','Earlier draw, '+fmtDay(p.date)+': '+p.nums.join(' '));
+      const chips=document.createElement('div');chips.className='p3chips';
+      p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);const key=r+':'+n;
+        chips.appendChild(tapBall(t,key,String(n),pf(key),'Digit '+n+', '+SPOTS[r]+' spot, drawn '+fmtDay(p.date)))});
+      const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
+      it.append(chips,lab);list.appendChild(it)});
   }else{
     const G=GAMES.boledo,L=all.length;
     const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
@@ -1260,7 +1266,7 @@ function addRecent(last,all,nBig){
       const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
       it.append(t,lab);list.appendChild(it)});
   }
-  if(state.game!=='pick3')box.append(cap);box.append(list);last.appendChild(box);
+  box.append(cap,list);last.appendChild(box);
   fitRecent(last);
 }
 /* show only as many small balls as fit on the line; Pick 3 drops below the big balls if there's no room */
@@ -1269,9 +1275,12 @@ function fitRecent(last){
   const list=box.querySelector('.recent-list'),items=[...list.children];
   box.classList.remove('below');items.forEach(x=>x.classList.remove('off'));
   if(state.game==='pick3'){
-    const it=items[0],big=[...last.querySelectorAll(':scope>.ldball,:scope>.tile')];  // big balls sit in tap buttons (.ldball) since Nov 2026
-    const gap=parseFloat(getComputedStyle(last).columnGap)||12,used=big.reduce((s,t)=>s+t.offsetWidth+gap,0),need=it.offsetWidth+parseFloat(getComputedStyle(box).paddingLeft)+2;
-    box.classList.toggle('below',last.clientWidth-used<need);return;
+    // beside the big balls only when every earlier draw fits there; otherwise the row drops below and keeps as many whole draws as fit
+    const fitsAll=()=>{const W=list.clientWidth,l=items[items.length-1];return l.offsetLeft-list.offsetLeft+l.offsetWidth<=W+1};
+    if(!fitsAll())box.classList.add('below');
+    const W=list.clientWidth;let n=0;
+    items.forEach(x=>{if(n&&x.offsetLeft-list.offsetLeft+x.offsetWidth>W+1)x.classList.add('off');else{x.style.setProperty('--g',n);n++}});
+    box.querySelector('.recent-cap').textContent=n===1?'Draw Before':'Past '+n+' Draws';return;
   }
   const W=list.clientWidth,vw=document.documentElement.clientWidth,cap=vw<360?3:vw<600?4:6;let n=0;
   items.forEach(x=>{const fits=x.offsetLeft-list.offsetLeft+x.offsetWidth<=W+1;if(!fits||n>=cap)x.classList.add('off');else{x.style.setProperty('--r',n);n++}});
