@@ -1551,3 +1551,6 @@ html.easy .cd b{font-size:19px}
 .pick-title{white-space:nowrap}
 /* Share button while the picture is being drawn */
 .sharebtn.busy{opacity:.65;cursor:progress}
+/* pop-ups while the phone keyboard is up (app.js adds .kb): fit the visible part of the screen */
+.sheet.kb{top:var(--vvt,0px);bottom:auto;height:var(--vvh,100%)}
+.sheet.kb .sheet-in{max-height:calc(var(--vvh,100dvh) - 8px);padding-bottom:12px}

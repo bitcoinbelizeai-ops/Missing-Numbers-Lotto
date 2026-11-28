@@ -1960,3 +1960,24 @@ whenLibrary(async ok=>{
   if(session&&session.user){user=session.user;await afterSignIn(false)}else drawStrip();
 });
 })();
+
+/* ---------- pop-ups stay above the phone keyboard ----------
+   Phones lay the on-screen keyboard over the page without moving fixed pop-ups, so the lower
+   fields and the main button of a bottom sheet ended up behind the keys. While a sheet is open
+   and the keyboard is up, the sheet is fitted to the part of the screen still visible, and the
+   field being typed in (with its label) is scrolled into view inside the sheet. */
+(()=>{const vv=window.visualViewport;if(!vv)return;let raf=0;
+  function showFocus(){const el=document.activeElement,inn=el&&el.closest&&el.closest('.sheet-in');if(!inn||el.type==='checkbox')return;
+    const ib=inn.getBoundingClientRect(),b=(el.closest('.ac-row')||el).getBoundingClientRect(),pad=12;
+    let top=b.top;const lab=el.id&&inn.querySelector('label[for="'+el.id+'"]');
+    if(lab){const lt=lab.getBoundingClientRect().top;if(b.bottom-lt<ib.height-2*pad)top=lt}
+    if(b.bottom>ib.bottom-pad)inn.scrollTop+=Math.min(b.bottom-ib.bottom+pad,top-ib.top-pad);
+    else if(top<ib.top+pad)inn.scrollTop-=ib.top+pad-top}
+  function fit(){raf=0;const kb=vv.scale<1.05&&innerHeight-vv.height>120;
+    document.querySelectorAll('.sheet').forEach(s=>{const on=kb&&!s.hidden;s.classList.toggle('kb',on);
+      if(on){s.style.setProperty('--vvt',Math.max(0,vv.offsetTop)+'px');s.style.setProperty('--vvh',vv.height+'px')}});
+    if(kb)showFocus()}
+  const q=()=>{if(!raf)raf=requestAnimationFrame(fit)};
+  vv.addEventListener('resize',q);vv.addEventListener('scroll',q);
+  document.addEventListener('focusin',e=>{if(e.target.closest&&e.target.closest('.sheet-in')){q();setTimeout(q,350)}});
+})();
