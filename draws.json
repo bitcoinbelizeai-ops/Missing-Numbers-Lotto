@@ -1,6 +1,6 @@
 {
- "updated": "2026-11-26",
- "source": "magayo.com",
+ "updated": "2026-11-27",
+ "source": "BBN Belize",
  "draws": [
   {
    "id": "lottery-2026-03-15",
@@ -1848,6 +1848,18 @@
    ],
    "source": "bbn",
    "added": "2026-11-27T02:32:14Z"
+  },
+  {
+   "id": "pick3-2026-11-27",
+   "game": "pick3",
+   "date": "2026-11-27",
+   "nums": [
+    "2",
+    "9",
+    "1"
+   ],
+   "source": "bbn",
+   "added": "2026-11-28T02:32:19Z"
   }
  ]
 }
