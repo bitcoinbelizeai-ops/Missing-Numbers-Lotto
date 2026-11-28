@@ -109,9 +109,13 @@ ORDER.forEach(g=>{const b=document.createElement('button');b.type='button';b.dat
   b.innerHTML='<span class="tile gball" data-game="'+g+'"><span>'+BALL[g]+'</span></span><span class="gtxt"><b>'+esc(GAMES[g].label).replace(/ (\d)$/,'&nbsp;$1')+'</b><small id="gl-'+g+'">&nbsp;</small></span>';
   b.onclick=()=>{
     if(PAGE_GAME&&g!==PAGE_GAME){state.game=g;savePrefs();try{sessionStorage.setItem('bz-skip-intro','1')}catch(e){}location.href='/'+SLUG[g]+'/';return}
-    state.game=g;savePrefs();setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render();
-    // bring the Last Draw box to the middle of the screen so the new game's result is in view
-    requestAnimationFrame(()=>$('secLast').scrollIntoView({block:'center',behavior:reduceMotion()?'auto':'smooth'}))};seg.appendChild(b)});
+    state.game=g;savePrefs();
+    // show the tapped game as chosen straight away; the page is rebuilt right after that paint
+    seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.g===g));
+    afterPaint(()=>{if(state.game!==g)return;
+      setup();$('dDate').value=nextMissingDate(g);$('addMsg').textContent='';checkDate();render();
+      // bring the Last Draw box to the middle of the screen so the new game's result is in view
+      requestAnimationFrame(()=>$('secLast').scrollIntoView({block:'center',behavior:reduceMotion()?'auto':'smooth'}))})};seg.appendChild(b)});
 function setup(){
   const G=GAMES[state.game];
   document.body.dataset.game=state.game;
@@ -556,7 +560,9 @@ function runMixer(){
   };
   mixAnim=requestAnimationFrame(step);
 }
-$('mixBtn').addEventListener('click',()=>{SND.init();$('mixTitle').textContent='Mixer · '+GAMES[state.game].label;$('mixBox').hidden=false;runMixer();$('mixClose').focus({preventScroll:true})});
+$('mixBtn').addEventListener('click',()=>{SND.init();$('mixTitle').textContent='Mixer · '+GAMES[state.game].label;
+  $('mixStage').innerHTML='';$('mixOut').hidden=true;$('mixBtns').hidden=true;$('mixBox').hidden=false;$('mixClose').focus({preventScroll:true});
+  afterPaint(()=>{if(!$('mixBox').hidden)runMixer()})});
 $('mixAgain').addEventListener('click',()=>{SND.init();runMixer()});
 function closeMix(){cancelAnimationFrame(mixAnim);stopReels();SND.stopHiss();SND.close();$('mixBox').hidden=true;$('mixBtn').focus()}
 $('mixClose').addEventListener('click',closeMix);
@@ -666,7 +672,10 @@ async function makeShareImage(){
   return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
 }
 $('shareBtn').addEventListener('click',async()=>{
-  const blob=await makeShareImage();if(!blob){toast('Nothing to share yet');return}
+  const sb=$('shareBtn');if(sb.classList.contains('busy'))return;
+  sb.classList.add('busy');sb.setAttribute('aria-busy','true');
+  let blob;try{await new Promise(r=>afterPaint(r));blob=await makeShareImage()}finally{sb.classList.remove('busy');sb.removeAttribute('aria-busy')}
+  if(!blob){toast('Nothing to share yet');return}
   shareBlob=blob;const file=new File([blob],'belize-'+state.game+'-result.png',{type:'image/png'});
   const text=GAMES[state.game].label+' result · Belize Lottery Missing Numbers · https://missingnumbers.bz';
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}catch(e){if(e&&e.name==='AbortError')return}
@@ -812,6 +821,8 @@ function onScreen(el,need){if(!el||document.hidden)return false;const r=el.getBo
    Plays once per game or look-back change, when the section scrolls into view. */
 const WAVE_S=.8,TOP_STEP=.3;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* run heavy work just after the browser has painted the tap (faster-feeling taps, INP fix Nov 28, 2026) */
+const afterPaint=f=>requestAnimationFrame(()=>setTimeout(f,0));
 const dramaState={tiles:{key:null,played:false,seen:false},hot:{key:null,played:false,seen:false}};
 let dramaIO=null;
 /* Answer first: numbers always show their real value. They used to count up from 0,
@@ -985,7 +996,7 @@ function render(){
   const src=real(state.sample||state.draws);
   const newest=src.reduce((m,d)=>d.date>m?d.date:m,'');
   ORDER.forEach(g=>{const l=src.filter(d=>d.game===g).reduce((m,d)=>d.date>m?d.date:m,'');
-    const el=$('gl-'+g);if(el)el.textContent=l?'Last draw '+fmtDate(l).replace(/,? \d{4}$/,''):'No results yet'});
+    const el=$('gl-'+g);if(el)el.textContent=l?'Last draw '+fmtDate(l).replace(/,? \d{4}$/,''):state.loaded?'No results yet':' '});
   $('fresh').innerHTML=newest?'Latest results: <b>'+esc(fmtDate(newest))+'</b>':'';
   renderPageLatest(src);
 
@@ -1042,7 +1053,11 @@ function render(){
     $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:'')+(jd?' Next jackpot as shown on BBN Belize\'s '+fmtDay(jd.date).replace(/,? \d{4}$/,'')+' result.':''); }
 
   const say=$('say');say.removeAttribute('aria-busy');
-  if(!state.loaded&&!state.sample){say.innerHTML='<span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span>';say.setAttribute('aria-busy','true');
+  /* while loading, the panels keep the height the real results will need (app.css "Loading
+     placeholders keep their size"), so nothing below jumps when the results land (CLS fix, Nov 28, 2026) */
+  const skel=!state.loaded&&!state.sample;
+  ['secLast','secMiss'].forEach(id=>{const el=$(id);if(skel)el.dataset.sk=state.game;else delete el.dataset.sk});
+  if(skel){say.innerHTML='<span class="skl" style="width:85%"></span><span class="skl" style="width:55%"></span>';say.setAttribute('aria-busy','true');
     body.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(12)+'</div>';
     hot.innerHTML='<div class="sk-grid" aria-hidden="true">'+'<span class="sk"></span>'.repeat(4)+'</div>';
     ldSig='skel';last.innerHTML='<div class="sk-row" aria-hidden="true"><span class="sk big"></span><span class="sk big"></span><span class="sk big"></span></div>';}
@@ -1497,7 +1512,7 @@ const INTRO=(()=>{
   const markSeen=()=>{try{localStorage.setItem(DAYKEY,bzNow().iso)}catch(e){}};
   const statusText=()=>state.loaded?'Latest results ready':'Loading the latest results\u2026';
   let statT=0;
-  function skip(){if(!running)return;clearTimeout(timer);clearTimeout(fadeT);introFading();sp.classList.add('iz-skip');timer=setTimeout(end,220)}
+  function skip(){if(!running)return;clearTimeout(timer);clearTimeout(fadeT);sp.classList.add('iz-skip');afterPaint(introFading);timer=setTimeout(end,220)}
   function play(withSound){
     if(reduceMotion()||running)return false;
     const short=!withSound&&seenToday(),total=short?SHORT:FULL;markSeen();
@@ -1542,7 +1557,9 @@ toTop();addEventListener('load',toTop);addEventListener('pageshow',e=>{if(e.pers
   else if(hiddenAt&&Date.now()-hiddenAt>15*60*1000){toTop();hiddenAt=0}})})();
 
 setup();render();
-adapter.subscribe(rows=>{state.draws=rows;state.loaded=true;render()});
+/* first visit: nothing saved on this phone yet, so keep the loading placeholders until draws.json
+   answers (final) instead of flashing "No results yet" and then jumping when the results land */
+adapter.subscribe((rows,final)=>{state.draws=rows;if(rows.length||final!==false)state.loaded=true;render()});
 return{setCanWrite(v){state.canWrite=v;render()},toast,todayISO,getDraws:()=>state.draws};
 }
 
@@ -1567,7 +1584,7 @@ function allDraws(){
 }
 const push=()=>cb(allDraws());
 const adapter={
-  subscribe(f){cb=f;push()},
+  subscribe(f){cb=f;cb(allDraws(),false)},
   async save(list){list.forEach(d=>{mine[d.id]=d;delete gone[d.id]});
     if(!(store(MINE,mine)&&store(GONE,gone)))throw new Error("This phone's storage is full or turned off.");push()},
   async remove(id){delete mine[id];gone[id]=1;store(MINE,mine);store(GONE,gone);push()}
