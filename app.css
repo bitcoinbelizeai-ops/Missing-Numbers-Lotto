@@ -1436,3 +1436,32 @@ footer{font-size:14px}
 .gamelinks a[aria-current="page"]{color:var(--cream);text-decoration:none;cursor:default}
 html.easy .game-hd h1{font-size:26px}
 html.easy .game-hd p,html.easy .gamelinks a{font-size:17px}
+
+/* ---------- Glass bottom menu (owner, Nov 27, 2026) ----------
+   Floating frosted pill like modern phone apps: inset from the edges, page shows through, blurred.
+   Labels keep a soft shadow so they stay readable over bright balls. Solid fallback where blur isn't
+   supported or the phone asks for less transparency. Hide-on-scroll (app.js) unchanged. */
+@media (max-width:700px){
+  :root{--tb-tint:rgba(4,20,52,.5);--tb-gap:10px}
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .tabbar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));
+    bottom:calc(var(--tb-gap) + env(safe-area-inset-bottom,0px));
+    padding:4px 6px;gap:2px;border-radius:28px;
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02) 55%),var(--tb-tint);
+    -webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%);
+    border:1px solid rgba(255,255,255,.18);border-top-color:rgba(255,255,255,.30);
+    box-shadow:0 10px 28px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.10)}
+  .tabbar.away{transform:translateY(calc(100% + var(--tb-gap) + 16px + env(safe-area-inset-bottom,0px)))}
+  .tabbar button{min-height:52px;border-radius:22px;color:#eef3fc;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+  .tabbar svg{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
+  .tabbar button.on{color:#ffd451}
+  .tabbar button.on svg{background:rgba(255,212,81,.22)}
+  .tabbar button:focus-visible{outline-offset:-3px;border-radius:22px}
+  .eyehint{bottom:calc(92px + env(safe-area-inset-bottom,0px))}  /* clear of the floating bar */
+}
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  @media (max-width:700px){.tabbar{background:linear-gradient(180deg,#0a2253,#041232)}}
+}
+@media (max-width:700px) and (prefers-reduced-transparency:reduce){
+  .tabbar{background:linear-gradient(180deg,#0a2253,#041232);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
