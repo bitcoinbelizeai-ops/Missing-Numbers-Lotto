@@ -1465,3 +1465,11 @@ html.easy .game-hd p,html.easy .gamelinks a{font-size:17px}
 @media (max-width:700px) and (prefers-reduced-transparency:reduce){
   .tabbar{background:linear-gradient(180deg,#0a2253,#041232);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* ---------- Small phones (320-359px): Sunday Jackpot prize rows fit on screen (Nov 27, 2026) ----------
+   4 balls + the "1st prize" label were ~43px wider than a 320px screen. Narrower label, smaller balls. */
+@media (max-width:359px){
+  .lastdraw .prizerow{gap:6px}
+  .lastdraw .prizelab,html.easy .lastdraw .prizelab{flex-basis:60px;font-size:12.5px;letter-spacing:.05em}
+  .lastdraw .prizerow .tile{width:40px}
+}
