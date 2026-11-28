@@ -105,7 +105,7 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 .recent{flex:1 1 0;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:6px;padding-left:14px;border-left:1px dashed rgba(255,255,255,.3)}
 .recent.below{flex-basis:100%;padding:12px 0 0;border-left:0;border-top:1px dashed rgba(255,255,255,.3)}
 .recent-cap{margin:0;font:700 12px var(--f-label);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;text-shadow:0 1px 0 rgba(0,0,0,.85)}
-.recent-list{display:flex;align-items:flex-start;gap:10px;overflow:hidden;padding:3px 4px 6px;margin:-3px -4px -6px}
+.recent-list{display:flex;align-items:flex-start;gap:10px;overflow:hidden;padding:5px 5px 6px;margin:-5px -5px -6px}   /* room for the Lucky Number star */
 .recent-item{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px}
 .recent-item.bwrap{padding:0 1px}
 .recent-item.off{display:none}
@@ -1090,6 +1090,14 @@ html.easy .mine-tag b{font-size:17px}
 html.easy .mine-tag small{font-size:13.5px}
 html.easy .mine-x{font-size:18px}
 html.easy .bwrap.is-mine .tile::after{font-size:15px}
+/* Lucky Number star scales with the ball (owner, Nov 27, 2026): full 22px badge on big balls, down to 12px on the
+   small Pick 3 past-draw balls, so it never covers the number or gets cut off at the row's edge */
+.bwrap.is-mine .tile{container-type:inline-size}
+.bwrap.is-mine .tile::after{width:clamp(12px,40%,22px);height:auto;aspect-ratio:1;top:-9%;right:-9%;font-size:clamp(8px,23cqi,13px)}
+html.easy .bwrap.is-mine .tile::after{font-size:clamp(9px,26cqi,15px)}
+/* same for the star on the Lucky Number picker balls, which shrink on small phones */
+.pickball{container-type:inline-size}
+.pickstar{width:clamp(14px,34%,20px);height:auto;aspect-ratio:1;font-size:clamp(9px,20cqi,12px)}
 html.easy .starbtn{font-size:15.5px}
 html.easy .topout-h{font-size:15px}
 html.easy .topout-list .rk{font-size:15.5px}

@@ -135,6 +135,8 @@ details.fold .fold-body{display:flex;flex-direction:column;gap:12px;margin-top:1
 details.fold-help>summary{list-style:none;cursor:pointer;color:var(--yellow);font-size:15.5px;text-decoration:underline;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center}
 details.fold-help p{margin-top:8px}
 @media (prefers-reduced-motion:reduce){details.fold>summary::after{transition:none}}
+#allFold h2 .count{font:700 14px Barlow,sans-serif;letter-spacing:0;text-transform:none;color:var(--gold);border:1px solid rgba(233,196,106,.62);border-radius:999px;padding:1px 9px;vertical-align:2px}
+#allFold h2 .count:empty{display:none}
 @media (max-width:700px){.list.all{max-height:none;overflow:visible}}
 @media (max-width:420px){.hol-form{grid-template-columns:1fr}}
 
@@ -248,9 +250,13 @@ h3.week:first-child{margin-top:0}
   </section>
 
   <section class="panel" id="allBox" hidden>
-    <h2>All past results · <span id="allGame">Boledo</span></h2>
-    <p class="help">Every result on the site for the game picked above, newest first. Remove takes it off the site for everyone.</p>
+    <details class="fold" id="allFold"><summary><h2>All past results · <span id="allGame">Boledo</span> <span class="count" id="allCount"></span></h2></summary>
+    <div class="fold-body">
+    <p class="help">Every result on the site for the game picked above, newest first, 10 at a time. Remove takes it off the site for everyone.</p>
     <div class="list all" id="all"></div>
+    <div class="row"><button class="btn ghost" id="allMore" hidden>Show 10 more</button><button class="btn ghost" id="allLess" hidden>Show fewer</button></div>
+    <p class="help" id="allShowing" role="status"></p>
+    </div></details>
   </section>
 
   <section class="panel" id="backupBox" hidden>
@@ -286,7 +292,7 @@ h3.week:first-child{margin-top:0}
   </section>
 </div>
 
-<script src="admin.js?v=7"></script>
+<script src="admin.js?v=8"></script>
 
 </body>
 </html>

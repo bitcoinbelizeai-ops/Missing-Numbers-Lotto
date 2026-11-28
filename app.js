@@ -1261,7 +1261,7 @@ function addRecent(last,all,nBig){
     const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
     prev.slice(0,6).forEach(p=>{const k=G.keys(p)[0];
       const it=document.createElement('button');it.type='button';it.className='bwrap recent-item';
-      it.dataset.key=k;it.dataset.detail=facts(k,'<b>'+k+'</b> · ');
+      it.dataset.key=k;if(isMine(k))it.classList.add('is-mine');it.dataset.detail=facts(k,'<b>'+k+'</b> · ');
       it.setAttribute('aria-label',k+', drawn '+fmtDay(p.date)+'. Tap for details.');
       const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
       it.append(t,lab);list.appendChild(it)});
