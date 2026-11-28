@@ -118,6 +118,7 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 /* Pick 3 shows up to 3 earlier draws (Nov 27, 2026): balls a touch smaller and packed tight inside a draw,
    with clearly wider space between draws so each set of three reads as one result */
 .recent.p3 .recent-list{gap:12px}
+.recent.p3.below .recent-list{justify-content:space-between;max-width:400px}   /* equal space between the past draws (owner, Nov 27, 2026); capped so they stay together on wide screens */
 .recent.p3 .p3chips{gap:2px}
 .recent.p3 .p3chips .tile{width:28px}
 body[data-enter] .lastdraw.roll .recent .tile,.lastdraw.roll .recent .tile{animation:rollinr 1s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s)}
@@ -1480,3 +1481,19 @@ html.easy .game-hd p,html.easy .gamelinks a{font-size:17px}
   .lastdraw .prizelab,html.easy .lastdraw .prizelab{flex-basis:60px;font-size:12.5px;letter-spacing:.05em}
   .lastdraw .prizerow .tile{width:40px}
 }
+
+/* ---------- Next-draw box (27 Nov 2026, impeccable + ui-ux-pro-max) ----------
+   Owner: the day/time line under the countdown looked out of place, and on desktop it was not centred.
+   The countdown becomes one full-width box split into two equal halves: "Next draw in" + time on the left,
+   the draw's day + time on the right, both centred, so it lines up edge to edge with the jackpot ticket and the
+   two buttons below, on every game and screen size. */
+.drawinfo #drawNext,.hub .drawinfo #drawNext{flex-basis:100%;width:100%;flex-direction:column;align-items:stretch;gap:10px}
+.cd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;gap:0;width:100%;box-sizing:border-box;padding:9px 0;border-radius:16px}
+.cd-main,.cd-when{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;padding:0 8px;text-align:center}
+.cd-when{border-left:1px solid rgba(254,194,7,.4);color:inherit;font-size:inherit}
+.cd-lbl,.cd-day{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;font:700 12.5px/1.15 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--cream)}
+.cd-dot{flex:none}
+.cd b{font-size:19px;white-space:nowrap}
+.cd.live b{font-size:15px}
+html.easy .cd-lbl,html.easy .cd-day{font-size:14px}
+html.easy .cd b{font-size:19px}

@@ -687,12 +687,15 @@ function fmtLeft(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/8640
 /* the latest scheduled draw whose draw time has passed (Belize time) */
 function lastHeldDate(g){const n=bzNow();let iso=n.iso;for(let i=0;i<8;i++){if(isDrawDay(g,iso)&&(iso<n.iso||n.min>=atMin(g)))return iso;iso=isoAdd(iso,-1)}return null}
 const WAIT_MAX_H=36;let lastPoll=0;
+/* right half of the next-draw box: short day on top ("Today", "Tomorrow" or "Sat, Nov 28"), draw time under it */
+const cdDay=iso=>{const t=bzNow().iso;return iso===t?'Today':iso===isoAdd(t,1)?'Tomorrow':fmtDay(iso).replace(/,? \d{4}$/,'')};
+const cdWhen=(iso,g)=>'<span class="cd-day">'+esc(cdDay(iso))+'</span><b class="cd-at">'+fmtTime(g)+'</b>';
 function tickCountdown(){
   const el=$('cdTime');if(!el){clearInterval(cdTimer);return}
   const jpEl=document.querySelector('.jp');  // next draw just started: the jackpot is no longer known, take it down
   if(jpEl&&!jackpotDraw(drawsFor())){jpEl.remove();$('drawFine').textContent=$('drawFine').textContent.replace(/ Next jackpot as shown.*$/,'')}
   const g=state.game,chip=$('cdChip'),when=chip.parentNode.querySelector('.cd-when');
-  if(when&&when.dataset.next===undefined)when.dataset.next=when.textContent;
+  if(when&&when.dataset.next===undefined)when.dataset.next=when.innerHTML;
   // Hold the "next draw" timer until the result of the draw that just happened is posted
   const held=lastHeldDate(g),since=held?Date.now()-drawEpoch(g,held):Infinity;
   const posted=held&&drawsFor().some(d=>d.date===held);
@@ -700,14 +703,14 @@ function tickCountdown(){
   chip.classList.toggle('live',!!waiting);chip.classList.remove(waiting?'soon':'x');
   if(waiting){
     const mins=Math.floor(since/60000);
-    $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Waiting for results';
+    $('cdLbl').textContent=mins<(DRAW_LEN[g]||15)?'Drawing now':'Results soon';
     el.textContent=mins<1?'just drawn':mins<60?mins+' min ago':Math.floor(mins/60)+' h '+pad(mins%60,2)+' m ago';
-    if(when)when.textContent=(held===bzNow().iso?'Today':fmtDay(held).replace(/,? \d{4}$/,''))+' · '+fmtTime(g)+' draw';
+    if(when)when.innerHTML=cdWhen(held,g);
     // the phone app re-checks for new results every minute for the first 45 minutes after the draw (when BBN posts), then every 3 minutes (Nov 21, 2026)
     if(typeof window.bzRefresh==='function'&&Date.now()-lastPoll>(since<45*60e3?60e3:180e3)){lastPoll=Date.now();window.bzRefresh()}
     return;
   }
-  if(when&&when.dataset.next!==undefined)when.textContent=when.dataset.next;
+  if(when&&when.dataset.next!==undefined&&when.innerHTML!==when.dataset.next)when.innerHTML=when.dataset.next;
   const left=drawEpoch(g,nextDrawDate(g))-Date.now();
   if(left<=0){render();return}
   $('cdLbl').textContent='Next draw in';el.textContent=fmtLeft(left);
@@ -1031,8 +1034,9 @@ function render(){
     }
   }else{ldSig=ldNew;last.classList.remove('roll','hold');last.innerHTML='<p class="empty">No '+esc(G.label)+' results yet.</p>';$('shareBtn').hidden=true}
   { const nx=nextDrawDate(state.game),S=SCHEDULE[state.game],tonight=nx===bzNow().iso;
-    $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span> <b id="cdTime">--:--:--</b></span>'+
-      '<span class="cd-when">'+(tonight?'Today':esc(fmtDay(nx).replace(/,? \d{4}$/,'')))+' · '+fmtTime(state.game)+'</span>'+jackpotLine(all)+holidayLine(state.game);
+    // one box, two equal halves (owner, Nov 27, 2026): countdown on the left, the draw's day and time on the right
+    $('drawNext').innerHTML='<span class="cd" id="cdChip"><span class="cd-main"><span class="cd-lbl"><span class="cd-dot" aria-hidden="true"></span><span id="cdLbl">Next draw in</span></span> <b id="cdTime">--:--:--</b></span>'+
+      ' <span class="cd-when">'+cdWhen(nx,state.game)+'</span></span>'+jackpotLine(all)+holidayLine(state.game);
     startCountdown();jackpotRoll();
     const jd=jackpotDraw(all);
     $('drawFine').textContent=G.label+' is drawn '+S.text+', Belize time.'+(S.extra?' '+S.extra:'')+(jd?' Next jackpot as shown on BBN Belize\'s '+fmtDay(jd.date).replace(/,? \d{4}$/,'')+' result.':''); }
