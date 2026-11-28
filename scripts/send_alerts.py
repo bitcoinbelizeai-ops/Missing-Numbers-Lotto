@@ -350,6 +350,29 @@ def check_secrets(token, private_key):
     return ok
 
 
+def tidy_sub(s):
+    """Clean one sign-up row before use (added 27 Nov 2026, security review).
+    Anyone can save a sign-up with the public key, so a row may hold odd data on purpose.
+    Returns a safe copy, or None to skip the row. One bad row must never stop alerts for everyone."""
+    if not isinstance(s, dict) or not all(isinstance(s.get(k), str) and s.get(k) for k in ("endpoint", "p256dh", "auth")):
+        return None
+    games = [g for g in (s.get("games") or []) if isinstance(g, str) and g in LABELS] if isinstance(s.get("games"), list) else []
+    if not games:
+        return None
+    raw = s.get("mine") if isinstance(s.get("mine"), dict) else {}
+    mine = {}
+    for g in games:
+        v = raw.get(g)
+        if isinstance(v, list):
+            nums = [str(x) for x in v if isinstance(x, (str, int)) and not isinstance(x, bool) and re.fullmatch(r"\d{1,4}|[0-2]:\d", str(x))][:12]  # Pick 3 = "spot:digit"
+            if nums:
+                mine[g] = nums
+    unopened = s.get("unopened")
+    return {"endpoint": s["endpoint"], "p256dh": s["p256dh"], "auth": s["auth"], "games": games, "mine": mine,
+            "mode": "weekly" if s.get("mode") == "weekly" else "each",
+            "unopened": unopened if isinstance(unopened, int) and not isinstance(unopened, bool) else 0}
+
+
 def main():
     dry = "--dry-run" in sys.argv
     now = dt.datetime.now(BELIZE)
@@ -377,6 +400,10 @@ def main():
     else:
         due = rpc("push_due", {"p_token": token, "p_ids": ids})
         subs, done = due["subs"], set(due["done"])
+    clean_subs = [t for t in (tidy_sub(x) for x in (subs or [])) if t]
+    if len(clean_subs) != len(subs or []):
+        print(f"Draw alerts: skipped {len(subs or []) - len(clean_subs)} sign-up(s) with unreadable data.")
+    subs = clean_subs
 
     new = [d for d in recent if d["id"] not in done]
     stale = [d for d in new if (now - draw_time(d)).total_seconds() > MAX_AGE_H * 3600]
@@ -399,7 +426,11 @@ def main():
                     continue
                 payload, is_pause = paused_message(), True
             else:
-                payload, is_pause = message(fresh, histories, s), False
+                try:
+                    payload, is_pause = message(fresh, histories, s), False
+                except Exception as e:                      # one odd row never stops the rest
+                    print(f"  skipped one phone: {type(e).__name__}")
+                    continue
             if not payload:
                 continue
             print(("[dry run] " if dry else "") + f"-> {payload['title']} | {payload['body']}")
@@ -413,7 +444,11 @@ def main():
         for s in subs:
             if s.get("mode") != "weekly":
                 continue
-            payload = weekly_message(histories, s)
+            try:
+                payload = weekly_message(histories, s)
+            except Exception as e:                          # one odd row never stops the rest
+                print(f"  skipped one phone: {type(e).__name__}")
+                continue
             if not payload:
                 continue
             print(("[dry run] " if dry else "") + f"-> {payload['title']} | {payload['body']}")
