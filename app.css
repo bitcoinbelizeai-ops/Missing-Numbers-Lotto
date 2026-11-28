@@ -1505,3 +1505,49 @@ html.easy .game-hd p,html.easy .gamelinks a{font-size:17px}
 .cd.live b{font-size:15px}
 html.easy .cd-lbl,html.easy .cd-day{font-size:14px}
 html.easy .cd b{font-size:19px}
+
+/* ---------- Loading placeholders keep their size (Nov 28, 2026) ----------
+   First visit only: the grey placeholders show until draws.json answers. Each one reserves the
+   height the real content takes for that game (measured at 320/375/412/1200 px), so the
+   panels below don't jump when the results land. data-sk is removed as soon as results render. */
+.fresh:empty::before{content:"0"}
+[data-sk] .lastdraw{min-height:114px;align-content:center}
+[data-sk="pick3"] .lastdraw{min-height:181px}
+[data-sk="fantasy5"] .lastdraw{min-height:144px}
+[data-sk="lottery"] .lastdraw{min-height:245px}
+[data-sk="fantasy5"] .drawinfo{min-height:189px}
+[data-sk] .say{min-height:96px}
+#secLast[data-sk] .panel-head{min-height:71px}
+[data-sk] .notebar{min-height:21px}
+[data-sk="lottery"] .notebar{min-height:61px}
+[data-sk="lottery"] .say{min-height:120px}
+[data-sk] #tiles{height:276px;overflow:hidden}
+[data-sk="pick3"] #tiles{height:559px}
+@media (max-width:399px){
+  [data-sk="pick3"] #tiles{height:671px}
+}
+@media (max-width:359px){
+  [data-sk] .say{min-height:120px}
+  [data-sk="lottery"] .say{min-height:144px}
+  [data-sk="fantasy5"] .lastdraw{min-height:156px}
+}
+@media (min-width:360px) and (max-width:399px){
+  [data-sk="fantasy5"] .lastdraw{min-height:156px}
+}
+@media (min-width:400px) and (max-width:639px){
+  [data-sk="fantasy5"] #tiles{height:322px}
+}
+@media (min-width:640px){
+  [data-sk] .say{min-height:72px}
+  [data-sk="lottery"] .say{min-height:72px}
+  [data-sk="lottery"] .notebar{min-height:34px}
+  [data-sk="fantasy5"] .lastdraw{min-height:88px}
+  [data-sk="fantasy5"] .drawinfo{min-height:194px}
+  [data-sk="pick3"] #tiles{height:448px}
+  [data-sk="fantasy5"] #tiles{height:210px}
+}
+/* "Choose Your Game" wrapped onto 2 lines in the stand-in font on 320px phones, then jumped back to
+   1 line when the real font arrived (22px shift). Keep it on one line; the side rules shrink instead. */
+.pick-title{white-space:nowrap}
+/* Share button while the picture is being drawn */
+.sharebtn.busy{opacity:.65;cursor:progress}
