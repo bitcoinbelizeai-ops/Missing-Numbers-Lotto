@@ -41,7 +41,9 @@ jobs:
           src=$(python3 -c 'import json,os; p=json.loads(os.environ.get("PAYLOAD_JSON") or "null") or {}; print("Love FM" if str(p.get("source","")).strip().lower()=="lovefm" else "BBN")' 2>/dev/null || echo BBN)
           for i in 1 2 3; do
             python3 scripts/receive_bbn.py
-            git add data/bbn-results.json draws.json 2>/dev/null || true
+            # game pages (/boledo/ etc.) carry the latest result in their HTML for Google: rebuild them too
+            python3 scripts/build_game_pages.py || echo "Game pages not rebuilt (the result is still saved)."
+            git add data/bbn-results.json draws.json boledo fantasy-5 pick-3 sunday-jackpot 2>/dev/null || true
             if git diff --cached --quiet; then
               echo "Nothing new to save."
               exit 0
