@@ -1217,7 +1217,7 @@ function startLastRoll(){
   last.classList.remove('hold','roll');void last.offsetWidth;last.classList.add('roll');
   if(reduceMotion())return;
   const rec=last.querySelector('.recent'),rs=rec?parseFloat(rec.style.getPropertyValue('--rs'))*1000:0;
-  [...last.querySelectorAll('.recent .tile')].filter(t=>!t.closest('.off')).forEach((t,r)=>SND.later(rs+r*220,()=>SND.rollIn(4+r,.55,.45)));
+  [...last.querySelectorAll('.recent .tile')].filter(t=>!t.closest('.off')).forEach((t,r)=>SND.later(rs+r*(state.game==='pick3'?120:220),()=>SND.rollIn(4+Math.min(r,5),.55,.45)));
   const ts=[...last.querySelectorAll('.tile,.letter')].filter(t=>!t.closest('.recent'));ts.forEach((t,j)=>{const i=+(t.style.getPropertyValue('--i')||j),pr=!!t.closest('.prizerow');const st=200+i*(pr?200:380),D=pr?1250:1500,kind=document.body.dataset.enter;
     if(kind==='roll')SND.later(st,()=>SND.rollIn(j,D*.6/1000));
     else if(kind==='flip')SND.later(st,()=>SND.spinIn(j,D*.62/1000));
@@ -1229,27 +1229,29 @@ function introFading(){introOn=false;if(ldPending)startLastRoll()}
 
 /* Last Draw: earlier results beside the winning ball.
    Boledo: up to 6 smaller balls, newest first, as many as fit ("Past 4 Draws"); tap one for its ball card.
-   Pick 3: the one draw before, as three mini balls ("Yesterday" only when it really was yesterday, counted from today; otherwise its weekday). */
+   Pick 3: up to 3 earlier draws, each as three mini balls with its day under them ("Past 3 Draws"), as many as fit. */
 const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WKD_LONG=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const isoDay=iso=>{const [y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d)};
 function addRecent(last,all,nBig){
   const d=all[all.length-1],prev=all.slice(0,-1).filter(x=>!x.nodraw).reverse();
   if(!prev.length)return;
-  const box=document.createElement('div');box.className='recent';
+  const box=document.createElement('div');box.className=state.game==='pick3'?'recent p3':'recent';
   box.style.setProperty('--rs',(.2+(nBig-1)*.38+1.05).toFixed(2)+'s');   // start after the winning balls land
   const cap=document.createElement('p');cap.className='recent-cap';
   const list=document.createElement('div');list.className='recent-list';
   const dayLab=iso=>{const t=isoDay(iso);return WKD[t.getDay()]+' '+t.getDate()};
   if(state.game==='pick3'){
-    const p=prev[0];
-    // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
-    const it=document.createElement('div');it.className='recent-item';
-    it.setAttribute('role','group');it.setAttribute('aria-label','Draw before, '+fmtDay(p.date)+': '+p.nums.join(' '));
-    const chips=document.createElement('div');chips.className='p3chips';const pf=ldFactsFn(all);
-    p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);const key=r+':'+n;
-      chips.appendChild(tapBall(t,key,String(n),pf(key),'Digit '+n+', '+SPOTS[r]+' spot, draw before'))});
-    const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
-    it.append(chips,lab);list.appendChild(it);
+    // up to 3 earlier draws, newest first (owner, Nov 27, 2026); fitRecent shows as many as fit without cutting a ball
+    const pf=ldFactsFn(all);
+    prev.slice(0,3).forEach(p=>{
+      // no day name above the balls (owner, Nov 21, 2026): the date under the balls is enough
+      const it=document.createElement('div');it.className='recent-item';
+      it.setAttribute('role','group');it.setAttribute('aria-label','Earlier draw, '+fmtDay(p.date)+': '+p.nums.join(' '));
+      const chips=document.createElement('div');chips.className='p3chips';
+      p.nums.forEach((n,r)=>{const t=ballEl(String(n));t.style.setProperty('--r',r);const key=r+':'+n;
+        chips.appendChild(tapBall(t,key,String(n),pf(key),'Digit '+n+', '+SPOTS[r]+' spot, drawn '+fmtDay(p.date)))});
+      const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
+      it.append(chips,lab);list.appendChild(it)});
   }else{
     const G=GAMES.boledo,L=all.length;
     const facts=factsFor(all.map(G.keys),all.map(x=>x.date),L,null,null,'all '+L+' draws we have');
@@ -1260,7 +1262,7 @@ function addRecent(last,all,nBig){
       const t=ballEl(k);const lab=document.createElement('span');lab.className='recent-day';lab.textContent=dayLab(p.date);
       it.append(t,lab);list.appendChild(it)});
   }
-  if(state.game!=='pick3')box.append(cap);box.append(list);last.appendChild(box);
+  box.append(cap,list);last.appendChild(box);
   fitRecent(last);
 }
 /* show only as many small balls as fit on the line; Pick 3 drops below the big balls if there's no room */
@@ -1269,9 +1271,12 @@ function fitRecent(last){
   const list=box.querySelector('.recent-list'),items=[...list.children];
   box.classList.remove('below');items.forEach(x=>x.classList.remove('off'));
   if(state.game==='pick3'){
-    const it=items[0],big=[...last.querySelectorAll(':scope>.ldball,:scope>.tile')];  // big balls sit in tap buttons (.ldball) since Nov 2026
-    const gap=parseFloat(getComputedStyle(last).columnGap)||12,used=big.reduce((s,t)=>s+t.offsetWidth+gap,0),need=it.offsetWidth+parseFloat(getComputedStyle(box).paddingLeft)+2;
-    box.classList.toggle('below',last.clientWidth-used<need);return;
+    // beside the big balls only when every earlier draw fits there; otherwise the row drops below and keeps as many whole draws as fit
+    const fitsAll=()=>{const W=list.clientWidth,l=items[items.length-1];return l.offsetLeft-list.offsetLeft+l.offsetWidth<=W+1};
+    if(!fitsAll())box.classList.add('below');
+    const W=list.clientWidth;let n=0;
+    items.forEach(x=>{if(n&&x.offsetLeft-list.offsetLeft+x.offsetWidth>W+1)x.classList.add('off');else{x.style.setProperty('--g',n);n++}});
+    box.querySelector('.recent-cap').textContent=n===1?'Draw Before':'Past '+n+' Draws';return;
   }
   const W=list.clientWidth,vw=document.documentElement.clientWidth,cap=vw<360?3:vw<600?4:6;let n=0;
   items.forEach(x=>{const fits=x.offsetLeft-list.offsetLeft+x.offsetWidth<=W+1;if(!fits||n>=cap)x.classList.add('off');else{x.style.setProperty('--r',n);n++}});

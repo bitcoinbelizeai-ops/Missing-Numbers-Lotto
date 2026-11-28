@@ -115,8 +115,15 @@ body[data-game="boledo"] .say b{color:#2a1d00}
 .p3chips{display:flex;gap:3px}
 .recent .p3chips .tile{width:30px}
 .recent .p3chips .tile span{font-size:14px;width:66%}
+/* Pick 3 shows up to 3 earlier draws (Nov 27, 2026): balls a touch smaller and packed tight inside a draw,
+   with clearly wider space between draws so each set of three reads as one result */
+.recent.p3 .recent-list{gap:12px}
+.recent.p3 .p3chips{gap:2px}
+.recent.p3 .p3chips .tile{width:28px}
 body[data-enter] .lastdraw.roll .recent .tile,.lastdraw.roll .recent .tile{animation:rollinr 1s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s)}
 body[data-enter] .lastdraw.roll .recent .p3chips .tile{animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .12s)}
+body .lastdraw.roll .recent.p3 .p3chips .tile{animation-delay:calc(var(--rs,1.3s) + (var(--g,0) * 3 + var(--r,0)) * .12s)}
+.lastdraw.roll .recent.p3 .recent-day{animation-delay:calc(var(--rs,1.3s) + var(--g,0) * .36s + .5s)}
 .lastdraw.roll .recent-cap{animation:topfade .45s both;animation-delay:var(--rs,1.3s)}
 .lastdraw.roll .recent-day{animation:topfade .4s both;animation-delay:calc(var(--rs,1.3s) + var(--r,0) * .22s + .45s)}
 .lastdraw.roll .recent{animation:topfade .3s both;animation-delay:calc(var(--rs,1.3s) - .3s)}
