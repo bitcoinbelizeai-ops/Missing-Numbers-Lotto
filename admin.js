@@ -47,7 +47,7 @@ function setGame(g){game=g;document.body.dataset.g=g;
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===g));
   $('numsLbl').textContent=PH[g][0];$('nums').placeholder=PH[g][1];$('nums').inputMode=g==='fantasy5'?'text':g==='lottery'?'decimal':'numeric';
   $('date').value=lastDraw(g);$('date').max=bz().iso;$('sched').textContent='Drawn '+SCHED[g].text;
-  $('nums').value='';$('confirm').classList.remove('show');$('msg').className='msg';preview();showAll();}
+  $('nums').value='';$('confirm').classList.remove('show');$('msg').className='msg';preview();allShown=ALL_STEP;showAll();}
 
 async function gh(method,body){
   const r=await fetch(API+(method==='GET'?'?ref='+BRANCH+'&t='+Date.now():''),{method,cache:'no-store',
@@ -68,12 +68,19 @@ async function commit(change,message){
     catch(e){if(e.status!==409||attempt===2)throw e}
   }
 }
+/* All past results (owner, Nov 27, 2026): folded away by default, and 10 at a time so the page doesn't get too long */
+const ALL_STEP=10;let allShown=ALL_STEP;
 function showAll(){
   if(!current)return;$('allGame').textContent=LABEL[game];
   const box=$('all');box.innerHTML='';
   const rows=(current.data.draws||[]).filter(d=>d.game===game).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  $('allCount').textContent=rows.length?rows.length:'';
+  const shown=Math.min(allShown,rows.length);
+  $('allMore').hidden=shown>=rows.length;$('allMore').textContent='Show '+Math.min(ALL_STEP,rows.length-shown)+' more';
+  $('allLess').hidden=shown<=ALL_STEP;
+  $('allShowing').textContent=rows.length>ALL_STEP?'Showing '+shown+' of '+rows.length+'.':'';
   if(!rows.length){box.innerHTML='<p class="help">No '+LABEL[game]+' results on the site yet.</p>';return}
-  rows.forEach(d=>{const it=document.createElement('div');it.className='item'+(d.nodraw?' skip':'');
+  rows.slice(0,shown).forEach(d=>{const it=document.createElement('div');it.className='item'+(d.nodraw?' skip':'');
     const yr=d.date.slice(0,4)!==bz().iso.slice(0,4)?' '+d.date.slice(0,4):'';
     const nums=d.nodraw?'no draw'+(d.holiday?' · '+esc(d.holiday):' (skipped)'):d.nums.join(' ')+(d.letter?' '+d.letter:'');
     it.innerHTML='<span>'+fmtDay(d.date)+yr+' · <b>'+nums+'</b>'+(d.source==='admin'?' <small>(you)</small>':'')+'</span>';
@@ -514,6 +521,8 @@ $('saveToken').onclick=async()=>{const t=$('token').value.trim();if(!/^(github_p
   catch(e){token='';msg($('connMsg'),e.message,'err')}};
 $('forget').onclick=()=>{setTok('');token='';current=null;start()};
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setGame(b.dataset.g));
+$('allMore').onclick=()=>{const first=allShown;allShown+=ALL_STEP;showAll();const it=$('all').children[first];if(it){const b=it.querySelector('button');if(b)b.focus({preventScroll:true});it.scrollIntoView({behavior:'smooth',block:'nearest'})}};
+$('allLess').onclick=()=>{allShown=ALL_STEP;showAll();$('allFold').scrollIntoView({behavior:'smooth',block:'start'})};
 $('nums').addEventListener('input',()=>{$('confirm').classList.remove('show');preview()});
 $('nums').addEventListener('keydown',e=>{if(e.key==='Enter')review()});
 $('review').onclick=review;
